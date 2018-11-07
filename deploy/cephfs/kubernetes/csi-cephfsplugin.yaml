@@ -1,15 +1,15 @@
 kind: DaemonSet
 apiVersion: apps/v1beta2
 metadata:
-  name: csi-cephfsplugin
+  name: csi-ecfsplugin
 spec:
   selector:
     matchLabels:
-      app: csi-cephfsplugin
+      app: csi-ecfsplugin
   template:
     metadata:
       labels:
-        app: csi-cephfsplugin
+        app: csi-ecfsplugin
     spec:
       serviceAccount: csi-nodeplugin
       hostNetwork: true
@@ -25,41 +25,41 @@ spec:
             - "--kubelet-registration-path=$(DRIVER_REG_SOCK_PATH)"
           env:
             - name: ADDRESS
-              value: /var/lib/kubelet/plugins/csi-cephfsplugin/csi.sock
+              value: /var/lib/kubelet/plugins/csi-ecfsplugin/csi.sock
             - name: DRIVER_REG_SOCK_PATH
-              value: /var/lib/kubelet/plugins/csi-cephfsplugin/csi.sock
+              value: /var/lib/kubelet/plugins/csi-ecfsplugin/csi.sock
             - name: KUBE_NODE_NAME
               valueFrom:
                 fieldRef:
                   fieldPath: spec.nodeName
           volumeMounts:
             - name: socket-dir
-              mountPath: /var/lib/kubelet/plugins/csi-cephfsplugin
+              mountPath: /var/lib/kubelet/plugins/csi-ecfsplugin
             - name: registration-dir
               mountPath: /registration
-        - name: csi-cephfsplugin
+        - name: csi-ecfsplugin
           securityContext:
             privileged: true
             capabilities:
               add: ["SYS_ADMIN"]
             allowPrivilegeEscalation: true
-          image: quay.io/cephcsi/cephfsplugin:v0.3.0
+          image: quay.io/cephcsi/ecfsplugin:v0.3.0
           args :
             - "--nodeid=$(NODE_ID)"
             - "--endpoint=$(CSI_ENDPOINT)"
             - "--v=5"
-            - "--drivername=csi-cephfsplugin"
+            - "--drivername=csi-ecfsplugin"
           env:
             - name: NODE_ID
               valueFrom:
                 fieldRef:
                   fieldPath: spec.nodeName
             - name: CSI_ENDPOINT
-              value: unix://var/lib/kubelet/plugins/csi-cephfsplugin/csi.sock
+              value: unix://var/lib/kubelet/plugins/csi-ecfsplugin/csi.sock
           imagePullPolicy: "IfNotPresent"
           volumeMounts:
             - name: plugin-dir
-              mountPath: /var/lib/kubelet/plugins/csi-cephfsplugin
+              mountPath: /var/lib/kubelet/plugins/csi-ecfsplugin
             - name: pods-mount-dir
               mountPath: /var/lib/kubelet/pods
               mountPropagation: "Bidirectional"
@@ -73,7 +73,7 @@ spec:
       volumes:
         - name: plugin-dir
           hostPath:
-            path: /var/lib/kubelet/plugins/csi-cephfsplugin
+            path: /var/lib/kubelet/plugins/csi-ecfsplugin
             type: DirectoryOrCreate
         - name: registration-dir
           hostPath:
@@ -85,7 +85,7 @@ spec:
             type: Directory
         - name: socket-dir
           hostPath:
-            path: /var/lib/kubelet/plugins/csi-cephfsplugin
+            path: /var/lib/kubelet/plugins/csi-ecfsplugin
             type: DirectoryOrCreate
         - name: host-sys
           hostPath:

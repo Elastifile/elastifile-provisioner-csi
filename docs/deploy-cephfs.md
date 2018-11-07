@@ -4,16 +4,16 @@ The CSI CephFS plugin is able to both provision new CephFS volumes and attach an
 
 ## Building
 
-CSI CephFS plugin can be compiled in a form of a binary file or in a form of a Docker image. When compiled as a binary file, the result is stored in `_output/` directory with the name `cephfsplugin`. When compiled as an image, it's stored in the local Docker image store.
+CSI CephFS plugin can be compiled in a form of a binary file or in a form of a Docker image. When compiled as a binary file, the result is stored in `_output/` directory with the name `ecfsplugin`. When compiled as an image, it's stored in the local Docker image store.
 
 Building binary:
 ```bash
-$ make cephfsplugin
+$ make ecfsplugin
 ```
 
 Building Docker image:
 ```bash
-$ make image-cephfsplugin
+$ make image-ecfsplugin
 ```
 
 ## Configuration
@@ -23,7 +23,7 @@ $ make image-cephfsplugin
 Option | Default value | Description
 ------ | ------------- | -----------
 `--endpoint` | `unix://tmp/csi.sock` | CSI endpoint, must be a UNIX socket
-`--drivername` | `csi-cephfsplugin` | name of the driver (Kubernetes: `provisioner` field in StorageClass must correspond to this value)
+`--drivername` | `csi-ecfsplugin` | name of the driver (Kubernetes: `provisioner` field in StorageClass must correspond to this value)
 `--nodeid` | _empty_ | This node's ID
 `--volumemounter` | _empty_ | default volume mounter. Available options are `kernel` and `fuse`. This is the mount method used if volume parameters don't specify otherwise. If left unspecified, the driver will first probe for `ceph-fuse` in system's path and will choose Ceph kernel client if probing failed.
 
@@ -70,8 +70,8 @@ Those manifests deploy service accounts, cluster roles and cluster role bindings
 **Deploy CSI sidecar containers:**
 
 ```bash
-$ kubectl create -f csi-cephfsplugin-attacher.yaml
-$ kubectl create -f csi-cephfsplugin-provisioner.yaml
+$ kubectl create -f csi-ecfsplugin-attacher.yaml
+$ kubectl create -f csi-ecfsplugin-provisioner.yaml
 ```
 
 Deploys stateful sets for external-attacher and external-provisioner sidecar containers for CSI CephFS.
@@ -79,7 +79,7 @@ Deploys stateful sets for external-attacher and external-provisioner sidecar con
 **Deploy CSI CephFS driver:**
 
 ```bash
-$ kubectl create -f csi-cephfsplugin.yaml
+$ kubectl create -f csi-ecfsplugin.yaml
 ```
 
 Deploys a daemon set with two containers: CSI driver-registrar and the CSI CephFS driver.
@@ -90,13 +90,13 @@ After successfuly completing the steps above, you should see output similar to t
 ```bash
 $ kubectl get all
 NAME                                 READY     STATUS    RESTARTS   AGE
-pod/csi-cephfsplugin-attacher-0      1/1       Running   0          26s
-pod/csi-cephfsplugin-provisioner-0   1/1       Running   0          25s
-pod/csi-cephfsplugin-rljcv           2/2       Running   0          24s
+pod/csi-ecfsplugin-attacher-0      1/1       Running   0          26s
+pod/csi-ecfsplugin-provisioner-0   1/1       Running   0          25s
+pod/csi-ecfsplugin-rljcv           2/2       Running   0          24s
 
 NAME                                   TYPE        CLUSTER-IP       EXTERNAL-IP   PORT(S)     AGE
-service/csi-cephfsplugin-attacher      ClusterIP   10.104.116.218   <none>        12345/TCP   27s
-service/csi-cephfsplugin-provisioner   ClusterIP   10.101.78.75     <none>        12345/TCP   26s
+service/csi-ecfsplugin-attacher      ClusterIP   10.104.116.218   <none>        12345/TCP   27s
+service/csi-ecfsplugin-provisioner   ClusterIP   10.101.78.75     <none>        12345/TCP   26s
 
 ...
 ```

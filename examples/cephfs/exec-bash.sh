@@ -1,6 +1,6 @@
 #!/bin/bash
 
-CONTAINER_NAME=csi-cephfsplugin
+CONTAINER_NAME=csi-ecfsplugin
 POD_NAME=$(kubectl get pods -l app=$CONTAINER_NAME -o=name | head -n 1)
 
 function get_pod_status() {

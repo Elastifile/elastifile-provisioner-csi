@@ -16,7 +16,7 @@ script:
   - test -z $(gofmt -s -l $GO_FILES)
   - go vet -v $(go list ./... | grep -v /vendor/)
   - make rbdplugin
-  - make cephfsplugin
+  - make ecfsplugin
 
 deploy:
   - provider: script

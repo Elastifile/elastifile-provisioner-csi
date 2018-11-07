@@ -23,7 +23,7 @@ $ make image-rbdplugin
 Option | Default value | Description
 ------ | ------------- | -----------
 `--endpoint` | `unix://tmp/csi.sock` | CSI endpoint, must be a UNIX socket
-`--drivername` | `csi-cephfsplugin` | name of the driver (Kubernetes: `provisioner` field in StorageClass must correspond to this value)
+`--drivername` | `csi-ecfsplugin` | name of the driver (Kubernetes: `provisioner` field in StorageClass must correspond to this value)
 `--nodeid` | _empty_ | This node's ID
 `--containerized` | true | Whether running in containerized mode
 

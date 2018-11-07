@@ -2,6 +2,17 @@
 
 
 [[projects]]
+  branch = "master"
+  digest = "1:e425828600a166bce89b226f6089ac7380948714d05e6f5ff21ae2543f0950dc"
+  name = "github.com/ceph/ceph-csi"
+  packages = [
+    "pkg/cephfs",
+    "pkg/rbd",
+  ]
+  pruneopts = ""
+  revision = "47a7b1ff8e6c43761359aeb16d32ef5db70dc5ae"
+
+[[projects]]
   digest = "1:cf4f5171128e62b46299b0a7cd79543f50e62f483d2ca9364e4957c7bbee7a38"
   name = "github.com/container-storage-interface/spec"
   packages = ["lib/go/csi/v0"]
@@ -183,6 +194,8 @@
   analyzer-name = "dep"
   analyzer-version = 1
   input-imports = [
+    "github.com/ceph/ceph-csi/pkg/cephfs",
+    "github.com/ceph/ceph-csi/pkg/rbd",
     "github.com/container-storage-interface/spec/lib/go/csi/v0",
     "github.com/golang/glog",
     "github.com/kubernetes-csi/drivers/pkg/csi-common",
@@ -195,6 +208,8 @@
     "k8s.io/apimachinery/pkg/util/wait",
     "k8s.io/kubernetes/pkg/util/keymutex",
     "k8s.io/kubernetes/pkg/util/mount",
+    "k8s.io/kubernetes/pkg/util/nsenter",
+    "k8s.io/utils/exec",
   ]
   solver-name = "gps-cdcl"
   solver-version = 1

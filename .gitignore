@@ -5,7 +5,7 @@
 
 # docker build
 /deploy/rbd/docker/rbdplugin
-/deploy/cephfs/docker/cephfsplugin
+/deploy/cephfs/docker/ecfsplugin
 
 # rbdplugin executable
 rbdplugin

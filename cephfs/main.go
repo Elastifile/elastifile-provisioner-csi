@@ -31,7 +31,7 @@ func init() {
 
 var (
 	endpoint      = flag.String("endpoint", "unix://tmp/csi.sock", "CSI endpoint")
-	driverName    = flag.String("drivername", "csi-cephfsplugin", "name of the driver")
+	driverName    = flag.String("drivername", "csi-ecfsplugin", "name of the driver")
 	nodeId        = flag.String("nodeid", "", "node id")
 	volumeMounter = flag.String("volumemounter", "", "default volume mounter (possible options are 'kernel', 'fuse')")
 )

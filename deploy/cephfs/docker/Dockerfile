@@ -10,9 +10,9 @@ RUN apt-get update && apt-get install -y wget && \
     apt-get update && apt-get install -y kmod ceph-common ceph-fuse attr --no-install-recommends && \
     rm -rf /var/lib/apt/lists/*
 
-COPY cephfsplugin /cephfsplugin
+COPY ecfsplugin /ecfsplugin
 
-RUN chmod +x /cephfsplugin && \
+RUN chmod +x /ecfsplugin && \
     mkdir -p /var/log/ceph
 
-ENTRYPOINT ["/cephfsplugin"]
+ENTRYPOINT ["/ecfsplugin"]
