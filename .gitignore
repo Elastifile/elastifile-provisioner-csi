@@ -4,11 +4,7 @@
 /_output
 
 # docker build
-/deploy/rbd/docker/rbdplugin
-/deploy/cephfs/docker/ecfsplugin
-
-# rbdplugin executable
-rbdplugin
+deploy/docker/ecfsplugin
 
 # Emacs save files
 *~

@@ -23,5 +23,5 @@ spec:
       volumes:
        - name: mypvc
          persistentVolumeClaim:
-           claimName: csi-cephfs-pvc
+           claimName: csi-ecfs-pvc
            readOnly: false

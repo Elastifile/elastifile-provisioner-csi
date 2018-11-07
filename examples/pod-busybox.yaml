@@ -4,11 +4,11 @@ metadata:
   name: demo-pod
 spec:
   containers:
-   - name: web-server
-     image: nginx
+   - name: container1
+     image: busybox
      volumeMounts:
        - name: volume1
-         mountPath: /var/lib/www
+         mountPath: /mnt
   volumes:
    - name: volume1
      persistentVolumeClaim:

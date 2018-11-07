@@ -3,6 +3,6 @@ kind: ConfigMap
 metadata:
   name: elastifile
 data:
-  managementAddress: 1.1.1.1
-  managementusername: admin
-  nfsAddress: 22.22.22.22
+  managementAddress: 35.195.9.136
+  managementUserName: admin
+  nfsAddress: 35.195.9.136

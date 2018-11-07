@@ -1,7 +1,7 @@
 apiVersion: storage.k8s.io/v1
 kind: StorageClass
 metadata:
-  name: csi-cephfs
+  name: csi-ecfs
 provisioner: csi-ecfsplugin
 parameters:
   # Comma separated list of Ceph monitors
@@ -25,9 +25,9 @@ parameters:
   # rootPath: /absolute/path
 
   # The secrets have to contain user and/or Ceph admin credentials.
-  csiProvisionerSecretName: csi-cephfs-secret
+  csiProvisionerSecretName: csi-ecfs-secret
   csiProvisionerSecretNamespace: default
-  csiNodeStageSecretName: csi-cephfs-secret
+  csiNodeStageSecretName: csi-ecfs-secret
   csiNodeStageSecretNamespace: default
 
   # (optional) The driver can use either ceph-fuse (fuse) or ceph kernel client (kernel)

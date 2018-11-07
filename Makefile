@@ -14,29 +14,37 @@
 
 .PHONY: all plugin
 
-REGISTRY=hub.docker.com
+#REGISTRY=hub.docker.com
+#IMAGE_NAME = $(REGISTRY)/elastifileio/ecfs-provisioner-csi
 IMAGE_NAME = elastifileio/ecfs-provisioner-csi
 PLUGIN_TAG ?= next
 
-$(info cephfs image settings: $(IMAGE_NAME) version $(PLUGIN_TAG))
+TEMP_DIR=_output
+DOCKER_DIR=deploy/docker
+PLUGIN_BINARY=ecfsplugin
 
-all: plugin push
+$(info ecfs image settings: $(IMAGE_NAME) version $(PLUGIN_TAG))
 
-#test:
-#	go test github.com/ceph/ceph-csi/pkg/... -cover
-#	go vet github.com/ceph/ceph-csi/pkg/...
+# Compile, create image and push it
+all: image push
 
-plugin:
+# Compile the plugin binary
+binary:
 	if [ ! -d ./vendor ]; then dep ensure; fi
-	CGO_ENABLED=0 GOOS=linux go build -a -ldflags '-extldflags "-static"' -o  _output/ecfsplugin ./cephfs
+	CGO_ENABLED=0 GOOS=linux go build -a -ldflags '-extldflags "-static"' -o  $(TEMP_DIR)/$(PLUGIN_BINARY) ./ecfs
 
-image: plugin
-	cp _output/ecfsplugin deploy/cephfs/docker
-	docker build -t $(IMAGE_NAME):$(PLUGIN_TAG) deploy/cephfs/docker
+# Create docker image
+image: binary
+	cp $(TEMP_DIR)/$(PLUGIN_BINARY) $(DOCKER_DIR)
+	docker build -t $(IMAGE_NAME):$(PLUGIN_TAG) $(DOCKER_DIR)
 
+# Push image to docker registry
 push:
 	docker push $(IMAGE_NAME):$(PLUGIN_TAG)
 
+# Remove previous build's artifacts
 clean:
 	go clean -r -x
-	rm -f deploy/cephfs/docker/ecfsplugin
+	rm -f $(DOCKER_DIR)/$(PLUGIN_BINARY)
+	rm -f $(TEMP_DIR)/$(PLUGIN_BINARY)
+

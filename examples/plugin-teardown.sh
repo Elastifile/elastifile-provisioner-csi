@@ -8,7 +8,7 @@ fi
 
 cd "$deployment_base" || exit 1
 
-objects=(csi-ecfsplugin-attacher csi-ecfsplugin-provisioner csi-ecfsplugin storageclass csi-attacher-rbac csi-provisioner-rbac csi-nodeplugin-rbac)
+objects=(csi-ecfsplugin-attacher csi-ecfsplugin-provisioner csi-ecfsplugin storageclass csi-attacher-rbac csi-provisioner-rbac csi-nodeplugin-rbac configmap secret)
 
 for obj in ${objects[@]}; do
 	kubectl delete -f "./$obj.yaml"

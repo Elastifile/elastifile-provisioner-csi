@@ -2,10 +2,9 @@ apiVersion: storage.k8s.io/v1
 kind: StorageClass
 metadata:
    name: elastifile
-provisioner: elastifileio/ecfs-provisioner-csi
+provisioner: csi-ecfsplugin
 parameters:
-  csiProvisionerSecretName: password-rest
+  csiProvisionerSecretName: elastifile
   csiProvisionerSecretNamespace: default
   username: admin
 reclaimPolicy: Delete 
-
