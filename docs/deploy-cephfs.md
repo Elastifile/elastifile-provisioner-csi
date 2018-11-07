@@ -1,19 +1,21 @@
-# CSI CephFS plugin
+# CSI ECFS plugin
 
-The CSI CephFS plugin is able to both provision new CephFS volumes and attach and mount existing ones to workloads.
+The CSI ECFS plugin is able to both provision new ECFS volumes and attach and mount existing ones to workloads.
 
 ## Building
 
-CSI CephFS plugin can be compiled in a form of a binary file or in a form of a Docker image. When compiled as a binary file, the result is stored in `_output/` directory with the name `ecfsplugin`. When compiled as an image, it's stored in the local Docker image store.
+CSI ECFS plugin can be compiled in a form of a binary file or in a form of a Docker image.
+When compiled as a binary file, the result is stored in `_output/` directory with the name `ecfsplugin`.
+When compiled as an image, it's stored in the local Docker image store.
 
 Building binary:
 ```bash
-$ make ecfsplugin
+$ make plugin
 ```
 
 Building Docker image:
 ```bash
-$ make image-ecfsplugin
+$ make image
 ```
 
 ## Configuration
@@ -76,7 +78,7 @@ $ kubectl create -f csi-ecfsplugin-provisioner.yaml
 
 Deploys stateful sets for external-attacher and external-provisioner sidecar containers for CSI CephFS.
 
-**Deploy CSI CephFS driver:**
+**Deploy CSI ECFS driver:**
 
 ```bash
 $ kubectl create -f csi-ecfsplugin.yaml
@@ -105,5 +107,6 @@ You can try deploying a demo pod from `examples/cephfs` to test the deployment f
 
 ### Notes on volume deletion
 
-Volumes that were provisioned dynamically (i.e. `provisionVolume=true`) are allowed to be deleted by the driver as well, if the user chooses to do so. Otherwise, the driver is forbidden to delete such volumes - attempting to delete them is a no-op.
+Volumes that were provisioned dynamically (i.e. `provisionVolume=true`) are allowed to be deleted by the driver as well, 
+if the user chooses to do so. Otherwise, the driver is forbidden to delete such volumes - attempting to delete them is a no-op.
 

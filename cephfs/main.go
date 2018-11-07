@@ -18,11 +18,11 @@ package main
 
 import (
 	"flag"
-	"os"
-	"path"
-
-	"github.com/ceph/ceph-csi/pkg/cephfs"
 	"github.com/golang/glog"
+	"os"
+
+	_ "github.com/elastifile/emanage-go/pkg/emanage"
+	//"github.com/golang/glog"
 )
 
 func init() {
@@ -31,30 +31,18 @@ func init() {
 
 var (
 	endpoint      = flag.String("endpoint", "unix://tmp/csi.sock", "CSI endpoint")
-	driverName    = flag.String("drivername", "csi-ecfsplugin", "name of the driver")
-	nodeId        = flag.String("nodeid", "", "node id")
-	volumeMounter = flag.String("volumemounter", "", "default volume mounter (possible options are 'kernel', 'fuse')")
+	driverName    = flag.String("drivername", "csi-ecfsplugin", "Name of the driver")
+	nodeId        = flag.String("nodeid", "", "Node id")
+	mounter = flag.String("volumemounter", "", "Default volume mounter (possible options are 'kernel', 'fuse')")
 )
 
 func main() {
+	glog.Info("Entering ECFS plugin")
 	flag.Parse()
 
-	if err := createPersistentStorage(path.Join(cephfs.PluginFolder, "controller")); err != nil {
-		glog.Errorf("failed to create persistent storage for controller: %v", err)
-		os.Exit(1)
-	}
+	driver := NewECFSDriver()
+	driver.Run(*driverName, *nodeId, *endpoint, *mounter)
 
-	if err := createPersistentStorage(path.Join(cephfs.PluginFolder, "node")); err != nil {
-		glog.Errorf("failed to create persistent storage for node: %v", err)
-		os.Exit(1)
-	}
-
-	driver := cephfs.NewCephFSDriver()
-	driver.Run(*driverName, *nodeId, *endpoint, *volumeMounter)
-
+	glog.Info("Exiting ECFS plugin")
 	os.Exit(0)
-}
-
-func createPersistentStorage(persistentStoragePath string) error {
-	return os.MkdirAll(persistentStoragePath, os.FileMode(0755))
 }
