@@ -18,7 +18,6 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"os"
 
 	"github.com/container-storage-interface/spec/lib/go/csi/v0"
@@ -31,57 +30,6 @@ import (
 type nodeServer struct {
 	*csicommon.DefaultNodeServer
 }
-
-func getCredentialsForVolume(volOptions *volumeOptions, volId volumeID, req *csi.NodeStageVolumeRequest) (*credentials, error) {
-	glog.V(2).Infof("AAAAA getCredentialsForVolume - enter. WE SHOULD NOT BE HERE") // TODO: DELME
-	var (
-		userCr = &credentials{}
-		err    error
-	)
-
-	// TODO: Remove ProvisionVolume check - always create the volume (?)
-	//if volOptions.ProvisionVolume {
-	// The volume is provisioned dynamically, get the credentials directly from Ceph
-
-	// First, store admin credentials - those are needed for retrieving the user credentials
-
-	adminCr, err := getAdminCredentials(req.GetNodeStageSecrets())
-	if err != nil {
-		return nil, fmt.Errorf("failed to get admin credentials from node stage secrets: %v", err)
-	}
-
-	if err = storeCephCredentials(volId, adminCr); err != nil {
-		return nil, fmt.Errorf("failed to store ceph admin credentials: %v", err)
-	}
-
-	// Then get the ceph user
-
-	entity, err := getCephUser(adminCr, volId)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get ceph user: %v", err)
-	}
-
-	userCr = entity.toCredentials()
-	//} else {
-	//	// The volume is pre-made, credentials are in node stage secrets
-	//
-	//	userCr, err = getUserCredentials(req.GetNodeStageSecrets())
-	//	if err != nil {
-	//		return nil, fmt.Errorf("failed to get user credentials from node stage secrets: %v", err)
-	//	}
-	//}
-
-	if err = storeCephCredentials(volId, userCr); err != nil {
-		return nil, fmt.Errorf("failed to store ceph user credentials: %v", err)
-	}
-
-	return userCr, nil
-}
-
-//func (ns *nodeServer) NodeStageVolume(ctx context.Context, req *csi.NodeStageVolumeRequest) (*csi.NodeStageVolumeResponse, error) {
-//	//return nil, status.Error(codes.Unimplemented, "")
-//	return &csi.NodeStageVolumeResponse{}, nil
-//}
 
 func (ns *nodeServer) nodePublishVolume1(ctx context.Context, req *csi.NodePublishVolumeRequest) (*csi.NodePublishVolumeResponse, error) {
 	glog.V(2).Infof("AAAAA NodePublishVolume - enter. ctx: %+v req: %+v", ctx, req) // TODO: DELME
@@ -124,43 +72,6 @@ func (ns *nodeServer) nodePublishVolume1(ctx context.Context, req *csi.NodePubli
 
 	return &csi.NodePublishVolumeResponse{}, nil
 }
-
-//func (ns *nodeServer) nodePublishVolume2(ctx context.Context, req *csi.NodePublishVolumeRequest) (*csi.NodePublishVolumeResponse, error) {
-//	targetPath := req.GetTargetPath()
-//	notMnt, err := mount.New("").IsLikelyNotMountPoint(targetPath)
-//	if err != nil {
-//		if os.IsNotExist(err) {
-//			if err := os.MkdirAll(targetPath, 0750); err != nil {
-//				return nil, status.Error(codes.Internal, err.Error())
-//			}
-//			notMnt = true
-//		} else {
-//			return nil, status.Error(codes.Internal, err.Error())
-//		}
-//	}
-//
-//	if !notMnt {
-//		return &csi.NodePublishVolumeResponse{}, nil
-//	}
-//
-//	volumeAttrs := req.GetVolumeAttributes()
-//	source := volumeAttrs["mountPath"]
-//	mountOption := volumeAttrs["mountOptionAnnotation"]
-//	mounter := mount.New("")
-//
-//	err = mounter.Mount(source, targetPath, "nfs", strings.Split(strings.Trim(mountOption, " "), ","))
-//	if err != nil {
-//		if os.IsPermission(err) {
-//			return nil, status.Error(codes.PermissionDenied, err.Error())
-//		}
-//		if strings.Contains(err.Error(), "invalid argument") {
-//			return nil, status.Error(codes.InvalidArgument, err.Error())
-//		}
-//		return nil, status.Error(codes.Internal, err.Error())
-//	}
-//
-//	return &csi.NodePublishVolumeResponse{}, nil
-//}
 
 func (ns *nodeServer) NodePublishVolume(ctx context.Context, req *csi.NodePublishVolumeRequest) (*csi.NodePublishVolumeResponse, error) {
 	glog.V(2).Infof("AAAAA NodePublishVolume - enter. ctx: %+v req: %+v", ctx, req) // TODO: DELME
@@ -211,11 +122,6 @@ func (ns *nodeServer) nodeStageVolume1(ctx context.Context, req *csi.NodeStageVo
 	return &csi.NodeStageVolumeResponse{}, nil
 }
 
-//func (ns *nodeServer) nodeStageVolume2(ctx context.Context, req *csi.NodeStageVolumeRequest) (*csi.NodeStageVolumeResponse, error) {
-//	glog.Infof("ecfs: Faked NodeStageVolume call")
-//	return &csi.NodeStageVolumeResponse{}, nil
-//}
-
 func (ns *nodeServer) NodeStageVolume(ctx context.Context, req *csi.NodeStageVolumeRequest) (*csi.NodeStageVolumeResponse, error) {
 	return ns.nodeStageVolume1(ctx, req)
 }
@@ -238,29 +144,6 @@ func (ns *nodeServer) nodeUnpublishVolume1(ctx context.Context, req *csi.NodeUnp
 
 	return &csi.NodeUnpublishVolumeResponse{}, nil
 }
-
-//func (ns *nodeServer) nodeUnpublishVolume2(ctx context.Context, req *csi.NodeUnpublishVolumeRequest) (*csi.NodeUnpublishVolumeResponse, error) {
-//	targetPath := req.GetTargetPath()
-//	notMnt, err := mount.New("").IsLikelyNotMountPoint(targetPath)
-//
-//	if err != nil {
-//		if os.IsNotExist(err) {
-//			return nil, status.Error(codes.NotFound, "Targetpath not found")
-//		} else {
-//			return nil, status.Error(codes.Internal, err.Error())
-//		}
-//	}
-//	if notMnt {
-//		return nil, status.Error(codes.NotFound, "Volume not mounted")
-//	}
-//
-//	err = util.UnmountPath(req.GetTargetPath(), mount.New(""))
-//	if err != nil {
-//		return nil, status.Error(codes.Internal, err.Error())
-//	}
-//
-//	return &csi.NodeUnpublishVolumeResponse{}, nil
-//}
 
 func (ns *nodeServer) NodeUnpublishVolume(ctx context.Context, req *csi.NodeUnpublishVolumeRequest) (*csi.NodeUnpublishVolumeResponse, error) {
 	return ns.nodeUnpublishVolume1(ctx, req)
@@ -287,14 +170,15 @@ func (ns *nodeServer) NodeUnstageVolume(ctx context.Context, req *csi.NodeUnstag
 
 func (ns *nodeServer) NodeGetCapabilities(ctx context.Context, req *csi.NodeGetCapabilitiesRequest) (*csi.NodeGetCapabilitiesResponse, error) {
 	return &csi.NodeGetCapabilitiesResponse{
-		Capabilities: []*csi.NodeServiceCapability{
-			{
-				Type: &csi.NodeServiceCapability_Rpc{
-					Rpc: &csi.NodeServiceCapability_RPC{
-						Type: csi.NodeServiceCapability_RPC_STAGE_UNSTAGE_VOLUME,
+			Capabilities: []*csi.NodeServiceCapability{
+				{
+					Type: &csi.NodeServiceCapability_Rpc{
+						Rpc: &csi.NodeServiceCapability_RPC{
+							Type: csi.NodeServiceCapability_RPC_STAGE_UNSTAGE_VOLUME,
+						},
 					},
 				},
 			},
 		},
-	}, nil
+		nil
 }

@@ -31,10 +31,6 @@ type controllerServer struct {
 	*csicommon.DefaultControllerServer
 }
 
-const (
-	oneGB = 1073741824
-)
-
 func (cs *controllerServer) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest) (*csi.CreateVolumeResponse, error) {
 	glog.Warningf("AAAAA CreateVolume - req: %+v", req) // TODO: DELME
 	if err := cs.validateCreateVolumeRequest(req); err != nil {
@@ -43,65 +39,27 @@ func (cs *controllerServer) CreateVolume(ctx context.Context, req *csi.CreateVol
 		return nil, err
 	}
 
-	ecfsConfig, err := newConfig()
+	pluginConfig, err := newPluginConfig()
 	if err != nil {
 		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
 
+	// TODO: Don't create eManage client for each action (will need relogin support)
 	var ems emanageClient
-	//glog.V(2).Infof("AAAAA CreateVolume - creating eManage client. ecfsConfig: %+v", ecfsConfig) // TODO: DELME
-	//emsClient, err := newEmanageClient(*ecfsConfig)
-	//if err != nil {
-	//	glog.Errorf("failed to create emanage client %+v - err:%v", ecfsConfig, err)
-	//	return nil, err
-	//}
-
-	// Configuration
-
-	//volId := newVolumeId()
-	//glog.Warningf("AAAAA CreateVolume - req.Name: %v", req.Name) // TODO: DELME
-
-	// TODO: Here we can get params from the user regarding User Mapping, mount options etc.
-	volOptions, err := newVolumeOptions(req.Name, req.GetParameters())
+	// TODO: Here we can get User Mapping, mount options and other user-specified params (How?)
+	volOptions, err := newVolumeOptions(req.GetName(), req.GetParameters())
 	if err != nil {
 		glog.Errorf("Validation of volume options failed: %v", err)
 		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
 	glog.Warningf("AAAAA CreateVolume - volOptions: %+v", volOptions) // TODO: DELME
 
-	//emsConfig := ecfsConfigData{VolumeID: volId}
-	//if err = emsConfig.writeToFile(); err != nil {
-	//	glog.Errorf("failed to write ceph config file to %s: %v", getCephConfPath(volId), err)
-	//	return nil, status.Error(codes.Internal, err.Error())
-	//}
-
-	// Create a volume in case the user didn't provide one
-
-	// Admin credentials are required
-
-	//cr, err := getAdminCredentials(req.GetControllerCreateSecrets())
-	//if err != nil {
-	//	return nil, status.Error(codes.InvalidArgument, err.Error())
-	//}
-
-	//if err = storeCephCredentials(volId, cr); err != nil {
-	//	glog.Errorf("failed to store admin credentials for '%s': %v", cr.id, err)
-	//	return nil, status.Error(codes.Internal, err.Error())
-	//}
-
-	glog.V(2).Infof("AAAAA CreateVolume - before volOptions.Name. volOptions: %+v", volOptions) // TODO: DELME
-	volOptions.Name = req.Name
-	glog.V(2).Infof("AAAAA CreateVolume - after volOptions.Name") // TODO: DELME
 	volOptions.Capacity = req.GetCapacityRange().GetRequiredBytes()
 	if volOptions.Capacity == 0 {
-		// TODO: Is this check even needed? If so, make the default configurable
+		// TODO: Make the default configurable
 		volOptions.Capacity = int64(100 * size.GiB)
 	}
-	volOptions.NfsAddress = ecfsConfig.NFSServer
-
-	//XXXXXX
-	// Add to ctx: nfsAddress, export.Name (volOptions are not persistent enough)
-	//context.WithValue()
+	volOptions.NfsAddress = pluginConfig.NFSServer
 
 	glog.V(2).Infof("AAAAA CreateVolume - calling createVolume()") // TODO: DELME
 	err = createVolume(ems.GetClient(), volOptions)
@@ -111,21 +69,18 @@ func (cs *controllerServer) CreateVolume(ctx context.Context, req *csi.CreateVol
 	}
 	glog.V(2).Info("AAAAA CreateVolume - after createVolume()") // TODO: DELME
 
-	//if _, err = createCephUser(volOptions, cr, volId); err != nil {
-	//	glog.Errorf("failed to create ceph user for volume %s: %v", req.GetName(), err)
-	//	return nil, status.Error(codes.Internal, err.Error())
-	//}
-
 	glog.Infof("ecfs: successfully created volume %s", volOptions.Name)
 
-	if err = ctrCache.insert(&controllerCacheEntry{VolOptions: *volOptions, VolumeID: volumeID(req.Name)}); err != nil {
-		glog.Errorf("failed to store a cache entry for volume %s: %v", req.Name, err)
-		return nil, status.Error(codes.Internal, err.Error())
-	}
+	//glog.Infof("BBBBB inserting volume into controller cache - %v", volOptions.Name) // TODO: DELME
+	//if err = ctrCache.insert(&controllerCacheEntry{VolumeID: volumeID(volOptions.Name), VolOptions: *volOptions}); err != nil {
+	//	glog.Errorf("Failed to store cache entry for volume %s: %v", volOptions.Name, err)
+	//	return nil, status.Error(codes.Internal, err.Error())
+	//}
+	//glog.Infof("BBBBB inserted volume into controller cache - %v (%+v)", volOptions.Name, ctrCache) // TODO: DELME
 
 	return &csi.CreateVolumeResponse{
 		Volume: &csi.Volume{
-			Id:            req.Name,
+			Id:            volOptions.Name,
 			CapacityBytes: int64(volOptions.Capacity),
 			Attributes:    req.GetParameters(),
 		},
@@ -133,6 +88,8 @@ func (cs *controllerServer) CreateVolume(ctx context.Context, req *csi.CreateVol
 }
 
 func (cs *controllerServer) DeleteVolume(ctx context.Context, req *csi.DeleteVolumeRequest) (*csi.DeleteVolumeResponse, error) {
+	glog.Infof("ecfs: Deleting volume %v", req.VolumeId)
+	//glog.Infof("BBBBB current cache state - %+v", ctrCache) // TODO: DELME
 	if err := cs.validateDeleteVolumeRequest(req); err != nil {
 		glog.Errorf("DeleteVolumeRequest validation failed: %v", err)
 		return nil, err
@@ -144,44 +101,26 @@ func (cs *controllerServer) DeleteVolume(ctx context.Context, req *csi.DeleteVol
 	)
 
 	// Load volume info from cache
+	//glog.Infof("BBBBB popping volume from controller cache - %s", volId) // TODO: DELME
+	//ent, err := ctrCache.pop(volId)
+	//if err != nil {
+	//	glog.Error(err)
+	//	return nil, status.Error(codes.Internal, err.Error())
+	//}
 
-	ent, err := ctrCache.pop(volId)
+	//defer func() {
+	//	if err != nil {
+	//		// Reinsert cache entry for retry
+	//		if insErr := ctrCache.insert(ent); insErr != nil {
+	//			glog.Errorf("failed to reinsert volume cache entry in rollback procedure for volume %s: %v", volId, err)
+	//		}
+	//	}
+	//}()
+
+	var ems emanageClient
+	err = deleteVolume(ems.GetClient(), req.GetVolumeId())
 	if err != nil {
-		glog.Error(err)
-		return nil, status.Error(codes.Internal, err.Error())
-	}
-
-	if !ent.VolOptions.ProvisionVolume {
-		// DeleteVolume() is forbidden for statically provisioned volumes!
-
-		glog.Warningf("volume %s is provisioned statically, aborting delete", volId)
-		return &csi.DeleteVolumeResponse{}, nil
-	}
-
-	defer func() {
-		if err != nil {
-			// Reinsert cache entry for retry
-			if insErr := ctrCache.insert(ent); insErr != nil {
-				glog.Errorf("failed to reinsert volume cache entry in rollback procedure for volume %s: %v", volId, err)
-			}
-		}
-	}()
-
-	// Deleting a volume requires admin credentials
-
-	cr, err := getAdminCredentials(req.GetControllerDeleteSecrets())
-	if err != nil {
-		glog.Errorf("failed to retrieve admin credentials: %v", err)
-		return nil, status.Error(codes.InvalidArgument, err.Error())
-	}
-
-	if err = purgeVolume(volId, cr, &ent.VolOptions); err != nil {
-		glog.Errorf("failed to delete volume %s: %v", volId, err)
-		return nil, status.Error(codes.Internal, err.Error())
-	}
-
-	if err = deleteCephUser(cr, volId); err != nil {
-		glog.Errorf("failed to delete ceph user for volume %s: %v", volId, err)
+		glog.Errorf("failed to delete volume %s: %v", req.GetVolumeId(), err)
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 

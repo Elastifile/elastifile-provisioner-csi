@@ -119,14 +119,20 @@ func newVolumeOptions(volumeName string, volOptions map[string]string) (opts *vo
 		return
 	}
 
+	opts.Name = volumeName
 	opts.NfsAddress = configMap[nfsAddress]
 
-	// Opportunistically fill out Dc and Export (useful when not creating a new volume
+	// Opportunistically fill out Dc and Export (these are required when not creating a new volume, e.g. during mount)
 	opts.DataContainer, opts.Export, err = ems.GetDcExportByName(volumeName)
 	if err != nil {
 		err = errors.WrapPrefix(err, fmt.Sprintf("No Data Container & Export found for volume %v", volumeName), 0)
 		glog.Infof(err.Error())
 	}
+
+	// TODO: volOptions is the user-specified parameters
+	// Update opts accordingly
+
+	// TODO: How does the user fill out volOptions (aka req.Parameters)???
 
 	//if err = extractOption(&opts.Monitors, "monitors", volOptions); err != nil {
 	//	return nil, err

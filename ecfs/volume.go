@@ -21,7 +21,6 @@ import (
 	"github.com/golang/glog"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
-	"os"
 	"path"
 	"strings"
 
@@ -58,53 +57,6 @@ func getVolumeNamespace(volId volumeID) string {
 func setVolumeAttribute(root, attrName, attrValue string) error {
 	return execCommandAndValidate("setfattr", "-n", attrName, "-v", attrValue, root)
 }
-
-//func createVolume(volOptions *volumeOptions, adminCr *credentials, volId volumeID, bytesQuota int64) error {
-//	cephRoot := getCephRootPath_local(volId)
-//
-//	if err := createMountPoint(cephRoot); err != nil {
-//		return err
-//	}
-//
-//	// RootPath is not set for a dynamically provisioned volume
-//	// Access to ecfs's / is required
-//	volOptions.RootPath = "/"
-//
-//	m, err := newMounter(volOptions)
-//	if err != nil {
-//		return fmt.Errorf("failed to create mounter: %v", err)
-//	}
-//
-//	if err = m.mount(cephRoot, adminCr, volOptions, volId); err != nil {
-//		return fmt.Errorf("error mounting ceph root: %v", err)
-//	}
-//
-//	defer func() {
-//		unmountVolume(cephRoot)
-//		os.Remove(cephRoot)
-//	}()
-//
-//	volOptions.RootPath = getVolumeRootPath_ceph(volId)
-//	localVolRoot := getCephRootVolumePath_local(volId)
-//
-//	if err := createMountPoint(localVolRoot); err != nil {
-//		return err
-//	}
-//
-//	if err := setVolumeAttribute(localVolRoot, "ceph.quota.max_bytes", fmt.Sprintf("%d", bytesQuota)); err != nil {
-//		return err
-//	}
-//
-//	if err := setVolumeAttribute(localVolRoot, "ceph.dir.layout.pool", volOptions.Pool); err != nil {
-//		return fmt.Errorf("%v\ncephfs: Does pool '%s' exist?", err, volOptions.Pool)
-//	}
-//
-//	if err := setVolumeAttribute(localVolRoot, "ceph.dir.layout.pool_namespace", getVolumeNamespace(volId)); err != nil {
-//		return err
-//	}
-//
-//	return nil
-//}
 
 func dcExists(emsClient *emanage.Client, opt *volumeOptions) (found bool, err error) {
 	dcList, err := emsClient.DataContainers.GetAll(&emanage.DcGetAllOpts{})
@@ -147,7 +99,6 @@ func alreadyCreatedError(err error) bool {
 }
 
 func createDc(emsClient *emanage.Client, opt *volumeOptions) (*emanage.DataContainer, error) {
-	// Create DataContainer for volume
 	dc, err := emsClient.DataContainers.Create(opt.Name, dcPolicy, &emanage.DcCreateOpts{
 		SoftQuota:      int(opt.Capacity), // TODO: Consider setting soft quota at 80% of hard quota
 		HardQuota:      int(opt.Capacity),
@@ -207,6 +158,7 @@ func createVolume(emsClient *emanage.Client, volOptions *volumeOptions) (err err
 		return status.Error(codes.AlreadyExists, err.Error())
 	}
 
+	// Create Data Container
 	dc, err := createDc(emsClient, volOptions)
 	glog.V(2).Infof("AAAAA createVolume - createDc() err: %v, result: %+v", err, volOptions.DataContainer) // TODO: DELME
 	if err != nil {
@@ -222,96 +174,83 @@ func createVolume(emsClient *emanage.Client, volOptions *volumeOptions) (err err
 	volOptions.DataContainer = dc
 	glog.V(2).Infof("AAAAA createVolume - DC created: %+v", volOptions.DataContainer) // TODO: DELME
 
-	//cephRoot := getCephRootPath_local(volumeID(volOptions.Name))
-	//
-	//if err := createMountPoint(cephRoot); err != nil {
-	//	return err
-	//}
-
+	// Create Export
 	export, err := createExport(emsClient, volOptions)
 	if err != nil {
 		return status.Error(codes.Internal, err.Error())
 	} else {
 		volOptions.Export = &export
 	}
-	glog.V(2).Infof("AAAAA createVolume - export created: %+v", volOptions.DataContainer) // TODO: DELME
-
-	// RootPath is not set for a dynamically provisioned volume
-	// Access to ecfs's / is required
-	//volOptions.RootPath = "/"
-	//
-	//m, err := newMounter(volOptions)
-	//if err != nil {
-	//	return fmt.Errorf("failed to create mounter: %v", err)
-	//}
-	//
-	//if err = m.mount(cephRoot, adminCr, volOptions, volId); err != nil {
-	//	return fmt.Errorf("error mounting ceph root: %v", err)
-	//}
-	//
-	//defer func() {
-	//	unmountVolume(cephRoot)
-	//	os.Remove(cephRoot)
-	//}()
-	//
-	//volOptions.RootPath = getVolumeRootPath_ceph(volId)
-	//localVolRoot := getCephRootVolumePath_local(volId)
-	//
-	//if err := createMountPoint(localVolRoot); err != nil {
-	//	return err
-	//}
-	//
-	//if err := setVolumeAttribute(localVolRoot, "ceph.quota.max_bytes", fmt.Sprintf("%d", bytesQuota)); err != nil {
-	//	return err
-	//}
-	//
-	//if err := setVolumeAttribute(localVolRoot, "ceph.dir.layout.pool", volOptions.Pool); err != nil {
-	//	return fmt.Errorf("%v\ncephfs: Does pool '%s' exist?", err, volOptions.Pool)
-	//}
-	//
-	//if err := setVolumeAttribute(localVolRoot, "ceph.dir.layout.pool_namespace", getVolumeNamespace(volOptions.Name)); err != nil {
-	//	return err
-	//}
+	glog.Infof("AAAAA createVolume - export created: %+v", volOptions.DataContainer) // TODO: DELME
 
 	return nil
 }
 
-func purgeVolume(volId volumeID, adminCr *credentials, volOptions *volumeOptions) error {
+func deleteExport(emsClient *emanage.Client, dc *emanage.DataContainer) (err error) {
+	exports, err := emsClient.Exports.GetAll(&emanage.GetAllOpts{})
+	if err != nil {
+		return errors.WrapPrefix(err, "Failed to get exports", 0)
+	}
+
+	var found bool
+	for _, export := range exports {
+		if export.DataContainerId == dc.Id && export.Name == dc.Name {
+			found = true
+			_, err := emsClient.Exports.Delete(&export)
+			if err != nil {
+				return err
+			}
+		}
+	}
+
+	if !found {
+		glog.Infof("ecfs: deleteVolume - Export for volume %v not found. Assuming already deleted", dc.Name)
+	}
+
+	return nil
+}
+
+func deleteDataContainer(emsClient *emanage.Client, dc *emanage.DataContainer) (err error) {
+	_, err = emsClient.DataContainers.Delete(dc)
+	if err != nil {
+		err = errors.WrapPrefix(err, fmt.Sprintf("Failed to delete Data Container %v", dc.Name), 0)
+	}
+	return
+}
+
+func deleteVolume(emsClient *emanage.Client, volId string) error {
 	var (
-		cephRoot        = getCephRootPath_local(volId)
-		volRoot         = getCephRootVolumePath_local(volId)
-		volRootDeleting = volRoot + "-deleting"
+		found bool
+		dc    emanage.DataContainer
 	)
 
-	if err := createMountPoint(cephRoot); err != nil {
+	dcs, err := emsClient.DataContainers.GetAll(&emanage.DcGetAllOpts{})
+	if err != nil {
+		return errors.WrapPrefix(err, "Failed to get Data Containers", 0)
+	}
+
+	// Find the DC to be deleted
+	for _, dc = range dcs {
+		if dc.Name == volId {
+			found = true
+			break
+		}
+	}
+	if !found {
+		glog.Infof("deleteVolume - Data Container for volume %v not found. Assuming already deleted", volId)
+		return nil
+	}
+
+	err = deleteExport(emsClient, &dc)
+	if err != nil {
 		return err
 	}
 
-	// Root path is not set for dynamically provisioned volumes
-	// Access to ecfs's / is required
-	volOptions.RootPath = "/"
-
-	m, err := newMounter(volOptions)
+	err = deleteDataContainer(emsClient, &dc)
 	if err != nil {
-		return fmt.Errorf("failed to create mounter: %v", err)
+		return err
 	}
 
-	if err = m.mount(cephRoot, adminCr, volOptions, volId); err != nil {
-		return fmt.Errorf("error mounting ceph root: %v", err)
-	}
-
-	defer func() {
-		unmountVolume(volRoot)
-		os.Remove(volRoot)
-	}()
-
-	if err := os.Rename(volRoot, volRootDeleting); err != nil {
-		return fmt.Errorf("coudln't mark volume %s for deletion: %v", volId, err)
-	}
-
-	if err := os.RemoveAll(volRootDeleting); err != nil {
-		return fmt.Errorf("failed to delete volume %s: %v", volId, err)
-	}
-
+	glog.Infof("ecfs: Deleted Data Container '%v'", dc.Name)
 	return nil
 }

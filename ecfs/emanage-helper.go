@@ -24,7 +24,7 @@ func newEmanageClient() (client *emanage.Client, err error) {
 
 	if emsConfig == nil {
 		glog.V(2).Infof("AAAAA GetClient - initializing new eManage client") // TODO: DELME
-		emsConfig, err = newConfig()
+		emsConfig, err = newPluginConfig()
 		if err != nil {
 			return
 			//panic(fmt.Sprintf("Failed to create new ECFS plugin config - %v", err))
@@ -105,6 +105,9 @@ func (ems *emanageClient) GetDcExportByName(dcExportName string) (*emanage.DataC
 }
 
 func GetProvisionerSettings() (configMap map[string]string, secret map[string]string, err error) {
+	// TODO: Implement fetching cluster configuration and credentials from configmap+secret - these are fake values
+	glog.Warning("Config map and secrets are not yet supported - using hard-coded values!!!")
+
 	configMap = make(map[string]string)
 	secret = make(map[string]string)
 

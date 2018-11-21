@@ -13,8 +13,7 @@ type config struct {
 	Password   string
 }
 
-func newConfig() (conf *config, err error) {
-	// TODO: Implement fetching cluster configuration and credentials from configmap+secret - these are fake values
+func newPluginConfig() (conf *config, err error) {
 	configMap, secret, err := GetProvisionerSettings()
 	if err != nil {
 		err = errors.Wrap(err, 0)
@@ -28,7 +27,7 @@ func newConfig() (conf *config, err error) {
 		Password:   secret[managementPassword],
 	}
 
-	// TODO: Consider masking the password
+	// TODO: Mask the password in the log
 	glog.Infof("Parsed config map and secrets %+v", conf)
 	return
 }

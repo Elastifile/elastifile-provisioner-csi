@@ -17,8 +17,6 @@ limitations under the License.
 package main
 
 import (
-	"os"
-
 	"github.com/golang/glog"
 
 	"github.com/container-storage-interface/spec/lib/go/csi/v0"
@@ -74,14 +72,14 @@ func (fs *ecfsDriver) Run(driverName, nodeId, endpoint, volumeMounter string) {
 
 	// Configuration
 
-	if err := os.MkdirAll(controllerCacheRoot, 0755); err != nil {
-		glog.Fatalf("ecfs: failed to create %s: %v", controllerCacheRoot, err)
-		return
-	}
-
-	if err := loadControllerCache(); err != nil {
-		glog.Errorf("ecfs: failed to read volume cache: %v", err)
-	}
+	//if err := os.MkdirAll(controllerCacheRoot, 0755); err != nil {
+	//	glog.Fatalf("ecfs: failed to create %s: %v", controllerCacheRoot, err)
+	//	return
+	//}
+	//
+	//if err := loadControllerCache(); err != nil {
+	//	glog.Errorf("ecfs: failed to read volume cache: %v", err)
+	//}
 
 	// TODO: Check NFS Address availability
 
@@ -113,10 +111,15 @@ func (fs *ecfsDriver) Run(driverName, nodeId, endpoint, volumeMounter string) {
 
 	fs.driver.AddControllerServiceCapabilities([]csi.ControllerServiceCapability_RPC_Type{
 		csi.ControllerServiceCapability_RPC_CREATE_DELETE_VOLUME,
+		//csi.ControllerServiceCapability_RPC_CREATE_DELETE_SNAPSHOT
+		//csi.ControllerServiceCapability_RPC_LIST_SNAPSHOTS
+		//csi.ControllerServiceCapability_RPC_GET_CAPACITY
+		//csi.ControllerServiceCapability_RPC_PUBLISH_UNPUBLISH_VOLUME
 	})
 
 	fs.driver.AddVolumeCapabilityAccessModes([]csi.VolumeCapability_AccessMode_Mode{
 		csi.VolumeCapability_AccessMode_MULTI_NODE_MULTI_WRITER,
+		// TODO: Check if we need to advertise other (more limited) access modes, e.g. MULTI_NODE_SINGLE_WRITER
 	})
 
 	// Create gRPC servers
