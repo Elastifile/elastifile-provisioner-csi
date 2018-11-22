@@ -1,8 +1,12 @@
+
+${MANIFEST}=$1
+: ${MANIFEST:="pod-with-io.yaml"}
+
 pushd ..
 time make all
 popd
 ./plugin-deploy.sh
-kubectl create -f pod-with-volume.yaml
-sleep 5
-kubectl get pod,pvc
+kubectl create -f ${MANIFEST}
+echo Examine the cluster state with the following command:
+echo kubectl get pod,pvc
 

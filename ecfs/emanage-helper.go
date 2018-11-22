@@ -103,18 +103,3 @@ func (ems *emanageClient) GetDcExportByName(dcExportName string) (*emanage.DataC
 	}
 	return nil, nil, errors.Errorf("Export not found by DataContainer&Export name", dcExportName)
 }
-
-func GetProvisionerSettings() (configMap map[string]string, secret map[string]string, err error) {
-	// TODO: Implement fetching cluster configuration and credentials from configmap+secret - these are fake values
-	glog.Warning("Config map and secrets are not yet supported - using hard-coded values!!!")
-
-	configMap = make(map[string]string)
-	secret = make(map[string]string)
-
-	configMap[managementAddress] = "https://35.241.144.0"
-	configMap[managementUserName] = "admin"
-	configMap[nfsAddress] = "172.28.0.5"
-	secret[managementPassword] = "changeme"
-
-	return
-}

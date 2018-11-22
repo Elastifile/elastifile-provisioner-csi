@@ -2,13 +2,19 @@
 #  name = "github.com/elastifile/emanage-go"
 #  branch = "v3"
 
+[[override]]
+  name = "github.com/davecgh/go-spew"
+
+[[override]]
+  name = "github.com/go-stack/stack"
+
 [[constraint]]
   name = "github.com/container-storage-interface/spec"
   version = "~0.3.0"
 
 [[constraint]]
-  branch = "master"
   name = "github.com/kubernetes-csi/drivers"
+  revision = "d8f283cd941f1e24e20e62653476a3722633f43e"
 
 [[constraint]]
   branch = "master"
@@ -20,18 +26,17 @@
 
 [[constraint]]
   name = "google.golang.org/grpc"
-  version = "1.10.0"
+  version = "v1.13.0"
 
 [[constraint]]
-  version = "kubernetes-1.10.0-beta.1"
   name = "k8s.io/apimachinery"
+  revision = "302974c03f7e50f16561ba237db776ab93594ef6"
 
 [[constraint]]
   name = "k8s.io/kubernetes"
-  version = "v1.10.0-beta.1"
+  version = "v1.11.1"
 
 [[override]]
-  version = "kubernetes-1.10.0-beta.1"
   name = "k8s.io/api"
 
 [[override]]
