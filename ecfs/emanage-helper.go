@@ -21,13 +21,12 @@ var emsConfig *config
 
 // Connect to eManage
 func newEmanageClient() (client *emanage.Client, err error) {
-
 	if emsConfig == nil {
 		glog.V(2).Infof("AAAAA GetClient - initializing new eManage client") // TODO: DELME
-		emsConfig, err = newPluginConfig()
+		emsConfig, err = pluginConfig()
 		if err != nil {
+			err = errors.WrapPrefix(err, "Failed to get plugin configuration", 0)
 			return
-			//panic(fmt.Sprintf("Failed to create new ECFS plugin config - %v", err))
 		}
 	}
 
@@ -57,12 +56,12 @@ func (ems *emanageClient) GetClient() *emanage.Client {
 	var err error
 
 	if ems.Client == nil {
-		glog.V(2).Infof("AAAAA CreateVolume - creating eManage client") // TODO: DELME
+		glog.Infof("AAAAA CreateVolume - creating eManage client") // TODO: DELME
 		ems.Client, err = newEmanageClient()
 		if err != nil {
 			panic(fmt.Sprintf("Failed to create eManage client. err: %v", err))
 		}
-		glog.V(2).Infof("AAAAA GetClient - initialized new eManage client - %+v", ems.Client) // TODO: DELME
+		glog.Infof("AAAAA GetClient - initialized new eManage client - %+v", ems.Client) // TODO: DELME
 	}
 
 	return ems.Client

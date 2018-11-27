@@ -33,13 +33,16 @@ type controllerServer struct {
 
 func (cs *controllerServer) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest) (*csi.CreateVolumeResponse, error) {
 	glog.Warningf("AAAAA CreateVolume - req: %+v", req) // TODO: DELME
+	// From the log:
+	// AAAAA CreateVolume - req: name:"pvc-2b1f2e59f27e11e8" capacity_range:<required_bytes:53687091200 > volume_capabilities:<mount:<> access_mode:<mode:SINGLE_NODE_WRITER > > parameters:<key:"csiProvisionerSecretName" value:"elastifile" > parameters:<key:"csiProvisionerSecretNamespace" value:"default" > parameters:<key:"username" value:"admin" > controller_create_secrets:<key:"password" value:"changeme\n" >
 	if err := cs.validateCreateVolumeRequest(req); err != nil {
 		glog.Errorf("CreateVolumeRequest validation failed: %v", err)
 		err = status.Error(codes.InvalidArgument, err.Error())
 		return nil, err
 	}
 
-	pluginConfig, err := newPluginConfig()
+	// req.Parameters[SecretNamespace]
+	pluginConfig, err := pluginConfig()
 	if err != nil {
 		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}

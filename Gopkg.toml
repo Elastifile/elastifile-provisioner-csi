@@ -2,6 +2,10 @@
 #  name = "github.com/elastifile/emanage-go"
 #  branch = "v3"
 
+[[constraint]]
+  name = "k8s.io/client-go"
+  version = "7.0.0"
+
 [[override]]
   name = "github.com/davecgh/go-spew"
 

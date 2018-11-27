@@ -1,9 +1,17 @@
-Support config map and secrets during deployment
-Support user-specified defaults
-Support volume-specific arguments
-Configure dep (currently, it's a mix of dep, vendor, go get)
-Refactor
-Replace eManage client
+P1
+v Support volume create
+v Support volume delete
+v Configure dep (currently, it's a mix of dep, vendor, go get)
+v Support config map during deployment
+v Support secrets during deployment
+- Refactor
 
-Add GKE marketplace deployer
+P2
+- Support volume-specific arguments, e.g. user mapping, size
+- Support user-specified default values, e.g. volume size
+- Replace eManage client
+- Support snapshots
 
+P3
+- Support namespaces
+- Add GKE marketplace deployer
