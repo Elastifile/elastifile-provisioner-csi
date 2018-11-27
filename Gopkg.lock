@@ -66,7 +66,6 @@
   version = "v1.1.0"
 
 [[projects]]
-  branch = "master"
   digest = "1:941f9605aec45f9e849500c1d315662401982efe492277d1a3bbf5488567321d"
   name = "github.com/kubernetes-csi/drivers"
   packages = ["pkg/csi-common"]
@@ -96,14 +95,6 @@
   pruneopts = ""
   revision = "e790cca94e6cc75c7064b1332e63811d4aae1a53"
   version = "v1.1"
-
-[[projects]]
-  digest = "1:7365acd48986e205ccb8652cc746f09c8b7876030d53710ea6ef7d0bd0dcd7ca"
-  name = "github.com/pkg/errors"
-  packages = ["."]
-  pruneopts = ""
-  revision = "645ef00459ed84a119197bfb8d8205042c6df63d"
-  version = "v0.8.0"
 
 [[projects]]
   branch = "master"
@@ -205,11 +196,7 @@
 [[projects]]
   digest = "1:9b07c796baf391a2dfa8c64bd5ddc28cbeb00723389f2f3da2e3d09b961f2e31"
   name = "k8s.io/apimachinery"
-  packages = [
-    "pkg/util/runtime",
-    "pkg/util/sets",
-    "pkg/util/wait",
-  ]
+  packages = ["pkg/util/sets"]
   pruneopts = ""
   revision = "302974c03f7e50f16561ba237db776ab93594ef6"
 
@@ -219,7 +206,6 @@
   packages = [
     "pkg/util/file",
     "pkg/util/io",
-    "pkg/util/keymutex",
     "pkg/util/mount",
     "pkg/util/nsenter",
   ]
@@ -247,16 +233,10 @@
     "github.com/golang/glog",
     "github.com/kubernetes-csi/drivers/pkg/csi-common",
     "github.com/pborman/uuid",
-    "github.com/pkg/errors",
     "golang.org/x/net/context",
     "google.golang.org/grpc/codes",
     "google.golang.org/grpc/status",
-    "k8s.io/apimachinery/pkg/util/sets",
-    "k8s.io/apimachinery/pkg/util/wait",
-    "k8s.io/kubernetes/pkg/util/keymutex",
     "k8s.io/kubernetes/pkg/util/mount",
-    "k8s.io/kubernetes/pkg/util/nsenter",
-    "k8s.io/utils/exec",
   ]
   solver-name = "gps-cdcl"
   solver-version = 1
