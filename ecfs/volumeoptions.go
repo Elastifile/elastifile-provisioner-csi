@@ -89,22 +89,11 @@ func (o *volumeOptions) validate() error {
 
 func extractOption(dest *string, optionLabel string, options map[string]string) error {
 	if opt, ok := options[optionLabel]; !ok {
-		return errors.New("[IN SRC] Missing required field " + optionLabel)
+		return errors.New("Missing mandatory option " + optionLabel)
 	} else {
 		*dest = opt
 		return nil
 	}
-}
-
-func validateMounter(m string) error {
-	switch m {
-	case volumeMounter_fuse:
-	case volumeMounter_kernel:
-	default:
-		return fmt.Errorf("Unknown mounter '%s'. Valid options are 'fuse' and 'kernel'", m)
-	}
-
-	return nil
 }
 
 func newVolumeOptions(volumeName string, volOptions map[string]string) (opts *volumeOptions, err error) {

@@ -31,7 +31,7 @@ type nodeServer struct {
 	*csicommon.DefaultNodeServer
 }
 
-func (ns *nodeServer) nodePublishVolume1(ctx context.Context, req *csi.NodePublishVolumeRequest) (*csi.NodePublishVolumeResponse, error) {
+func (ns *nodeServer) nodePublishVolume(ctx context.Context, req *csi.NodePublishVolumeRequest) (*csi.NodePublishVolumeResponse, error) {
 	glog.V(2).Infof("AAAAA NodePublishVolume - enter. ctx: %+v req: %+v", ctx, req) // TODO: DELME
 	if err := validateNodePublishVolumeRequest(req); err != nil {
 		return nil, status.Error(codes.InvalidArgument, err.Error())
@@ -75,7 +75,7 @@ func (ns *nodeServer) nodePublishVolume1(ctx context.Context, req *csi.NodePubli
 
 func (ns *nodeServer) NodePublishVolume(ctx context.Context, req *csi.NodePublishVolumeRequest) (*csi.NodePublishVolumeResponse, error) {
 	glog.V(2).Infof("AAAAA NodePublishVolume - enter. ctx: %+v req: %+v", ctx, req) // TODO: DELME
-	return ns.nodePublishVolume1(ctx, req)
+	return ns.nodePublishVolume(ctx, req)
 }
 
 func (ns *nodeServer) nodeStageVolume1(ctx context.Context, req *csi.NodeStageVolumeRequest) (*csi.NodeStageVolumeResponse, error) {

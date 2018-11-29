@@ -17,9 +17,8 @@ limitations under the License.
 package main
 
 import (
-	"bytes"
-	"encoding/json"
 	"fmt"
+	"k8s.io/kubernetes/pkg/util/mount"
 	"os/exec"
 
 	"github.com/golang/glog"
@@ -27,15 +26,9 @@ import (
 	"google.golang.org/grpc/status"
 
 	"github.com/container-storage-interface/spec/lib/go/csi/v0"
-	"github.com/pborman/uuid"
-	"k8s.io/kubernetes/pkg/util/mount"
 )
 
 type volumeID string
-
-func newVolumeId() string {
-	return "v-" + uuid.NewUUID().String()
-}
 
 func execCommand(command string, args ...string) ([]byte, error) {
 	glog.Infof("ECFS: exec %s %s", command, args)
@@ -53,17 +46,6 @@ func execCommandAndValidate(program string, args ...string) error {
 	return nil
 }
 
-func execCommandJson(v interface{}, program string, args ...string) error {
-	out, err := execCommand(program, args...)
-
-	if err != nil {
-		return fmt.Errorf("ecfs: %s failed with following error: %s\necfs: %s output: %s", program, err, program, out)
-	}
-
-	return json.NewDecoder(bytes.NewReader(out)).Decode(v)
-}
-
-// Used in isMountPoint()
 var dummyMount = mount.New("")
 
 func isMountPoint(path string) (bool, error) {
@@ -73,30 +55,6 @@ func isMountPoint(path string) (bool, error) {
 	}
 
 	return !notMnt, nil
-}
-
-func storeCephCredentials(volId volumeID, cr *credentials) error {
-	keyringData := cephKeyringData{
-		UserId:   cr.id,
-		Key:      cr.key,
-		VolumeID: volId,
-	}
-
-	if err := keyringData.writeToFile(); err != nil {
-		return err
-	}
-
-	secret := cephSecretData{
-		UserId:   cr.id,
-		Key:      cr.key,
-		VolumeID: volId,
-	}
-
-	if err := secret.writeToFile(); err != nil {
-		return err
-	}
-
-	return nil
 }
 
 //
