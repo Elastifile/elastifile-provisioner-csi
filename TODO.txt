@@ -4,14 +4,20 @@ v Support volume delete
 v Configure dep (currently, it's a mix of dep, vendor, go get)
 v Support config map during deployment
 v Support secrets during deployment
-- Refactor
+v Support user-specified default values, e.g. user mapping
+- Support volume-specific arguments, e.g. user mapping
 
 P2
-- Support volume-specific arguments, e.g. user mapping, size
-- Support user-specified default values, e.g. volume size
+- Go over the CSI guide again
+- Address in-code TODOs
+v Remove ceph-specific code
+v Refactor the file structure
+- Cleanup
+- Code review
 - Replace eManage client
 - Support snapshots
 
 P3
 - Support namespaces
+- Support volume update (resize)
 - Add GKE marketplace deployer

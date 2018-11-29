@@ -18,8 +18,9 @@ package main
 
 import (
 	"fmt"
-
+	"github.com/elastifile/emanage-go/pkg/size"
 	"github.com/golang/glog"
+	"strconv"
 
 	"github.com/elastifile/emanage-go/pkg/emanage"
 	"github.com/elastifile/emanage-go/pkg/optional"
@@ -27,74 +28,55 @@ import (
 )
 
 type volumeOptions struct {
-	Name           string
-	NfsAddress     string
-	Export         *emanage.Export
-	DataContainer  *emanage.DataContainer
+	Name          string
+	NfsAddress    string
+	Export        *emanage.Export
+	DataContainer *emanage.DataContainer
+
+	Capacity       int64
 	UserMapping    emanage.UserMappingType
 	UserMappingUid int
 	UserMappingGid int
 	ExportUid      optional.Int
 	ExportGid      optional.Int
-	Capacity       int64
 	Permissions    int
-
-	// TODO: Remove ceph-specific options
-	//Monitors string `json:"monitors"`
-	Pool            string `json:"pool"`
-	RootPath        string `json:"rootPath"`
-	Mounter         string `json:"mounter"`
-	ProvisionVolume bool   `json:"provisionVolume"`
+	Access         string
 }
 
-func validateNonEmptyField(field, fieldName string) error {
-	if field == "" {
-		return fmt.Errorf("parameter '%s' cannot be empty", fieldName)
-	}
+// TODO: Defaults should be passed via storageclass YAML (parameters:)
+// TODO: Volume-specific parameters should be passed via pvc yaml ???
 
-	return nil
-}
-
-func (o *volumeOptions) validate() error {
-	// TODO: Validate Elastifile options
-
-	//if err := validateNonEmptyField(o.Monitors, "monitors"); err != nil {
-	//	return err
-	//}
-	//
-	//if err := validateNonEmptyField(o.RootPath, "rootPath"); err != nil {
-	//	if !o.ProvisionVolume {
-	//		return err
-	//	}
-	//} else {
-	//	if o.ProvisionVolume {
-	//		return fmt.Errorf("Non-empty field rootPath is in conflict with provisionVolume=true")
-	//	}
-	//}
-	//
-	//if o.ProvisionVolume {
-	//	if err := validateNonEmptyField(o.Pool, "pool"); err != nil {
-	//		return err
-	//	}
-	//}
-	//
-	//if o.Mounter != "" {
-	//	if err := validateMounter(o.Mounter); err != nil {
-	//		return err
-	//	}
-	//}
-
-	return nil
-}
-
-func extractOption(dest *string, optionLabel string, options map[string]string) error {
-	if opt, ok := options[optionLabel]; !ok {
-		return errors.New("Missing mandatory option " + optionLabel)
+func extractOptionString(paramName StorageClassCustomParameter, options map[string]string) (value string, err error) {
+	if opt, ok := options[string(paramName)]; !ok {
+		err = errors.New("Missing volume parameter: " + paramName)
 	} else {
-		*dest = opt
-		return nil
+		value = opt
 	}
+	return
 }
+
+//func extractOptionInt64(dest *int64, optionLabel string, options map[string]string) (err error) {
+//	if opt, ok := options[optionLabel]; !ok {
+//		err = errors.New("Missing mandatory option " + optionLabel)
+//	} else {
+//		*dest, err = strconv.ParseInt(opt, 0, 64)
+//	}
+//	return
+//}
+
+// Strings used in storageclass configuration file
+type StorageClassCustomParameter string
+
+const (
+	UserMapping       StorageClassCustomParameter = "userMapping"
+	UserMappingUid    StorageClassCustomParameter = "userMappingUid"
+	UserMappingGid    StorageClassCustomParameter = "userMappingGid"
+	ExportUid         StorageClassCustomParameter = "exportUid"
+	ExportGid         StorageClassCustomParameter = "exportGid"
+	Permissions       StorageClassCustomParameter = "permissions"
+	DefaultVolumeSize StorageClassCustomParameter = "defaultVolumeSize"
+	Access            StorageClassCustomParameter = "access"
+)
 
 func newVolumeOptions(volumeName string, volOptions map[string]string) (opts *volumeOptions, err error) {
 	var ems emanageClient
@@ -118,42 +100,82 @@ func newVolumeOptions(volumeName string, volOptions map[string]string) (opts *vo
 		glog.Infof(err.Error())
 	}
 
-	// TODO: volOptions is the user-specified parameters
-	// Update opts accordingly
+	var (
+		paramStr  string
+		paramInt  int
+		paramSize size.Size
+	)
 
-	// TODO: How does the user fill out volOptions (aka req.Parameters)???
+	// UserMapping
+	if paramStr, err = extractOptionString(UserMapping, volOptions); err != nil {
+		return
+	}
+	opts.UserMapping = emanage.UserMappingType(paramStr)
 
-	//if err = extractOption(&opts.Monitors, "monitors", volOptions); err != nil {
-	//	return nil, err
-	//}
-	//
-	//if err = extractOption(&provisionVolumeBool, "provisionVolume", volOptions); err != nil {
-	//	return nil, err
-	//}
-	//
-	//if opts.ProvisionVolume, err = strconv.ParseBool(provisionVolumeBool); err != nil {
-	//	return nil, fmt.Errorf("Failed to parse provisionVolume: %v", err)
-	//}
-	//
-	//if opts.ProvisionVolume {
-	//	if err = extractOption(&opts.Pool, "pool", volOptions); err != nil {
-	//		return nil, err
-	//	}
-	//} else {
-	//	if err = extractOption(&opts.RootPath, "rootPath", volOptions); err != nil {
-	//		return nil, err
-	//	}
-	//}
-	//
-	//// This field is optional, don't check for its presence
-	//extractOption(&opts.Mounter, "mounter", volOptions)
-
-	glog.V(2).Infof("AAAAA newVolumeOptions - validating opts: %+v", opts) // TODO: DELME
-	if err = opts.validate(); err != nil {
-		err = errors.WrapPrefix(err, "Failed to validate new volume options", 0)
+	// UserMappingUid
+	if paramStr, err = extractOptionString(UserMappingUid, volOptions); err != nil {
+		return
+	}
+	if opts.UserMappingUid, err = strconv.Atoi(paramStr); err != nil {
 		return
 	}
 
-	glog.V(2).Infof("AAAAA newVolumeOptions - returning: %+v", opts) // TODO: DELME
+	// UserMappingGid
+	if paramStr, err = extractOptionString(UserMappingGid, volOptions); err != nil {
+		return
+	}
+	if opts.UserMappingGid, err = strconv.Atoi(paramStr); err != nil {
+		return
+	}
+
+	// ExportUid
+	if paramStr, err = extractOptionString(ExportUid, volOptions); err != nil {
+		return
+	}
+	if paramInt, err = strconv.Atoi(paramStr); err != nil {
+		return
+	}
+	opts.ExportUid = optional.NewInt(paramInt)
+
+	// ExportGid
+	if paramStr, err = extractOptionString(ExportGid, volOptions); err != nil {
+		return
+	}
+	if paramInt, err = strconv.Atoi(paramStr); err != nil {
+		return
+	}
+	opts.ExportGid = optional.NewInt(paramInt)
+
+	// Permissions
+	if paramStr, err = extractOptionString(Permissions, volOptions); err != nil {
+		return
+	}
+	if opts.Permissions, err = strconv.Atoi(paramStr); err != nil {
+		return
+	}
+
+	// DefaultVolumeSize
+	if paramStr, err = extractOptionString(DefaultVolumeSize, volOptions); err != nil {
+		return
+	}
+	if paramSize, err = size.Parse(paramStr); err != nil {
+		return
+	}
+	if paramSize > 0 {
+		opts.Capacity = int64(paramSize)
+	} else {
+		opts.Capacity = int64(1 * size.TiB)
+	}
+
+	// Access
+	if paramStr, err = extractOptionString(Access, volOptions); err != nil {
+		return
+	}
+	if paramStr == "" { // Default value
+		paramStr = string(emanage.ExportAccessRW)
+	}
+	opts.Access = paramStr
+
+	glog.Infof("AAAAA newVolumeOptions - returning: %+v", opts) // TODO: DELME
 	return
 }

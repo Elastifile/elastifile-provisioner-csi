@@ -18,6 +18,7 @@ package main
 
 import (
 	"fmt"
+	"github.com/elastifile/emanage-go/pkg/optional"
 	"github.com/golang/glog"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -30,6 +31,7 @@ import (
 )
 
 const (
+	// TODO: Remove these consts
 	cephRootPrefix  = PluginFolder + "/controller/volumes/root-"
 	cephVolumesRoot = "csi-volumes"
 
@@ -122,9 +124,10 @@ func createExport(emsClient *emanage.Client, volOptions *volumeOptions) (export 
 	var exportOpt = &emanage.ExportCreateOpts{
 		DcId:        int(volOptions.DataContainer.Id),
 		Path:        "/",
-		UserMapping: emanage.UserMappingNone,
-		Uid:         volOptions.ExportUid,
-		Gid:         volOptions.ExportGid,
+		UserMapping: volOptions.UserMapping,
+		Uid:         optional.NewInt(volOptions.UserMappingUid),
+		Gid:         optional.NewInt(volOptions.UserMappingGid),
+		Access:      emanage.ExportAccessModeType(volOptions.Access),
 	}
 
 	export, err = emsClient.Exports.Create(volOptions.Name, exportOpt)

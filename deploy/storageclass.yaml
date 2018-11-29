@@ -3,8 +3,24 @@ kind: StorageClass
 metadata:
    name: elastifile
 provisioner: csi-ecfsplugin
+reclaimPolicy: Delete 
 parameters:
+  # Note - only string values are accepted in parameters
+  
+  # Supported values: no_mapping, remap_root, remap_all
+  userMapping: remap_root
+  userMappingUid: "1010"
+  userMappingGid: "1020"
+  exportUid: "1030"
+  exportGid: "1040"
+  permissions: "777"
+  defaultVolumeSize: 100GiB
+  # Supported values: read_write, read_only, list_only, no_access
+  access: read_write
+        
+
+  # The secrets have to contain user and/or Ceph admin credentials.
   csiProvisionerSecretName: elastifile
   csiProvisionerSecretNamespace: default
-  username: admin
-reclaimPolicy: Delete 
+  csiProvisionerConfigMapName: elastifile
+

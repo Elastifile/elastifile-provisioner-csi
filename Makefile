@@ -12,9 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-.PHONY: all plugin
+.PHONY: all plugin binary push clean
 
-#REGISTRY=hub.docker.com
+#REGISTRY ?= hub.docker.com
 #IMAGE_NAME = $(REGISTRY)/elastifileio/ecfs-provisioner-csi
 IMAGE_NAME = elastifileio/ecfs-provisioner-csi
 PLUGIN_TAG ?= next
@@ -47,4 +47,3 @@ clean:
 	go clean -r -x
 	rm -f $(DOCKER_DIR)/$(PLUGIN_BINARY)
 	rm -f $(TEMP_DIR)/$(PLUGIN_BINARY)
-

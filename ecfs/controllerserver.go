@@ -23,8 +23,6 @@ import (
 	"golang.org/x/net/context"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
-
-	"github.com/elastifile/emanage-go/pkg/size"
 )
 
 type controllerServer struct {
@@ -57,10 +55,9 @@ func (cs *controllerServer) CreateVolume(ctx context.Context, req *csi.CreateVol
 	}
 	glog.Warningf("AAAAA CreateVolume - volOptions: %+v", volOptions) // TODO: DELME
 
-	volOptions.Capacity = req.GetCapacityRange().GetRequiredBytes()
-	if volOptions.Capacity == 0 {
-		// TODO: Make the default configurable
-		volOptions.Capacity = int64(100 * size.GiB)
+	capacity := req.GetCapacityRange().GetRequiredBytes()
+	if capacity > 0 {
+		volOptions.Capacity = capacity
 	}
 	volOptions.NfsAddress = pluginConfig.NFSServer
 

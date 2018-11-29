@@ -78,7 +78,7 @@ func (ns *nodeServer) NodePublishVolume(ctx context.Context, req *csi.NodePublis
 	return ns.nodePublishVolume(ctx, req)
 }
 
-func (ns *nodeServer) nodeStageVolume1(ctx context.Context, req *csi.NodeStageVolumeRequest) (*csi.NodeStageVolumeResponse, error) {
+func (ns *nodeServer) nodeStageVolume(ctx context.Context, req *csi.NodeStageVolumeRequest) (*csi.NodeStageVolumeResponse, error) {
 	if err := validateNodeStageVolumeRequest(req); err != nil {
 		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
@@ -123,7 +123,7 @@ func (ns *nodeServer) nodeStageVolume1(ctx context.Context, req *csi.NodeStageVo
 }
 
 func (ns *nodeServer) NodeStageVolume(ctx context.Context, req *csi.NodeStageVolumeRequest) (*csi.NodeStageVolumeResponse, error) {
-	return ns.nodeStageVolume1(ctx, req)
+	return ns.nodeStageVolume(ctx, req)
 }
 
 func (ns *nodeServer) nodeUnpublishVolume1(ctx context.Context, req *csi.NodeUnpublishVolumeRequest) (*csi.NodeUnpublishVolumeResponse, error) {

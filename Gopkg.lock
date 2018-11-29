@@ -464,7 +464,6 @@
     "github.com/elastifile/errors",
     "github.com/golang/glog",
     "github.com/kubernetes-csi/drivers/pkg/csi-common",
-    "github.com/pborman/uuid",
     "golang.org/x/net/context",
     "google.golang.org/grpc/codes",
     "google.golang.org/grpc/status",
