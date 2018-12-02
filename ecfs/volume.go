@@ -22,7 +22,6 @@ import (
 	"github.com/golang/glog"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
-	"path"
 	"strings"
 
 	"github.com/elastifile/emanage-go/pkg/emanage"
@@ -30,35 +29,7 @@ import (
 	//"github.com/elastifile/emanage-go/vendor/github.com/elastifile/errors"
 )
 
-const (
-	// TODO: Remove these consts
-	cephRootPrefix  = PluginFolder + "/controller/volumes/root-"
-	cephVolumesRoot = "csi-volumes"
-
-	namespacePrefix = "ns-"
-
-	dcPolicy = 1 // TODO: Consider making the policy (e.g. compress/dedup) configurable
-)
-
-func getCephRootPath_local(volId volumeID) string {
-	return cephRootPrefix + string(volId)
-}
-
-func getCephRootVolumePath_local(volId volumeID) string {
-	return path.Join(getCephRootPath_local(volId), cephVolumesRoot, string(volId))
-}
-
-func getVolumeRootPath_ceph(volId volumeID) string {
-	return path.Join("/", cephVolumesRoot, string(volId))
-}
-
-func getVolumeNamespace(volId volumeID) string {
-	return namespacePrefix + string(volId)
-}
-
-func setVolumeAttribute(root, attrName, attrValue string) error {
-	return execCommandAndValidate("setfattr", "-n", attrName, "-v", attrValue, root)
-}
+const dcPolicy = 1 // TODO: Consider making the policy (e.g. compress/dedup) configurable
 
 func dcExists(emsClient *emanage.Client, opt *volumeOptions) (found bool, err error) {
 	dcList, err := emsClient.DataContainers.GetAll(&emanage.DcGetAllOpts{})
@@ -104,7 +75,7 @@ func createDc(emsClient *emanage.Client, opt *volumeOptions) (*emanage.DataConta
 	dc, err := emsClient.DataContainers.Create(opt.Name, dcPolicy, &emanage.DcCreateOpts{
 		SoftQuota:      int(opt.Capacity), // TODO: Consider setting soft quota at 80% of hard quota
 		HardQuota:      int(opt.Capacity),
-		DirPermissions: opt.Permissions,
+		DirPermissions: opt.ExportPermissions,
 	})
 
 	return &dc, err

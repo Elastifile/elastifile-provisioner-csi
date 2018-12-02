@@ -111,10 +111,10 @@ func (fs *ecfsDriver) Run(driverName, nodeId, endpoint, volumeMounter string) {
 
 	fs.driver.AddControllerServiceCapabilities([]csi.ControllerServiceCapability_RPC_Type{
 		csi.ControllerServiceCapability_RPC_CREATE_DELETE_VOLUME,
-		//csi.ControllerServiceCapability_RPC_CREATE_DELETE_SNAPSHOT
-		//csi.ControllerServiceCapability_RPC_LIST_SNAPSHOTS
-		//csi.ControllerServiceCapability_RPC_GET_CAPACITY
-		//csi.ControllerServiceCapability_RPC_PUBLISH_UNPUBLISH_VOLUME
+		csi.ControllerServiceCapability_RPC_CREATE_DELETE_SNAPSHOT,
+		csi.ControllerServiceCapability_RPC_LIST_SNAPSHOTS,
+		//csi.ControllerServiceCapability_RPC_GET_CAPACITY,
+		//csi.ControllerServiceCapability_RPC_PUBLISH_UNPUBLISH_VOLUME,
 	})
 
 	fs.driver.AddVolumeCapabilityAccessModes([]csi.VolumeCapability_AccessMode_Mode{

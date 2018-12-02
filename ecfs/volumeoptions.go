@@ -18,12 +18,12 @@ package main
 
 import (
 	"fmt"
+	"github.com/elastifile/emanage-go/pkg/optional"
 	"github.com/elastifile/emanage-go/pkg/size"
 	"github.com/golang/glog"
 	"strconv"
 
 	"github.com/elastifile/emanage-go/pkg/emanage"
-	"github.com/elastifile/emanage-go/pkg/optional"
 	"github.com/elastifile/errors"
 )
 
@@ -33,14 +33,14 @@ type volumeOptions struct {
 	Export        *emanage.Export
 	DataContainer *emanage.DataContainer
 
-	Capacity       int64
-	UserMapping    emanage.UserMappingType
-	UserMappingUid int
-	UserMappingGid int
-	ExportUid      optional.Int
-	ExportGid      optional.Int
-	Permissions    int
-	Access         string
+	Capacity          int64
+	UserMapping       emanage.UserMappingType
+	UserMappingUid    int
+	UserMappingGid    int
+	ExportPermissions int
+	ExportUid         optional.Int
+	ExportGid         optional.Int
+	Access            string
 }
 
 // TODO: Defaults should be passed via storageclass YAML (parameters:)
@@ -146,11 +146,11 @@ func newVolumeOptions(volumeName string, volOptions map[string]string) (opts *vo
 	}
 	opts.ExportGid = optional.NewInt(paramInt)
 
-	// Permissions
+	// ExportPermissions
 	if paramStr, err = extractOptionString(Permissions, volOptions); err != nil {
 		return
 	}
-	if opts.Permissions, err = strconv.Atoi(paramStr); err != nil {
+	if opts.ExportPermissions, err = strconv.Atoi(paramStr); err != nil {
 		return
 	}
 

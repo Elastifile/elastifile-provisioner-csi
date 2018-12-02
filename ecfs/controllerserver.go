@@ -56,18 +56,23 @@ func (cs *controllerServer) CreateVolume(ctx context.Context, req *csi.CreateVol
 	glog.Warningf("AAAAA CreateVolume - volOptions: %+v", volOptions) // TODO: DELME
 
 	capacity := req.GetCapacityRange().GetRequiredBytes()
+
+	glog.Warningf("CCCCC CreateVolume - LimitBytes: %+v", req.GetCapacityRange().GetLimitBytes())       // TODO: DELME
+	glog.Warningf("CCCCC CreateVolume - RequiredBytes: %+v", req.GetCapacityRange().GetRequiredBytes()) // TODO: DELME
+	req.GetControllerCreateSecrets()
+
 	if capacity > 0 {
 		volOptions.Capacity = capacity
 	}
 	volOptions.NfsAddress = pluginConfig.NFSServer
 
-	glog.V(2).Infof("AAAAA CreateVolume - calling createVolume()") // TODO: DELME
+	glog.Infof("AAAAA CreateVolume - calling createVolume()") // TODO: DELME
 	err = createVolume(ems.GetClient(), volOptions)
 	if err != nil {
 		glog.Errorf("failed to create volume %s: %v", req.GetName(), err)
 		return nil, status.Error(codes.Internal, err.Error())
 	}
-	glog.V(2).Info("AAAAA CreateVolume - after createVolume()") // TODO: DELME
+	glog.Info("AAAAA CreateVolume - after createVolume()") // TODO: DELME
 
 	glog.Infof("ecfs: successfully created volume %s", volOptions.Name)
 
@@ -149,3 +154,18 @@ func (cs *controllerServer) ValidateVolumeCapabilities(ctx context.Context, req 
 //	}
 //	return &csi.ValidateVolumeCapabilitiesResponse{Supported: true}, nil
 //}
+
+func (cs *controllerServer) CreateSnapshot(ctx context.Context, req *csi.CreateSnapshotRequest) (*csi.CreateSnapshotResponse, error) {
+	glog.Infof("AAAAA CreateSnapshot - enter. req: %+v", req) // TODO: DELME
+	return nil, status.Error(codes.Unimplemented, "")
+}
+
+func (cs *controllerServer) DeleteSnapshot(ctx context.Context, req *csi.DeleteSnapshotRequest) (*csi.DeleteSnapshotResponse, error) {
+	glog.Infof("AAAAA DeleteSnapshot - enter. req: %+v", req) // TODO: DELME
+	return nil, status.Error(codes.Unimplemented, "")
+}
+
+func (cs *controllerServer) ListSnapshots(ctx context.Context, req *csi.ListSnapshotsRequest) (*csi.ListSnapshotsResponse, error) {
+	glog.Infof("AAAAA ListSnapshots - enter. req: %+v", req) // TODO: DELME
+	return nil, status.Error(codes.Unimplemented, "")
+}
