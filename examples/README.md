@@ -1,17 +1,27 @@
-## How to test RBD and CephFS plugins with Kubernetes 1.11
+# Deploy/teardown Elastifile ECFS provisioner on Kubernetes 1.11 
 
-Both `rbd` and `cephfs` directories contain `plugin-deploy.sh` and `plugin-teardown.sh` helper scripts. You can use those to help you deploy/tear down RBACs, sidecar containers and the plugin in one go. By default, they look for the YAML manifests in `../../deploy/{rbd,cephfs}/kubernetes`. You can override this path by running `$ ./plugin-deploy.sh /path/to/my/manifests`.
+There are several helper scripts, that can be used to deploy/teardown the configuration and make your life a bit easier in general
 
-Once the plugin is successfuly deployed, you'll need to customize `storageclass.yaml` and `secret.yaml` manifests to reflect your Ceph cluster setup. Please consult the documentation for info about available parameters.
+## Deploy/create
+* `deploy-plugin.sh` - deploys the provisioner plugin
+* `create-pod.sh` - creates a pod, takes pod manifest as an optional argument 
+Demonstrates how to create a pod using a volume created by ECFS provisioner
+* `deploy-plugin-create-pod.sh` - deploys the plugin, then calls `create-pod.sh`
+IMPORTANT: Make sure the secrets and the configmap manifests are updated before running this script
+Demonstrates full functionality using a single command
+* `make-deploy-plugin-create-pod.sh` - builds the plugin, then calls `deploy-plugin-create-pod.sh`.
+Only useful when developing the plugin
 
-After configuring the secrets, monitors, etc. you can deploy a testing Pod mounting a RBD image / CephFS volume:
-```bash
-$ kubectl create -f secret.yaml
-$ kubectl create -f storageclass.yaml
-$ kubectl create -f pvc.yaml
-$ kubectl create -f pod.yaml
-```
+## Teardown
 
-Other helper scripts:
-* `logs.sh` output of the plugin
+* `teardown-plugin.sh` - removes the provisioner plugin
+* `teardown-pod-plugin.sh` - deletes the pod, then calls `teardown-plugin.sh`
+
+## Troubleshoot
+
+* `logs.sh` tails the output of the plugin container
+* `logs-all.sh` shows the output of all the plugin containers, recommended to be used in combination with grep
 * `exec-bash.sh` logs into the plugin's container and runs bash
+
+## Miscellaneous
+* `switch_gke_cluster.sh` - Changes the default K8s cluster/zone, gives the current user admin privileges on the cluster 

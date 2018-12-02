@@ -1,3 +1,3 @@
 kubectl delete -f pod-with-volume.yaml
-./plugin-teardown.sh
+./teardown-plugin.sh
 

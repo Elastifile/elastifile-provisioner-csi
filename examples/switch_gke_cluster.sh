@@ -4,19 +4,11 @@
 : ${CLUSTER:=cluster-1}
 : ${ZONE:=europe-west1-b}
 
-
-if [ "$1" == "poc" ]; then
-    PROJECT=launcher-poc-207208
-    CLUSTER=cluster-tmp
-    ZONE=us-central1-a
-fi
-
 set -x
 
 # Set project and zone
 gcloud config set project ${PROJECT}
 gcloud config set compute/zone ${ZONE}
-
 
 # Set cluster
 gcloud container clusters get-credentials "$CLUSTER" --zone "$ZONE"
