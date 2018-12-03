@@ -50,6 +50,7 @@ apiVersion: apps/v1beta1
 metadata:
   name: csi-snapshotter
 spec:
+  # TODO: Rename csi-snapshotter to csi-ecfsplugin-snapshotter
   serviceName: "csi-snapshotter"
   replicas: 1
   selector:
@@ -67,6 +68,7 @@ spec:
           args:
             - "--csi-address=$(ADDRESS)"
             - "--connection-timeout=15s"
+            - "--v=5"
           env:
             - name: ADDRESS
               value: unix:///var/lib/kubelet/plugins/csi-ecfsplugin/csi.sock
@@ -79,5 +81,5 @@ spec:
           hostPath:
             path: /var/lib/kubelet/plugins/csi-ecfsplugin
             type: DirectoryOrCreate
-
+# TODO: Remove emptyDir
 emptyDir:

@@ -11,16 +11,18 @@ spec:
       labels:
         app: csi-ecfsplugin
     spec:
-      serviceAccount: csi-nodeplugin
+      serviceAccount: csi-driver-registrar
       hostNetwork: true
       # to use e.g. Rook orchestrated cluster, and mons' FQDN is
       # resolved through k8s service, set dns policy to cluster first
       dnsPolicy: ClusterFirstWithHostNet      
       containers:
         - name: driver-registrar
-          image: quay.io/k8scsi/driver-registrar:v0.3.0
+          image: quay.io/k8scsi/driver-registrar:v1.0.0
+#          image: gcr.io/gke-release/csi-driver-registrar:v1.0.1-gke.0
           args:
-            - "--v=5"
+#            - "--v=5"
+            - "--v=10"
             - "--csi-address=$(ADDRESS)"
             - "--kubelet-registration-path=$(DRIVER_REG_SOCK_PATH)"
           env:
@@ -48,7 +50,8 @@ spec:
           args:
             - "--nodeid=$(NODE_ID)"
             - "--endpoint=$(CSI_ENDPOINT)"
-            - "--v=5"
+#            - "--v=5"
+            - "--v=10"
             - "--drivername=csi-ecfsplugin"
           env:
             - name: NODE_ID
@@ -56,7 +59,7 @@ spec:
                 fieldRef:
                   fieldPath: spec.nodeName
             - name: CSI_ENDPOINT
-              value: unix://var/lib/kubelet/plugins/csi-ecfsplugin/csi.sock
+              value: unix:///var/lib/kubelet/plugins/csi-ecfsplugin/csi.sock
           volumeMounts:
             - name: plugin-dir
               mountPath: /var/lib/kubelet/plugins/csi-ecfsplugin

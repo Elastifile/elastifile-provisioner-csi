@@ -1,3 +1,13 @@
+# Together with the RBAC file for external-provisioner, this YAML file
+# contains all RBAC objects that are necessary to run external CSI
+# snapshotter.
+#
+# In production, each CSI driver deployment has to be customized:
+# - to avoid conflicts, use non-default namespace and different names
+#   for non-namespaced entities like the ClusterRole
+# - optionally rename the non-namespaced ClusterRole if there
+#   are conflicts with other deployments
+
 apiVersion: v1
 kind: ServiceAccount
 metadata:
@@ -53,4 +63,3 @@ roleRef:
   # change the name also here if the ClusterRole gets renamed
   name: external-snapshotter-runner
   apiGroup: rbac.authorization.k8s.io
-

@@ -1,5 +1,7 @@
 # CSI ECFS plugin
 
+// TODO: Remove Ceph, add actual deploy actions and supported arguments
+
 The CSI ECFS plugin is able to both provision new ECFS volumes and attach and mount existing ones to workloads.
 
 ## Building
@@ -10,7 +12,7 @@ When compiled as an image, it's stored in the local Docker image store.
 
 Building binary:
 ```bash
-$ make plugin
+$ make binary
 ```
 
 Building Docker image:

@@ -9,16 +9,17 @@ v Support user-specified default values, e.g. user mapping
 
 P2
 - Go over the CSI guide again
-- Address in-code TODOs
 v Remove ceph-specific code
 v Refactor the file structure
+- Address in-code TODOs
 - Cleanup
-- Code review
 - Replace eManage client
-> Support snapshots (in alpha since k8s 1.12)
+- Support snapshots (in alpha since k8s 1.12)
+- Check logging levels consistency
 
 P3
+- Support liveness/health probe
 - Support namespaces
 - Support volume update (resize)
 - Add GKE marketplace deployer
-- Upgrade external images to v1.0.0+ (currently at v0.3.0)
+> Upgrade external images to v1.0.0+ (currently at v0.3.0)

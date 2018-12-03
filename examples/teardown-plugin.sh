@@ -2,7 +2,7 @@
 
 deployment_base="${1}"
 
-if [[ -z $deployment_base ]]; then
+if [[ -z ${deployment_base} ]]; then
 	deployment_base="../deploy"
 fi
 
@@ -14,3 +14,8 @@ for obj in ${objects[@]}; do
     echo "=== Deleting ${obj}"
 	kubectl delete -f "./$obj.yaml"
 done
+
+pushd ${deployment_base}
+./delete_crd.sh
+popd
+

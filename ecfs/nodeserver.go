@@ -18,13 +18,16 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"os"
 
-	"github.com/container-storage-interface/spec/lib/go/csi/v0"
+	"github.com/container-storage-interface/spec/lib/go/csi"
 	"github.com/golang/glog"
 	"github.com/kubernetes-csi/drivers/pkg/csi-common"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+
+	"github.com/elastifile/errors"
 )
 
 type nodeServer struct {
@@ -38,7 +41,6 @@ func (ns *nodeServer) nodePublishVolume(ctx context.Context, req *csi.NodePublis
 	}
 
 	// Configuration
-
 	targetPath := req.GetTargetPath()
 	volId := req.GetVolumeId()
 
@@ -74,7 +76,7 @@ func (ns *nodeServer) nodePublishVolume(ctx context.Context, req *csi.NodePublis
 }
 
 func (ns *nodeServer) NodePublishVolume(ctx context.Context, req *csi.NodePublishVolumeRequest) (*csi.NodePublishVolumeResponse, error) {
-	glog.V(2).Infof("AAAAA NodePublishVolume - enter. ctx: %+v req: %+v", ctx, req) // TODO: DELME
+	glog.V(6).Infof("NodePublishVolume - enter. req: %+v", req)
 	return ns.nodePublishVolume(ctx, req)
 }
 
@@ -88,7 +90,7 @@ func (ns *nodeServer) nodeStageVolume(ctx context.Context, req *csi.NodeStageVol
 	volId := volumeID(req.GetVolumeId())
 
 	glog.V(2).Infof("AAAAA NodeStageVolume - calling newVolumeOptions(). volId: %+v", volId) // TODO: DELME
-	volOptions, err := newVolumeOptions(req.VolumeId, req.GetVolumeAttributes())             // TODO: Here we rely on volume id being identical to its name. Check if the actual name is stored in its attributes
+	volOptions, err := newVolumeOptions(req.VolumeId, req.GetVolumeContext())                // TODO: Here we rely on volume id being identical to its name. Check if the actual name is stored in its attributes
 	if err != nil {
 		glog.Errorf("Error reading volume options for volume %s: %v", volId, err)
 		return nil, status.Error(codes.InvalidArgument, err.Error())
@@ -123,10 +125,11 @@ func (ns *nodeServer) nodeStageVolume(ctx context.Context, req *csi.NodeStageVol
 }
 
 func (ns *nodeServer) NodeStageVolume(ctx context.Context, req *csi.NodeStageVolumeRequest) (*csi.NodeStageVolumeResponse, error) {
+	glog.V(6).Infof("NodeStageVolume - enter. req: %+v", req)
 	return ns.nodeStageVolume(ctx, req)
 }
 
-func (ns *nodeServer) nodeUnpublishVolume1(ctx context.Context, req *csi.NodeUnpublishVolumeRequest) (*csi.NodeUnpublishVolumeResponse, error) {
+func (ns *nodeServer) nodeUnpublishVolume(ctx context.Context, req *csi.NodeUnpublishVolumeRequest) (*csi.NodeUnpublishVolumeResponse, error) {
 	if err := validateNodeUnpublishVolumeRequest(req); err != nil {
 		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
@@ -146,10 +149,12 @@ func (ns *nodeServer) nodeUnpublishVolume1(ctx context.Context, req *csi.NodeUnp
 }
 
 func (ns *nodeServer) NodeUnpublishVolume(ctx context.Context, req *csi.NodeUnpublishVolumeRequest) (*csi.NodeUnpublishVolumeResponse, error) {
-	return ns.nodeUnpublishVolume1(ctx, req)
+	glog.V(6).Infof("NodeUnpublishVolume - enter. req: %+v", req)
+	return ns.nodeUnpublishVolume(ctx, req)
 }
 
 func (ns *nodeServer) NodeUnstageVolume(ctx context.Context, req *csi.NodeUnstageVolumeRequest) (*csi.NodeUnstageVolumeResponse, error) {
+	glog.V(6).Infof("NodeUnstageVolume - enter. req: %+v", req)
 	if err := validateNodeUnstageVolumeRequest(req); err != nil {
 		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
@@ -161,14 +166,26 @@ func (ns *nodeServer) NodeUnstageVolume(ctx context.Context, req *csi.NodeUnstag
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	os.Remove(stagingTargetPath)
+	// Delete the mount dir
+	if err := os.Remove(stagingTargetPath); err != nil {
+		err = errors.WrapPrefix(err, fmt.Sprintf("Failed to delete staging mount dir %v", stagingTargetPath), 0)
+		return nil, status.Error(codes.Internal, err.Error())
+	}
 
 	glog.Infof("ecfs: successfully umounted volume %s from %s", req.GetVolumeId(), stagingTargetPath)
 
 	return &csi.NodeUnstageVolumeResponse{}, nil
 }
 
+// TODO: Implement. What's the use case? Is it needed?
+// Enabled via NodeServiceCapability_RPC_GET_VOLUME_STATS
+func (ns *nodeServer) NodeGetVolumeStats(ctx context.Context, req *csi.NodeGetVolumeStatsRequest) (*csi.NodeGetVolumeStatsResponse, error) {
+	glog.V(6).Infof("NodeGetVolumeStats - enter. req: %+v", req)
+	return nil, status.Error(codes.Unimplemented, "QQQQQ - not yet supported")
+}
+
 func (ns *nodeServer) NodeGetCapabilities(ctx context.Context, req *csi.NodeGetCapabilitiesRequest) (*csi.NodeGetCapabilitiesResponse, error) {
+	glog.V(6).Infof("NodeGetCapabilities - enter. req: %+v", req)
 	return &csi.NodeGetCapabilitiesResponse{
 			Capabilities: []*csi.NodeServiceCapability{
 				{
@@ -178,6 +195,13 @@ func (ns *nodeServer) NodeGetCapabilities(ctx context.Context, req *csi.NodeGetC
 						},
 					},
 				},
+				//{
+				//	Type: &csi.NodeServiceCapability_Rpc{
+				//		Rpc: &csi.NodeServiceCapability_RPC{
+				//			Type: csi.NodeServiceCapability_RPC_GET_VOLUME_STATS,
+				//		},
+				//	},
+				//},
 			},
 		},
 		nil

@@ -1,0 +1,8 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: elastifile
+data:
+  managementAddress: https://35.187.69.9
+  managementUserName: admin
+  nfsAddress: 10.255.255.1

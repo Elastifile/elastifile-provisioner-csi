@@ -17,15 +17,14 @@ limitations under the License.
 package main
 
 import (
+	"github.com/container-storage-interface/spec/lib/go/csi"
 	"github.com/golang/glog"
-
-	"github.com/container-storage-interface/spec/lib/go/csi/v0"
 	"github.com/kubernetes-csi/drivers/pkg/csi-common"
 )
 
 const (
 	PluginFolder = "/var/lib/kubelet/plugins/csi-ecfsfsplugin"
-	Version      = "0.1.0"
+	Version      = "1.0.0"
 )
 
 type ecfsDriver struct {
@@ -67,43 +66,13 @@ func NewNodeServer(d *csicommon.CSIDriver) *nodeServer {
 }
 
 func (fs *ecfsDriver) Run(driverName, nodeId, endpoint, volumeMounter string) {
-	glog.Infof("Starting driver: %v version: %v", driverName, Version)
-	glog.Infof("Driver: %v version: %v", driverName, Version)
+	// TODO: Consider checking EMS/NFS availability
+	// Pro: Early failures are easier to debug
+	// Con: The system may become available later, and this would result in unnecessary failures
+	// Maybe add a warning instead of failing here
 
-	// Configuration
-
-	//if err := os.MkdirAll(controllerCacheRoot, 0755); err != nil {
-	//	glog.Fatalf("ecfs: failed to create %s: %v", controllerCacheRoot, err)
-	//	return
-	//}
-	//
-	//if err := loadControllerCache(); err != nil {
-	//	glog.Errorf("ecfs: failed to read volume cache: %v", err)
-	//}
-
-	// TODO: Check NFS Address availability
-
-	//if err := loadAvailableMounters(); err != nil {
-	//	glog.Fatalf("ecfs: failed to load mounters: %v", err)
-	//}
-	//
-	//if volumeMounter != "" {
-	//	if err := validateMounter(volumeMounter); err != nil {
-	//		glog.Fatalln(err)
-	//	} else {
-	//		DefaultVolumeMounter = volumeMounter
-	//	}
-	//} else {
-	//	// Pick the first available mounter as the default one.
-	//	// The choice is biased towards "fuse" in case both
-	//	// ceph fuse and kernel mounters are available.
-	//	DefaultVolumeMounter = availableMounters[0]
-	//}
-	//
-	//glog.Infof("ecfs: setting default volume mounter to %s", DefaultVolumeMounter)
-	//
 	// Initialize default library driver
-
+	glog.Infof("ecfs: Starting driver: %v version: %v", driverName, Version)
 	fs.driver = csicommon.NewCSIDriver(driverName, Version, nodeId)
 	if fs.driver == nil {
 		glog.Fatalln("Failed to initialize CSI driver")
@@ -111,10 +80,13 @@ func (fs *ecfsDriver) Run(driverName, nodeId, endpoint, volumeMounter string) {
 
 	fs.driver.AddControllerServiceCapabilities([]csi.ControllerServiceCapability_RPC_Type{
 		csi.ControllerServiceCapability_RPC_CREATE_DELETE_VOLUME,
+		// PUBLISH_UNPUBLISH_VOLUME is not needed at the controller level to support NFS
+		// Enabling PUBLISH_UNPUBLISH_VOLUME results on "node XXX has no NodeID annotation"
+		//csi.ControllerServiceCapability_RPC_PUBLISH_UNPUBLISH_VOLUME,
 		csi.ControllerServiceCapability_RPC_CREATE_DELETE_SNAPSHOT,
 		csi.ControllerServiceCapability_RPC_LIST_SNAPSHOTS,
-		//csi.ControllerServiceCapability_RPC_GET_CAPACITY,
-		//csi.ControllerServiceCapability_RPC_PUBLISH_UNPUBLISH_VOLUME,
+		//csi.ControllerServiceCapability_RPC_GET_CAPACITY, // TODO: Add support for GetCapacity API
+		//csi.ControllerServiceCapability_RPC_CLONE_VOLUME, // Not supported in ECFS yet
 	})
 
 	fs.driver.AddVolumeCapabilityAccessModes([]csi.VolumeCapability_AccessMode_Mode{
@@ -123,7 +95,6 @@ func (fs *ecfsDriver) Run(driverName, nodeId, endpoint, volumeMounter string) {
 	})
 
 	// Create gRPC servers
-
 	fs.is = NewIdentityServer(fs.driver)
 	fs.ns = NewNodeServer(fs.driver)
 	fs.cs = NewControllerServer(fs.driver)

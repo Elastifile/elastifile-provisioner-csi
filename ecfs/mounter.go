@@ -18,8 +18,9 @@ package main
 
 import (
 	"fmt"
-	"github.com/golang/glog"
 	"os"
+
+	"github.com/golang/glog"
 )
 
 func mountEcfs(mountPoint string, volOptions *volumeOptions, volId volumeID) error {

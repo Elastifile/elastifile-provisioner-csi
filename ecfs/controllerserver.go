@@ -17,7 +17,7 @@ limitations under the License.
 package main
 
 import (
-	"github.com/container-storage-interface/spec/lib/go/csi/v0"
+	"github.com/container-storage-interface/spec/lib/go/csi"
 	"github.com/golang/glog"
 	"github.com/kubernetes-csi/drivers/pkg/csi-common"
 	"golang.org/x/net/context"
@@ -31,8 +31,6 @@ type controllerServer struct {
 
 func (cs *controllerServer) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest) (*csi.CreateVolumeResponse, error) {
 	glog.Warningf("AAAAA CreateVolume - req: %+v", req) // TODO: DELME
-	// From the log:
-	// AAAAA CreateVolume - req: name:"pvc-2b1f2e59f27e11e8" capacity_range:<required_bytes:53687091200 > volume_capabilities:<mount:<> access_mode:<mode:SINGLE_NODE_WRITER > > parameters:<key:"csiProvisionerSecretName" value:"elastifile" > parameters:<key:"csiProvisionerSecretNamespace" value:"default" > parameters:<key:"username" value:"admin" > controller_create_secrets:<key:"password" value:"changeme\n" >
 	if err := cs.validateCreateVolumeRequest(req); err != nil {
 		glog.Errorf("CreateVolumeRequest validation failed: %v", err)
 		err = status.Error(codes.InvalidArgument, err.Error())
@@ -59,7 +57,6 @@ func (cs *controllerServer) CreateVolume(ctx context.Context, req *csi.CreateVol
 
 	glog.Warningf("CCCCC CreateVolume - LimitBytes: %+v", req.GetCapacityRange().GetLimitBytes())       // TODO: DELME
 	glog.Warningf("CCCCC CreateVolume - RequiredBytes: %+v", req.GetCapacityRange().GetRequiredBytes()) // TODO: DELME
-	req.GetControllerCreateSecrets()
 
 	if capacity > 0 {
 		volOptions.Capacity = capacity
@@ -76,18 +73,11 @@ func (cs *controllerServer) CreateVolume(ctx context.Context, req *csi.CreateVol
 
 	glog.Infof("ecfs: successfully created volume %s", volOptions.Name)
 
-	//glog.Infof("BBBBB inserting volume into controller cache - %v", volOptions.Name) // TODO: DELME
-	//if err = ctrCache.insert(&controllerCacheEntry{VolumeID: volumeID(volOptions.Name), VolOptions: *volOptions}); err != nil {
-	//	glog.Errorf("Failed to store cache entry for volume %s: %v", volOptions.Name, err)
-	//	return nil, status.Error(codes.Internal, err.Error())
-	//}
-	//glog.Infof("BBBBB inserted volume into controller cache - %v (%+v)", volOptions.Name, ctrCache) // TODO: DELME
-
 	return &csi.CreateVolumeResponse{
 		Volume: &csi.Volume{
-			Id:            volOptions.Name,
+			VolumeId:      volOptions.Name,
 			CapacityBytes: int64(volOptions.Capacity),
-			Attributes:    req.GetParameters(),
+			VolumeContext: req.GetParameters(),
 		},
 	}, nil
 }
@@ -105,23 +95,6 @@ func (cs *controllerServer) DeleteVolume(ctx context.Context, req *csi.DeleteVol
 		err   error
 	)
 
-	// Load volume info from cache
-	//glog.Infof("BBBBB popping volume from controller cache - %s", volId) // TODO: DELME
-	//ent, err := ctrCache.pop(volId)
-	//if err != nil {
-	//	glog.Error(err)
-	//	return nil, status.Error(codes.Internal, err.Error())
-	//}
-
-	//defer func() {
-	//	if err != nil {
-	//		// Reinsert cache entry for retry
-	//		if insErr := ctrCache.insert(ent); insErr != nil {
-	//			glog.Errorf("failed to reinsert volume cache entry in rollback procedure for volume %s: %v", volId, err)
-	//		}
-	//	}
-	//}()
-
 	var ems emanageClient
 	err = deleteVolume(ems.GetClient(), req.GetVolumeId())
 	if err != nil {
@@ -136,36 +109,56 @@ func (cs *controllerServer) DeleteVolume(ctx context.Context, req *csi.DeleteVol
 
 func (cs *controllerServer) ValidateVolumeCapabilities(ctx context.Context, req *csi.ValidateVolumeCapabilitiesRequest) (*csi.ValidateVolumeCapabilitiesResponse, error) {
 	for _, cap := range req.VolumeCapabilities {
+		accessMode := int32(cap.GetAccessMode().GetMode())
+		glog.V(3).Infof("Checking volume capability %v (%v)",
+			csi.VolumeCapability_AccessMode_Mode_name[accessMode], accessMode)
+		// TODO: Consider checking the actual requested AccessMode - not the most general one
 		if cap.GetAccessMode().GetMode() != csi.VolumeCapability_AccessMode_MULTI_NODE_MULTI_WRITER {
-			return &csi.ValidateVolumeCapabilitiesResponse{Supported: false, Message: ""}, nil
+			return &csi.ValidateVolumeCapabilitiesResponse{
+				Confirmed: nil,
+				Message:   ""}, nil
 		}
 	}
-	return &csi.ValidateVolumeCapabilitiesResponse{Supported: true, Message: ""}, nil
+	return &csi.ValidateVolumeCapabilitiesResponse{
+		Confirmed: &csi.ValidateVolumeCapabilitiesResponse_Confirmed{
+			VolumeContext:      req.GetVolumeContext(),
+			VolumeCapabilities: req.GetVolumeCapabilities(),
+			Parameters:         req.GetParameters(),
+		},
+		Message: ""}, nil
 }
 
-//func (cs *controllerServer) ValidateVolumeCapabilities(
-//	ctx context.Context,
-//	req *csi.ValidateVolumeCapabilitiesRequest) (*csi.ValidateVolumeCapabilitiesResponse, error) {
-//	// Cephfs doesn't support Block volume
-//	for _, cap := range req.VolumeCapabilities {
-//		if cap.GetBlock() != nil {
-//			return &csi.ValidateVolumeCapabilitiesResponse{Supported: false, Message: ""}, nil
-//		}
-//	}
-//	return &csi.ValidateVolumeCapabilitiesResponse{Supported: true}, nil
-//}
+func (cs *controllerServer) ControllerPublishVolume(ctx context.Context, req *csi.ControllerPublishVolumeRequest) (*csi.ControllerPublishVolumeResponse, error) {
+	glog.V(6).Infof("ControllerPublishVolume - enter. req: %+v", req)
+	return nil, status.Error(codes.Unimplemented, "QQQQQ - not yet supported")
+}
 
+func (cs *controllerServer) ControllerUnpublishVolume(ctx context.Context, req *csi.ControllerUnpublishVolumeRequest) (*csi.ControllerUnpublishVolumeResponse, error) {
+	glog.V(6).Infof("ControllerUnpublishVolume - enter. req: %+v", req)
+	return nil, status.Error(codes.Unimplemented, "QQQQQ - not yet supported")
+}
+
+// TODO: Implement
 func (cs *controllerServer) CreateSnapshot(ctx context.Context, req *csi.CreateSnapshotRequest) (*csi.CreateSnapshotResponse, error) {
-	glog.Infof("AAAAA CreateSnapshot - enter. req: %+v", req) // TODO: DELME
-	return nil, status.Error(codes.Unimplemented, "")
+	glog.V(6).Infof("CreateSnapshot - enter. req: %+v", req)
+	return nil, status.Error(codes.Unimplemented, "QQQQQ - not yet supported")
 }
 
+// TODO: Implement
 func (cs *controllerServer) DeleteSnapshot(ctx context.Context, req *csi.DeleteSnapshotRequest) (*csi.DeleteSnapshotResponse, error) {
-	glog.Infof("AAAAA DeleteSnapshot - enter. req: %+v", req) // TODO: DELME
-	return nil, status.Error(codes.Unimplemented, "")
+	glog.V(6).Infof("DeleteSnapshot - enter. req: %+v", req)
+	return nil, status.Error(codes.Unimplemented, "QQQQQ - not yet supported")
 }
 
+// TODO: Implement
 func (cs *controllerServer) ListSnapshots(ctx context.Context, req *csi.ListSnapshotsRequest) (*csi.ListSnapshotsResponse, error) {
-	glog.Infof("AAAAA ListSnapshots - enter. req: %+v", req) // TODO: DELME
-	return nil, status.Error(codes.Unimplemented, "")
+	glog.V(6).Infof("ListSnapshots - enter. req: %+v", req)
+	return nil, status.Error(codes.Unimplemented, "QQQQQ - not yet supported")
 }
+
+// TODO: Implement
+// Found in master of https://github.com/container-storage-interface/spec/blob/master/spec.md#rpc-interface, but not in 1.0.0
+//func (cs *controllerServer) ControllerExpandVolume(ctx context.Context, req *csi.ControllerExpandVolumeRequest) (*csi.ControllerExpandVolumeResponse, error) {
+//	glog.V(6).Infof("ControllerExpandVolume - enter. req: %+v", req)
+//	// Set VolumeExpansion = ONLINE
+//}

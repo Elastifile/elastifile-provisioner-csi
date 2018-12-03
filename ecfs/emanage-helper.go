@@ -17,6 +17,8 @@ type emanageClient struct {
 	*emanage.Client
 }
 
+const exportName = "root"
+
 var emsConfig *config
 
 // Connect to eManage

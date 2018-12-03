@@ -18,20 +18,19 @@ package main
 
 import (
 	"fmt"
-	"k8s.io/kubernetes/pkg/util/mount"
 	"os/exec"
 
+	"github.com/container-storage-interface/spec/lib/go/csi"
 	"github.com/golang/glog"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
-
-	"github.com/container-storage-interface/spec/lib/go/csi/v0"
+	"k8s.io/kubernetes/pkg/util/mount"
 )
 
 type volumeID string
 
 func execCommand(command string, args ...string) ([]byte, error) {
-	glog.Infof("ECFS: exec %s %s", command, args)
+	glog.V(3).Infof("ecfs: Running command: %s %s", command, args)
 
 	cmd := exec.Command(command, args...)
 	return cmd.CombinedOutput()

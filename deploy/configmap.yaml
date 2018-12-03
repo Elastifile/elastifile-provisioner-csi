@@ -3,6 +3,7 @@ kind: ConfigMap
 metadata:
   name: elastifile
 data:
-  managementAddress: https://35.241.201.106
+  # managementAddress should start with https://
+  managementAddress: https://35.187.172.112
   managementUserName: admin
   nfsAddress: 10.255.255.1
