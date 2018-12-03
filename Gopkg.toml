@@ -14,11 +14,10 @@
 
 [[constraint]]
   name = "github.com/container-storage-interface/spec"
-  version = "~0.3.0"
+  version = "~1.0.0"
 
-[[constraint]]
-  name = "github.com/kubernetes-csi/drivers"
-  revision = "d8f283cd941f1e24e20e62653476a3722633f43e"
+#[[constraint]]
+#  name = "github.com/kubernetes-csi/drivers"
 
 [[constraint]]
   branch = "master"
