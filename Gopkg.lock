@@ -2,12 +2,12 @@
 
 
 [[projects]]
-  digest = "1:93147eb1d6f08d39f2c0efe3d29ee043bda72be7a8b3b367eb08c72c18524638"
+  digest = "1:cf4f5171128e62b46299b0a7cd79543f50e62f483d2ca9364e4957c7bbee7a38"
   name = "github.com/container-storage-interface/spec"
-  packages = ["lib/go/csi"]
+  packages = ["lib/go/csi/v0"]
   pruneopts = ""
-  revision = "ed0bb0e1557548aa028307f48728767cfe8f6345"
-  version = "v1.0.0"
+  revision = "2178fdeea87f1150a17a63252eee28d4d8141f72"
+  version = "v0.3.0"
 
 [[projects]]
   branch = "master"
@@ -74,7 +74,6 @@
   name = "github.com/golang/protobuf"
   packages = [
     "proto",
-    "protoc-gen-go/descriptor",
     "ptypes",
     "ptypes/any",
     "ptypes/duration",
@@ -133,12 +132,12 @@
   version = "v1.1.5"
 
 [[projects]]
-  digest = "1:f2e8790d99b22123c2a771069617b408062fcf3b0d93babf3ec7cdd414bb8d80"
+  digest = "1:b395b0e0acec5308219227deb0adf640d29f4632817ca76ab80879624cf13acf"
   name = "github.com/kubernetes-csi/drivers"
   packages = ["pkg/csi-common"]
   pruneopts = ""
-  revision = "df8026fe9418ed9d7d59837b468f5be40e719ab1"
-  version = "v1.0.0"
+  revision = "2765a8665f548e9bf7ce5fa4a8a6ff03a8418b44"
+  version = "v0.4.1"
 
 [[projects]]
   digest = "1:9ea83adf8e96d6304f394d40436f2eb44c1dc3250d223b74088cc253a6cd0a1c"
@@ -499,7 +498,7 @@
   analyzer-name = "dep"
   analyzer-version = 1
   input-imports = [
-    "github.com/container-storage-interface/spec/lib/go/csi",
+    "github.com/container-storage-interface/spec/lib/go/csi/v0",
     "github.com/elastifile/emanage-go/pkg/emanage",
     "github.com/elastifile/emanage-go/pkg/optional",
     "github.com/elastifile/emanage-go/pkg/size",

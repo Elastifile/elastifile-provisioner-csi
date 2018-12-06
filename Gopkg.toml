@@ -6,7 +6,11 @@
 #  branch = "master"
 #  name = "github.com/golang/glog"
 
-
+# CSI spec version
+# Cannot use [[constraint]] due to missing Go files error
+[[constraint]]
+  name = "github.com/container-storage-interface/spec"
+  version = "~0.3.0"
 
 #[[override]]
 #  name = "k8s.io/kubernetes"

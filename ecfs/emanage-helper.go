@@ -83,10 +83,10 @@ func (ems *emanageClient) GetDcByName(dcName string) (*emanage.DataContainer, er
 	return nil, errors.Errorf("Container '%v' not found", dcName)
 }
 
-func (ems *emanageClient) GetDcExportByName(dcExportName string) (*emanage.DataContainer, *emanage.Export, error) {
+func (ems *emanageClient) GetDcExportByName(dcName string) (*emanage.DataContainer, *emanage.Export, error) {
 	// Here we assume the Dc and the Export have the same name
-	glog.V(2).Infof("AAAAA GetDcExportByName - enter. Looking for Dc & export named: %v", dcExportName) // TODO: DELME
-	dc, err := ems.GetDcByName(dcExportName)
+	glog.V(2).Infof("AAAAA GetDcExportByName - enter. Looking for Dc & export named: %v", dcName) // TODO: DELME
+	dc, err := ems.GetDcByName(dcName)
 	if err != nil {
 		return nil, nil, errors.Wrap(err, 0)
 	}
@@ -97,10 +97,10 @@ func (ems *emanageClient) GetDcExportByName(dcExportName string) (*emanage.DataC
 	}
 
 	for _, export := range exports {
-		if dc.Id == export.DataContainerId && export.Name == dcExportName {
+		if dc.Id == export.DataContainerId && export.Name == exportName {
 			glog.V(2).Infof("AAAAA GetDcExportByName - success. Returning DC: %+v EXPORT: %+v", dc, export) // TODO: DELME
 			return dc, &export, nil
 		}
 	}
-	return nil, nil, errors.Errorf("Export not found by DataContainer&Export name", dcExportName)
+	return nil, nil, errors.Errorf("Export not found by DataContainer&Export name", dcName)
 }

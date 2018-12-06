@@ -18,6 +18,7 @@ package main
 
 import (
 	"fmt"
+	"github.com/elastifile/errors"
 	"os"
 
 	"github.com/golang/glog"
@@ -35,10 +36,17 @@ func mountEcfs(mountPoint string, volOptions *volumeOptions, volId volumeID) err
 	//glog.V(2).Infof("AAAAA mountEcfs. volId: %v, mountPoint: %v, volOptions: %+v", volId, mountPoint, volOptions) // TODO: DELME
 	glog.V(2).Infof("AAAAA mountEcfs. Export: %+v", volOptions.Export) // TODO: DELME
 	if volOptions.Export == nil {
-		panic("Export is not initialized")
+		// TODO: Don't create eManage client for each action (will need relogin support)
+		var emsClient emanageClient
+		_, export, err := emsClient.GetDcExportByName(volOptions.Name)
+		if err != nil {
+			return errors.WrapPrefix(err, fmt.Sprintf("Failed to get export for volume %s", volOptions.Name), 0)
+		}
+		volOptions.Export = export
 	}
 
-	// TODO: Add support for mount options
+	// TODO: Add support for mount options once mountOptions and SupportsMountOption() are supported in K8s
+	// https://kubernetes.io/docs/concepts/storage/persistent-volumes/#mount-options
 	args := [...]string{
 		"-vvv",
 		"-t", "nfs",
@@ -69,10 +77,10 @@ func bindMount(from, to string, readOnly bool) error {
 	return nil
 }
 
-func unmountVolume(mountPoint string) error {
-	return execCommandAndValidate("umount", mountPoint)
+func createMountPoint(mountPoint string) error {
+	return os.MkdirAll(mountPoint, 0750)
 }
 
-func createMountPoint(root string) error {
-	return os.MkdirAll(root, 0750)
+func unmountVolume(mountPoint string) error {
+	return execCommandAndValidate("umount", mountPoint)
 }

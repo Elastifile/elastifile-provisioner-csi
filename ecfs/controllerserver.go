@@ -17,7 +17,8 @@ limitations under the License.
 package main
 
 import (
-	"github.com/container-storage-interface/spec/lib/go/csi"
+	"github.com/container-storage-interface/spec/lib/go/csi/v0"
+	//"github.com/container-storage-interface/spec/lib/go/csi" // TODO: Uncomment when switching to CSI 1.0
 	"github.com/golang/glog"
 	"github.com/kubernetes-csi/drivers/pkg/csi-common"
 	"golang.org/x/net/context"
@@ -75,10 +76,16 @@ func (cs *controllerServer) CreateVolume(ctx context.Context, req *csi.CreateVol
 
 	return &csi.CreateVolumeResponse{
 		Volume: &csi.Volume{
-			VolumeId:      volOptions.Name,
+			Id:            volOptions.Name,
 			CapacityBytes: int64(volOptions.Capacity),
-			VolumeContext: req.GetParameters(),
+			Attributes:    req.GetParameters(),
 		},
+		// TODO: Uncomment when switching to CSI 1.0
+		//Volume: &csi.Volume{
+		//	VolumeId:      volOptions.Name,
+		//	CapacityBytes: int64(volOptions.Capacity),
+		//	VolumeContext: req.GetParameters(),
+		//},
 	}, nil
 }
 
@@ -115,16 +122,20 @@ func (cs *controllerServer) ValidateVolumeCapabilities(ctx context.Context, req 
 		// TODO: Consider checking the actual requested AccessMode - not the most general one
 		if cap.GetAccessMode().GetMode() != csi.VolumeCapability_AccessMode_MULTI_NODE_MULTI_WRITER {
 			return &csi.ValidateVolumeCapabilitiesResponse{
-				Confirmed: nil,
-				Message:   ""}, nil
+				Supported: false,
+				// TODO: Uncomment when switching to CSI 1.0
+				//Confirmed: nil,
+				Message: ""}, nil
 		}
 	}
 	return &csi.ValidateVolumeCapabilitiesResponse{
-		Confirmed: &csi.ValidateVolumeCapabilitiesResponse_Confirmed{
-			VolumeContext:      req.GetVolumeContext(),
-			VolumeCapabilities: req.GetVolumeCapabilities(),
-			Parameters:         req.GetParameters(),
-		},
+		Supported: true,
+		// TODO: Uncomment when switching to CSI 1.0
+		//Confirmed: &csi.ValidateVolumeCapabilitiesResponse_Confirmed{
+		//	VolumeContext:      req.GetVolumeContext(),
+		//	VolumeCapabilities: req.GetVolumeCapabilities(),
+		//	Parameters:         req.GetParameters(),
+		//},
 		Message: ""}, nil
 }
 

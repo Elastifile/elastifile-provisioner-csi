@@ -21,7 +21,8 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/container-storage-interface/spec/lib/go/csi"
+	"github.com/container-storage-interface/spec/lib/go/csi/v0"
+	//"github.com/container-storage-interface/spec/lib/go/csi" // TODO: Uncomment when switching to CSI 1.0
 	"github.com/golang/glog"
 	"github.com/kubernetes-csi/drivers/pkg/csi-common"
 	"google.golang.org/grpc/codes"
@@ -90,7 +91,8 @@ func (ns *nodeServer) nodeStageVolume(ctx context.Context, req *csi.NodeStageVol
 	volId := volumeID(req.GetVolumeId())
 
 	glog.V(2).Infof("AAAAA NodeStageVolume - calling newVolumeOptions(). volId: %+v", volId) // TODO: DELME
-	volOptions, err := newVolumeOptions(req.VolumeId, req.GetVolumeContext())                // TODO: Here we rely on volume id being identical to its name. Check if the actual name is stored in its attributes
+	volOptions, err := newVolumeOptions(req.VolumeId, req.GetVolumeAttributes())             // TODO: Here we rely on volume id being identical to its name. Check if the actual name is stored in its attributes
+	//volOptions, err := newVolumeOptions(req.VolumeId, req.GetVolumeContext())              // TODO: Uncomment when switching to CSI 1.0
 	if err != nil {
 		glog.Errorf("Error reading volume options for volume %s: %v", volId, err)
 		return nil, status.Error(codes.InvalidArgument, err.Error())
@@ -179,10 +181,11 @@ func (ns *nodeServer) NodeUnstageVolume(ctx context.Context, req *csi.NodeUnstag
 
 // TODO: Implement. What's the use case? Is it needed?
 // Enabled via NodeServiceCapability_RPC_GET_VOLUME_STATS
-func (ns *nodeServer) NodeGetVolumeStats(ctx context.Context, req *csi.NodeGetVolumeStatsRequest) (*csi.NodeGetVolumeStatsResponse, error) {
-	glog.V(6).Infof("NodeGetVolumeStats - enter. req: %+v", req)
-	return nil, status.Error(codes.Unimplemented, "QQQQQ - not yet supported")
-}
+// TODO: Uncomment when switching to CSI 1.0
+//func (ns *nodeServer) NodeGetVolumeStats(ctx context.Context, req *csi.NodeGetVolumeStatsRequest) (*csi.NodeGetVolumeStatsResponse, error) {
+//	glog.V(6).Infof("NodeGetVolumeStats - enter. req: %+v", req)
+//	return nil, status.Error(codes.Unimplemented, "QQQQQ - not yet supported")
+//}
 
 func (ns *nodeServer) NodeGetCapabilities(ctx context.Context, req *csi.NodeGetCapabilitiesRequest) (*csi.NodeGetCapabilitiesResponse, error) {
 	glog.V(6).Infof("NodeGetCapabilities - enter. req: %+v", req)
