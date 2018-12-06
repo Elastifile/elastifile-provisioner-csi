@@ -18,13 +18,14 @@ package main
 
 import (
 	"fmt"
-	"github.com/elastifile/emanage-go/pkg/optional"
-	"github.com/elastifile/emanage-go/pkg/size"
 	"github.com/golang/glog"
 	"strconv"
 
-	"github.com/elastifile/emanage-go/pkg/emanage"
+	"github.com/elastifile/emanage-go/src/emanage-client"
 	"github.com/elastifile/errors"
+
+	"optional"
+	"size"
 )
 
 type volumeOptions struct {

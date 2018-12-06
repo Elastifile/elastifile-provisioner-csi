@@ -9,8 +9,10 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
-	"github.com/elastifile/emanage-go/pkg/emanage"
+	"github.com/elastifile/emanage-go/src/emanage-client"
 	"github.com/elastifile/errors"
+	"optional"
+	"size"
 )
 
 type emanageClient struct {

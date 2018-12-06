@@ -21,7 +21,7 @@ import (
 	"github.com/golang/glog"
 	"os"
 
-	_ "github.com/elastifile/emanage-go/pkg/emanage"
+	_ "github.com/elastifile/emanage-go/src/emanage-client"
 )
 
 func init() {
@@ -29,10 +29,10 @@ func init() {
 }
 
 var (
-	endpoint      = flag.String("endpoint", "unix://tmp/csi.sock", "CSI endpoint")
-	driverName    = flag.String("drivername", "csi-ecfsplugin", "Name of the driver")
-	nodeId        = flag.String("nodeid", "", "Node id")
-	mounter = flag.String("volumemounter", "", "Default volume mounter (possible options are 'kernel', 'fuse')")
+	endpoint   = flag.String("endpoint", "unix://tmp/csi.sock", "CSI endpoint")
+	driverName = flag.String("drivername", "csi-ecfsplugin", "Name of the driver")
+	nodeId     = flag.String("nodeid", "", "Node id")
+	mounter    = flag.String("volumemounter", "", "Default volume mounter (possible options are 'kernel', 'fuse')")
 )
 
 func main() {

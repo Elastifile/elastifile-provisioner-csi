@@ -18,15 +18,15 @@ package main
 
 import (
 	"fmt"
-	"github.com/elastifile/emanage-go/pkg/optional"
+	"strings"
+
 	"github.com/golang/glog"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
-	"strings"
 
-	"github.com/elastifile/emanage-go/pkg/emanage"
+	"github.com/elastifile/emanage-go/src/emanage-client"
 	"github.com/elastifile/errors"
-	//"github.com/elastifile/emanage-go/vendor/github.com/elastifile/errors"
+	"optional"
 )
 
 const dcPolicy = 1 // TODO: Consider making the policy (e.g. compress/dedup) configurable

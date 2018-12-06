@@ -2,6 +2,22 @@
 
 
 [[projects]]
+  digest = "1:e4b30804a381d7603b8a344009987c1ba351c26043501b23b8c7ce21f0b67474"
+  name = "github.com/BurntSushi/toml"
+  packages = ["."]
+  pruneopts = ""
+  revision = "3012a1dbe2e4bd1391d42b32f0577cb7bbc7f005"
+  version = "v0.3.1"
+
+[[projects]]
+  branch = "master"
+  digest = "1:980024b62c4dd2a365bdffff761c9ad3ed907ebd71042a6007334399c179d43f"
+  name = "github.com/buger/goterm"
+  packages = ["."]
+  pruneopts = ""
+  revision = "c206103e1f37c0c6c5c039706305ea2aa6e8ad3b"
+
+[[projects]]
   digest = "1:cf4f5171128e62b46299b0a7cd79543f50e62f483d2ca9364e4957c7bbee7a38"
   name = "github.com/container-storage-interface/spec"
   packages = ["lib/go/csi/v0"]
@@ -10,21 +26,12 @@
   version = "v0.3.0"
 
 [[projects]]
-  branch = "master"
-  digest = "1:459d2d30ea4049b9d7d6a1de99b4adf04671ed88507e0fcf9aa57c81d28895bc"
+  branch = "renana/_unified_emanage_client"
+  digest = "1:5d452093dead5f376c5da86e4361f0abd31400d3e9b45149fd99fc9d93ca9ce3"
   name = "github.com/elastifile/emanage-go"
-  packages = [
-    "pkg/ejson",
-    "pkg/emanage",
-    "pkg/etime",
-    "pkg/eurl",
-    "pkg/optional",
-    "pkg/rest",
-    "pkg/retry",
-    "pkg/size",
-  ]
+  packages = ["src/emanage-client"]
   pruneopts = ""
-  revision = "fc8d334c2e52ace826b1f77809154878d45aa036"
+  revision = "c2de0816972f75be6378e96d19d309f13a5e8178"
 
 [[projects]]
   branch = "master"
@@ -35,12 +42,36 @@
   revision = "7fe4d1847ce1bb88fb6490a9296f206fd908e6ed"
 
 [[projects]]
+  digest = "1:23a5efa4b272df86a8ebffc942f5e0c1aac4b750836037394cc450b6d91e241a"
+  name = "github.com/fatih/camelcase"
+  packages = ["."]
+  pruneopts = ""
+  revision = "44e46d280b43ec1531bb25252440e34f1b800b65"
+  version = "v1.0.0"
+
+[[projects]]
+  digest = "1:2defd14040b1ca18840524e9d0f9cfab0ea8d2f2d396b343d221f8bc8e21ab9d"
+  name = "github.com/fatih/structs"
+  packages = ["."]
+  pruneopts = ""
+  revision = "4966fc68f5b7593aafa6cbbba2d65ec6e1416047"
+  version = "v1.1.0"
+
+[[projects]]
   digest = "1:b13707423743d41665fd23f0c36b2f37bb49c30e94adb813319c44188a51ba22"
   name = "github.com/ghodss/yaml"
   packages = ["."]
   pruneopts = ""
   revision = "0ca9ea5df5451ffdf184b4428c902747c2c11cd7"
   version = "v1.0.0"
+
+[[projects]]
+  digest = "1:968d8903d598e3fae738325d3410f33f07ea6a2b9ee5591e9c262ee37df6845a"
+  name = "github.com/go-errors/errors"
+  packages = ["."]
+  pruneopts = ""
+  revision = "a6af135bd4e28680facf08a3d206b454abc877a4"
+  version = "v1.0.1"
 
 [[projects]]
   digest = "1:a01080d20c45c031c13f3828c56e58f4f51d926a482ad10cc0316225097eb7ea"
@@ -124,12 +155,52 @@
   revision = "c63ab54fda8f77302f8d414e19933f2b6026a089"
 
 [[projects]]
+  digest = "1:8e3bd93036b4a925fe2250d3e4f38f21cadb8ef623561cd80c3c50c114b13201"
+  name = "github.com/hashicorp/errwrap"
+  packages = ["."]
+  pruneopts = ""
+  revision = "8a6fb523712970c966eefc6b39ed2c5e74880354"
+  version = "v1.0.0"
+
+[[projects]]
+  digest = "1:72308fdd6d5ef61106a95be7ca72349a5565809042b6426a3cfb61d99483b824"
+  name = "github.com/hashicorp/go-multierror"
+  packages = ["."]
+  pruneopts = ""
+  revision = "886a7fbe3eb1c874d46f623bfa70af45f425b3d1"
+  version = "v1.0.0"
+
+[[projects]]
+  digest = "1:8c7fb7f81c06add10a17362abc1ae569ff9765a26c061c6b6e67c909f4f414db"
+  name = "github.com/hashicorp/go-version"
+  packages = ["."]
+  pruneopts = ""
+  revision = "b5a281d3160aa11950a6182bd9a9dc2cb1e02d50"
+  version = "v1.0.0"
+
+[[projects]]
   digest = "1:b79fc583e4dc7055ed86742e22164ac41bf8c0940722dbcb600f1a3ace1a8cb5"
   name = "github.com/json-iterator/go"
   packages = ["."]
   pruneopts = ""
   revision = "1624edc4454b8682399def8740d46db5e4362ba4"
   version = "v1.1.5"
+
+[[projects]]
+  branch = "master"
+  digest = "1:2c5ad58492804c40bdaf5d92039b0cde8b5becd2b7feeb37d7d1cc36a8aa8dbe"
+  name = "github.com/kardianos/osext"
+  packages = ["."]
+  pruneopts = ""
+  revision = "ae77be60afb1dcacde03767a8c37337fad28ac14"
+
+[[projects]]
+  branch = "master"
+  digest = "1:e73373a4c63689f660e6a5ae925f3db6a32637de4323dc9c7619165ba0f6afa5"
+  name = "github.com/koding/multiconfig"
+  packages = ["."]
+  pruneopts = ""
+  revision = "69c27309b2d751c576b59ea9c3726597c2375da3"
 
 [[projects]]
   digest = "1:b395b0e0acec5308219227deb0adf640d29f4632817ca76ab80879624cf13acf"
@@ -498,16 +569,24 @@
   analyzer-name = "dep"
   analyzer-version = 1
   input-imports = [
+    "github.com/buger/goterm",
     "github.com/container-storage-interface/spec/lib/go/csi/v0",
-    "github.com/elastifile/emanage-go/pkg/emanage",
-    "github.com/elastifile/emanage-go/pkg/optional",
-    "github.com/elastifile/emanage-go/pkg/size",
+    "github.com/elastifile/emanage-go/src/emanage-client",
     "github.com/elastifile/errors",
+    "github.com/fatih/structs",
+    "github.com/go-errors/errors",
     "github.com/golang/glog",
+    "github.com/hashicorp/errwrap",
+    "github.com/hashicorp/go-multierror",
+    "github.com/hashicorp/go-version",
+    "github.com/kardianos/osext",
+    "github.com/koding/multiconfig",
     "github.com/kubernetes-csi/drivers/pkg/csi-common",
+    "github.com/mattn/go-colorable",
     "golang.org/x/net/context",
     "google.golang.org/grpc/codes",
     "google.golang.org/grpc/status",
+    "gopkg.in/inconshreveable/log15.v2",
     "k8s.io/apimachinery/pkg/apis/meta/v1",
     "k8s.io/client-go/kubernetes",
     "k8s.io/client-go/rest",

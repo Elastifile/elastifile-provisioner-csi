@@ -1,6 +1,20 @@
-#[[constraint]]
-#  name = "github.com/elastifile/emanage-go"
-#  branch = "v3"
+required = [
+"github.com/hashicorp/errwrap",
+"github.com/buger/goterm",
+"github.com/fatih/structs",
+"github.com/go-errors/errors",
+"github.com/hashicorp/go-multierror",
+"github.com/hashicorp/go-version",
+"github.com/kardianos/osext",
+"github.com/koding/multiconfig",
+"github.com/mattn/go-colorable",
+"gopkg.in/inconshreveable/log15.v2",
+#"gopkg.in/inconshreveable/log15.v2_ild/stack",
+]
+
+[[constraint]]
+  name = "github.com/elastifile/emanage-go"
+  branch = "renana/_unified_emanage_client"
 
 #[[constraint]]
 #  branch = "master"
@@ -51,3 +65,5 @@
 [[override]]
   name = "k8s.io/client-go"
   version = "kubernetes-1.11.0"
+
+
