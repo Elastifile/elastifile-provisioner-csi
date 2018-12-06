@@ -17,7 +17,7 @@ limitations under the License.
 package iscsi
 
 import (
-	"github.com/container-storage-interface/spec/lib/go/csi"
+	"github.com/container-storage-interface/spec/lib/go/csi/v0"
 	"github.com/golang/glog"
 
 	"github.com/kubernetes-csi/drivers/pkg/csi-common"
@@ -39,7 +39,7 @@ const (
 )
 
 var (
-	version = "1.0.0-rc2"
+	version = "0.3.0"
 )
 
 func NewDriver(nodeID, endpoint string) *driver {

@@ -8,6 +8,6 @@ This project contains the CSI [specification](spec.md) and [protobuf](csi.proto)
 
 ### Container Orchestrators (CO)
 
-* [Cloud Foundry](https://github.com/cloudfoundry/csi-plugins-release/blob/master/CSI_SUPPORT.md)
+* [Cloud Foundry](https://github.com/cloudfoundry/csi-local-volume-release)
 * [Kubernetes](https://kubernetes-csi.github.io/docs/)
 * [Mesos](http://mesos.apache.org/documentation/latest/csi/)

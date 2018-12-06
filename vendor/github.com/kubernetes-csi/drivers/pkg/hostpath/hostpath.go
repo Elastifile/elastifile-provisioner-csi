@@ -19,10 +19,9 @@ package hostpath
 import (
 	"fmt"
 
-	"github.com/container-storage-interface/spec/lib/go/csi"
+	"github.com/container-storage-interface/spec/lib/go/csi/v0"
 	"github.com/golang/glog"
 
-	timestamp "github.com/golang/protobuf/ptypes/timestamp"
 	"github.com/kubernetes-csi/drivers/pkg/csi-common"
 )
 
@@ -54,13 +53,13 @@ type hostPathVolume struct {
 }
 
 type hostPathSnapshot struct {
-	Name         string              `json:"name"`
-	Id           string              `json:"id"`
-	VolID        string              `json:"volID"`
-	Path         string              `json:"path"`
-	CreationTime timestamp.Timestamp `json:"creationTime"`
-	SizeBytes    int64               `json:"sizeBytes"`
-	ReadyToUse   bool                `json:"readyToUse"`
+	Name      string              `json:"name"`
+	Id        string              `json:"id"`
+	VolID     string              `json:"volID"`
+	Path      string              `json:"path"`
+	CreateAt  int64               `json:"createAt"`
+	SizeBytes int64               `json:"sizeBytes"`
+	Status    *csi.SnapshotStatus `json:"status"`
 }
 
 var hostPathVolumes map[string]hostPathVolume

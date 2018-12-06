@@ -19,7 +19,7 @@ package flexadapter
 import (
 	"os"
 
-	"github.com/container-storage-interface/spec/lib/go/csi"
+	"github.com/container-storage-interface/spec/lib/go/csi/v0"
 	"github.com/golang/glog"
 
 	"github.com/kubernetes-csi/drivers/pkg/csi-common"
@@ -38,7 +38,7 @@ type flexAdapter struct {
 }
 
 var (
-	version = "1.0.0-rc2"
+	version = "0.3.0"
 )
 
 func New() *flexAdapter {

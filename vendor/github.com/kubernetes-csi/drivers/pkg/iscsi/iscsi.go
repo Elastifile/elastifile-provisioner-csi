@@ -21,22 +21,22 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/container-storage-interface/spec/lib/go/csi"
+	"github.com/container-storage-interface/spec/lib/go/csi/v0"
 	"k8s.io/kubernetes/pkg/util/mount"
 	"k8s.io/kubernetes/pkg/volume/util"
 )
 
 func getISCSIInfo(req *csi.NodePublishVolumeRequest) (*iscsiDisk, error) {
 	volName := req.GetVolumeId()
-	tp := req.GetVolumeContext()["targetPortal"]
-	iqn := req.GetVolumeContext()["iqn"]
-	lun := req.GetVolumeContext()["lun"]
+	tp := req.GetVolumeAttributes()["targetPortal"]
+	iqn := req.GetVolumeAttributes()["iqn"]
+	lun := req.GetVolumeAttributes()["lun"]
 	if tp == "" || iqn == "" || lun == "" {
 		return nil, fmt.Errorf("iSCSI target information is missing")
 	}
 
-	portalList := req.GetVolumeContext()["portals"]
-	secretParams := req.GetVolumeContext()["secret"]
+	portalList := req.GetVolumeAttributes()["portals"]
+	secretParams := req.GetVolumeAttributes()["secret"]
 	secret := parseSecret(secretParams)
 
 	portal := portalMounter(tp)
@@ -52,15 +52,15 @@ func getISCSIInfo(req *csi.NodePublishVolumeRequest) (*iscsiDisk, error) {
 		bkportal = append(bkportal, portalMounter(string(portal)))
 	}
 
-	iface := req.GetVolumeContext()["iscsiInterface"]
-	initiatorName := req.GetVolumeContext()["initiatorName"]
+	iface := req.GetVolumeAttributes()["iscsiInterface"]
+	initiatorName := req.GetVolumeAttributes()["initiatorName"]
 	chapDiscovery := false
-	if req.GetVolumeContext()["discoveryCHAPAuth"] == "true" {
+	if req.GetVolumeAttributes()["discoveryCHAPAuth"] == "true" {
 		chapDiscovery = true
 	}
 
 	chapSession := false
-	if req.GetVolumeContext()["sessionCHAPAuth"] == "true" {
+	if req.GetVolumeAttributes()["sessionCHAPAuth"] == "true" {
 		chapSession = true
 	}
 

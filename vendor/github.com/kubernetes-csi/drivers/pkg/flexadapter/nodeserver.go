@@ -19,7 +19,7 @@ package flexadapter
 import (
 	"os"
 
-	"github.com/container-storage-interface/spec/lib/go/csi"
+	"github.com/container-storage-interface/spec/lib/go/csi/v0"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -53,9 +53,9 @@ func (ns *nodeServer) waitForAttach(req *csi.NodePublishVolumeRequest, fsType st
 
 	var dID string
 
-	if req.GetPublishContext() != nil {
+	if req.GetPublishInfo() != nil {
 		var ok bool
-		dID, ok = req.GetPublishContext()[deviceID]
+		dID, ok = req.GetPublishInfo()[deviceID]
 		if !ok {
 			return status.Error(codes.InvalidArgument, "Missing device ID")
 		}
@@ -65,7 +65,7 @@ func (ns *nodeServer) waitForAttach(req *csi.NodePublishVolumeRequest, fsType st
 
 	call := ns.flexDriver.NewDriverCall(waitForAttachCmd)
 	call.Append(dID)
-	call.AppendSpec(req.GetVolumeId(), fsType, req.GetReadonly(), req.GetVolumeContext())
+	call.AppendSpec(req.GetVolumeId(), fsType, req.GetReadonly(), req.GetVolumeAttributes())
 
 	_, err := call.Run()
 	if isCmdNotSupportedErr(err) {
@@ -116,15 +116,15 @@ func (ns *nodeServer) NodePublishVolume(ctx context.Context, req *csi.NodePublis
 
 	call.Append(req.GetTargetPath())
 
-	if req.GetPublishContext() != nil {
-		call.Append(req.GetPublishContext()[deviceID])
+	if req.GetPublishInfo() != nil {
+		call.Append(req.GetPublishInfo()[deviceID])
 	}
 
-	call.AppendSpec(req.GetVolumeId(), fsType, req.GetReadonly(), req.GetVolumeContext())
+	call.AppendSpec(req.GetVolumeId(), fsType, req.GetReadonly(), req.GetVolumeAttributes())
 	_, err = call.Run()
 	if isCmdNotSupportedErr(err) {
 		mountFlags := req.GetVolumeCapability().GetMount().GetMountFlags()
-		err := mountDevice(req.VolumeContext[deviceID], targetPath, fsType, req.GetReadonly(), mountFlags)
+		err := mountDevice(req.VolumeAttributes[deviceID], targetPath, fsType, req.GetReadonly(), mountFlags)
 		if err != nil {
 			return nil, status.Error(codes.Internal, err.Error())
 		}

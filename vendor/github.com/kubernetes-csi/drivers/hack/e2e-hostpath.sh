@@ -14,11 +14,18 @@ APP=hostpathplugin
 
 SKIP="WithCapacity"
 if [ x${TRAVIS} = x"true" ] ; then
-	SKIP="ValidateVolumeCapabilities"
+	SKIP="WithCapacity|NodeUnpublishVolume|NodePublishVolume"
 fi
 
 # Get csi-sanity
-./hack/get-sanity.sh
+if [ ! -x $GOPATH/bin/csi-sanity ] ; then
+	go get -u github.com/kubernetes-csi/csi-test
+	pushd $GOPATH/src/github.com/kubernetes-csi/csi-test/cmd/csi-sanity
+	make all
+	make install
+	popd
+#./hack/get-sanity.sh
+fi
 
 # Build
 make hostpath
