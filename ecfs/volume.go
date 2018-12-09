@@ -18,7 +18,6 @@ package main
 
 import (
 	"fmt"
-	"strings"
 
 	"github.com/golang/glog"
 	"google.golang.org/grpc/codes"
@@ -65,11 +64,6 @@ func exportExists(emsClient *emanageClient, exportName string, opt *volumeOption
 	return
 }
 
-func alreadyCreatedError(err error) bool {
-	return strings.Contains(err.Error(), "has already been taken") ||
-		strings.Contains(err.Error(), "already exist")
-}
-
 func createDc(emsClient *emanageClient, opt *volumeOptions) (*emanage.DataContainer, error) {
 	dc, err := emsClient.DataContainers.Create(opt.Name, dcPolicy, &emanage.DcCreateOpts{
 		SoftQuota:      int(opt.Capacity), // TODO: Consider setting soft quota at 80% of hard quota
@@ -103,7 +97,7 @@ func createExportForVolume(emsClient *emanageClient, volOptions *volumeOptions) 
 
 	export, err = emsClient.Exports.CreateForVolume(exportName, exportOpt)
 	if err != nil {
-		if alreadyCreatedError(err) {
+		if isErrorAlreadyExists(err) {
 			glog.V(3).Infof("ecfs: Export for volume %v was recently created - nothing to do", volOptions.Name)
 			err = nil
 		} else {
@@ -131,7 +125,7 @@ func createVolume(emsClient *emanageClient, volOptions *volumeOptions) (err erro
 		dc, err := createDc(emsClient, volOptions)
 		glog.V(2).Infof("AAAAA createVolume - createDc() err: %v, result: %+v", err, volOptions.DataContainer) // TODO: DELME
 		if err != nil {
-			if alreadyCreatedError(err) {
+			if isErrorAlreadyExists(err) {
 				glog.V(3).Infof("ecfs: Volume %v was recently created - nothing to do", volOptions.Name)
 				err = nil
 				// TODO: fetch the dc anyway. Currently, volOptions.DataContainer will be assigned nil in this case

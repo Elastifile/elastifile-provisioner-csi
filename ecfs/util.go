@@ -19,6 +19,7 @@ package main
 import (
 	"fmt"
 	"os/exec"
+	"strings"
 
 	"github.com/container-storage-interface/spec/lib/go/csi/v0"
 	//"github.com/container-storage-interface/spec/lib/go/csi" // TODO: Uncomment when switching to CSI 1.0
@@ -147,4 +148,14 @@ func validateNodeUnpublishVolumeRequest(req *csi.NodeUnpublishVolumeRequest) err
 	}
 
 	return nil
+}
+
+func isErrorAlreadyExists(err error) bool {
+	return strings.Contains(err.Error(), "has already been taken") ||
+		strings.Contains(err.Error(), "already exist")
+}
+
+func isErrorDoesNotExist(err error) bool {
+	return strings.Contains(err.Error(), "not found") ||
+		strings.Contains(err.Error(), "not exist")
 }

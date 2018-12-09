@@ -18,19 +18,17 @@ package main
 
 import (
 	"fmt"
-	"github.com/elastifile/errors"
 	"os"
 
 	"github.com/golang/glog"
+
+	"github.com/elastifile/errors"
 )
 
 func mountEcfs(mountPoint string, volOptions *volumeOptions, volId volumeID) error {
 	if err := createMountPoint(mountPoint); err != nil {
 		return err
 	}
-
-	// export = volOptions.Export.Name
-	// ip = volOptions.NfsAddress
 
 	glog.Infof("ECFS: Mounting volume %v on %v", volId, mountPoint)
 	//glog.V(2).Infof("AAAAA mountEcfs. volId: %v, mountPoint: %v, volOptions: %+v", volId, mountPoint, volOptions) // TODO: DELME

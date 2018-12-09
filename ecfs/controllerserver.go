@@ -17,6 +17,9 @@ limitations under the License.
 package main
 
 import (
+	"fmt"
+	"strings"
+
 	"github.com/container-storage-interface/spec/lib/go/csi/v0"
 	//"github.com/container-storage-interface/spec/lib/go/csi" // TODO: Uncomment when switching to CSI 1.0
 	"github.com/golang/glog"
@@ -24,6 +27,8 @@ import (
 	"golang.org/x/net/context"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+
+	"github.com/elastifile/errors"
 )
 
 type controllerServer struct {
@@ -31,14 +36,14 @@ type controllerServer struct {
 }
 
 func (cs *controllerServer) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest) (*csi.CreateVolumeResponse, error) {
-	glog.Warningf("AAAAA CreateVolume - req: %+v", req) // TODO: DELME
+	glog.V(2).Infof("ecfs: Creating volume: %v", req.GetName())
+	glog.V(6).Infof("ecfs: Received CreateVolumeRequest: %+v", req)
 	if err := cs.validateCreateVolumeRequest(req); err != nil {
 		glog.Errorf("CreateVolumeRequest validation failed: %v", err)
 		err = status.Error(codes.InvalidArgument, err.Error())
 		return nil, err
 	}
 
-	// req.Parameters[SecretNamespace]
 	pluginConfig, err := pluginConfig()
 	if err != nil {
 		return nil, status.Error(codes.InvalidArgument, err.Error())
@@ -55,10 +60,6 @@ func (cs *controllerServer) CreateVolume(ctx context.Context, req *csi.CreateVol
 	glog.Warningf("AAAAA CreateVolume - volOptions: %+v", volOptions) // TODO: DELME
 
 	capacity := req.GetCapacityRange().GetRequiredBytes()
-
-	glog.Warningf("CCCCC CreateVolume - LimitBytes: %+v", req.GetCapacityRange().GetLimitBytes())       // TODO: DELME
-	glog.Warningf("CCCCC CreateVolume - RequiredBytes: %+v", req.GetCapacityRange().GetRequiredBytes()) // TODO: DELME
-
 	if capacity > 0 {
 		volOptions.Capacity = capacity
 	}
@@ -90,8 +91,7 @@ func (cs *controllerServer) CreateVolume(ctx context.Context, req *csi.CreateVol
 }
 
 func (cs *controllerServer) DeleteVolume(ctx context.Context, req *csi.DeleteVolumeRequest) (*csi.DeleteVolumeResponse, error) {
-	glog.Infof("ecfs: Deleting volume %v", req.VolumeId)
-	//glog.Infof("BBBBB current cache state - %+v", ctrCache) // TODO: DELME
+	glog.V(2).Infof("ecfs: Deleting volume %v", req.GetVolumeId())
 	if err := cs.validateDeleteVolumeRequest(req); err != nil {
 		glog.Errorf("DeleteVolumeRequest validation failed: %v", err)
 		return nil, err
@@ -115,12 +115,12 @@ func (cs *controllerServer) DeleteVolume(ctx context.Context, req *csi.DeleteVol
 }
 
 func (cs *controllerServer) ValidateVolumeCapabilities(ctx context.Context, req *csi.ValidateVolumeCapabilitiesRequest) (*csi.ValidateVolumeCapabilitiesResponse, error) {
-	for _, cap := range req.VolumeCapabilities {
-		accessMode := int32(cap.GetAccessMode().GetMode())
+	for _, capability := range req.VolumeCapabilities {
+		accessMode := int32(capability.GetAccessMode().GetMode())
 		glog.V(3).Infof("Checking volume capability %v (%v)",
 			csi.VolumeCapability_AccessMode_Mode_name[accessMode], accessMode)
 		// TODO: Consider checking the actual requested AccessMode - not the most general one
-		if cap.GetAccessMode().GetMode() != csi.VolumeCapability_AccessMode_MULTI_NODE_MULTI_WRITER {
+		if capability.GetAccessMode().GetMode() != csi.VolumeCapability_AccessMode_MULTI_NODE_MULTI_WRITER {
 			return &csi.ValidateVolumeCapabilitiesResponse{
 				Supported: false,
 				// TODO: Uncomment when switching to CSI 1.0
@@ -128,6 +128,7 @@ func (cs *controllerServer) ValidateVolumeCapabilities(ctx context.Context, req 
 				Message: ""}, nil
 		}
 	}
+
 	return &csi.ValidateVolumeCapabilitiesResponse{
 		Supported: true,
 		// TODO: Uncomment when switching to CSI 1.0
@@ -140,31 +141,113 @@ func (cs *controllerServer) ValidateVolumeCapabilities(ctx context.Context, req 
 }
 
 func (cs *controllerServer) ControllerPublishVolume(ctx context.Context, req *csi.ControllerPublishVolumeRequest) (*csi.ControllerPublishVolumeResponse, error) {
-	glog.V(6).Infof("ControllerPublishVolume - enter. req: %+v", req)
+	glog.V(2).Infof("ecfs: Publishing volume %v on node %v", req.GetVolumeId(), req.GetNodeId())
+	glog.V(6).Infof("ecfs: ControllerPublishVolume - enter. req: %+v", req)
 	return nil, status.Error(codes.Unimplemented, "QQQQQ - not yet supported")
 }
 
 func (cs *controllerServer) ControllerUnpublishVolume(ctx context.Context, req *csi.ControllerUnpublishVolumeRequest) (*csi.ControllerUnpublishVolumeResponse, error) {
-	glog.V(6).Infof("ControllerUnpublishVolume - enter. req: %+v", req)
+	glog.V(2).Infof("ecfs: Unpublishing volume %v on node", req.GetVolumeId(), req.GetNodeId())
+	glog.V(6).Infof("ecfs: ControllerUnpublishVolume - enter. req: %+v", req)
 	return nil, status.Error(codes.Unimplemented, "QQQQQ - not yet supported")
 }
 
-// TODO: Implement
-func (cs *controllerServer) CreateSnapshot(ctx context.Context, req *csi.CreateSnapshotRequest) (*csi.CreateSnapshotResponse, error) {
-	glog.V(6).Infof("CreateSnapshot - enter. req: %+v", req)
-	return nil, status.Error(codes.Unimplemented, "QQQQQ - not yet supported")
+func (cs *controllerServer) CreateSnapshot(ctx context.Context, req *csi.CreateSnapshotRequest) (response *csi.CreateSnapshotResponse, err error) {
+	var ems *emanageClient
+	glog.V(2).Infof("ecfs: Creating snapshot %v on volume %v", req.GetName(), req.GetSourceVolumeId())
+	glog.V(6).Infof("ecfs: CreateSnapshot - enter. req: %+v", req)
+	ecfsSnapshot, err := createSnapshot(ems.GetClient(), req.GetName(), req.GetSourceVolumeId(), req.GetParameters())
+	if err != nil {
+		err = errors.WrapPrefix(err,
+			fmt.Sprintf("Failed to create snapshot for volume %v with name %v", req.GetSourceVolumeId(), req.GetName()), 0)
+		return
+	}
+
+	creationTimestamp, err := parseTimestampRFC3339(ecfsSnapshot.CreatedAt)
+	if err != nil {
+		err = errors.Wrap(err, 0)
+		return
+	}
+
+	csiSnapshotStatus := snapshotStatusEcfsToCsi(ecfsSnapshot.Status)
+	response = &csi.CreateSnapshotResponse{
+		Snapshot: &csi.Snapshot{
+			Id:             ecfsSnapshot.Name,
+			SourceVolumeId: req.GetSourceVolumeId(),
+			CreatedAt:      creationTimestamp,
+			Status: &csi.SnapshotStatus{
+				Type: csiSnapshotStatus,
+			},
+		},
+	}
+
+	return
 }
 
-// TODO: Implement
-func (cs *controllerServer) DeleteSnapshot(ctx context.Context, req *csi.DeleteSnapshotRequest) (*csi.DeleteSnapshotResponse, error) {
-	glog.V(6).Infof("DeleteSnapshot - enter. req: %+v", req)
-	return nil, status.Error(codes.Unimplemented, "QQQQQ - not yet supported")
+func (cs *controllerServer) DeleteSnapshot(ctx context.Context, req *csi.DeleteSnapshotRequest) (response *csi.DeleteSnapshotResponse, err error) {
+	glog.V(2).Infof("ecfs: Deleting snapshot %v", req.GetSnapshotId())
+	glog.V(6).Infof("ecfs: DeleteSnapshot - enter. req: %+v", req)
+	var ems *emanageClient
+	err = deleteSnapshot(ems.GetClient(), req.GetSnapshotId())
+	if err != nil {
+		err = errors.WrapPrefix(err, fmt.Sprintf("Failed to delete snapshot by id %v", req.GetSnapshotId()), 0)
+		return
+	}
+	response = &csi.DeleteSnapshotResponse{}
+	return
 }
 
-// TODO: Implement
-func (cs *controllerServer) ListSnapshots(ctx context.Context, req *csi.ListSnapshotsRequest) (*csi.ListSnapshotsResponse, error) {
-	glog.V(6).Infof("ListSnapshots - enter. req: %+v", req)
-	return nil, status.Error(codes.Unimplemented, "QQQQQ - not yet supported")
+func (cs *controllerServer) ListSnapshots(ctx context.Context, req *csi.ListSnapshotsRequest) (response *csi.ListSnapshotsResponse, err error) {
+	var (
+		args        []string
+		description string
+	)
+
+	// Print detailed description
+	if req.GetSnapshotId() != "" {
+		args = append(args, fmt.Sprintf("snapshot id: %v", req.GetSnapshotId()))
+	}
+	if req.GetSourceVolumeId() != "" {
+		args = append(args, fmt.Sprintf("volume id: %v", req.GetSourceVolumeId()))
+	}
+	if req.GetMaxEntries() != 0 {
+		args = append(args, fmt.Sprintf("max entries: %v", req.GetMaxEntries()))
+	}
+	if req.GetStartingToken() != "" {
+		args = append(args, fmt.Sprintf("starting token: %v", req.GetStartingToken()))
+	}
+	if len(args) > 0 {
+		description = "(" + strings.Join(args, ",")
+	}
+	glog.V(2).Infof("ecfs: Listing snapshots %v", description)
+	glog.V(6).Infof("ecfs: ListSnapshots - enter. req: %+v", req)
+
+	var ems *emanageClient
+	ecfsSnapshots, nextToken, err := listSnapshots(ems.GetClient(), req.GetSnapshotId(), req.GetSourceVolumeId(), req.GetMaxEntries(), req.GetStartingToken())
+	if err != nil {
+		err = errors.WrapPrefix(err, fmt.Sprintf("Failed to list snapshots. Request: %+v", req), 0)
+		return
+	}
+
+	var listEntries []*csi.ListSnapshotsResponse_Entry
+	for _, ecfsSnapshot := range ecfsSnapshots {
+		var csiSnapshot *csi.Snapshot
+		csiSnapshot, err = snapshotEcfsToCsi(ems.GetClient(), ecfsSnapshot)
+		if err != nil {
+			err = errors.Wrap(err, 0)
+			return
+		}
+		listEntry := &csi.ListSnapshotsResponse_Entry{
+			Snapshot: csiSnapshot,
+		}
+		listEntries = append(listEntries, listEntry)
+	}
+
+	response = &csi.ListSnapshotsResponse{
+		Entries:   listEntries,
+		NextToken: nextToken,
+	}
+	return
 }
 
 // TODO: Implement
