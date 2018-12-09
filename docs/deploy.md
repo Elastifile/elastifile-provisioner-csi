@@ -1,24 +1,8 @@
-# CSI ECFS plugin
+# Deploying Elastifile's ECFS CSI provisioner
 
 // TODO: Remove Ceph, add actual deploy actions and supported arguments
 
 The CSI ECFS plugin is able to both provision new ECFS volumes and attach and mount existing ones to workloads.
-
-## Building
-
-CSI ECFS plugin can be compiled in a form of a binary file or in a form of a Docker image.
-When compiled as a binary file, the result is stored in `_output/` directory with the name `ecfsplugin`.
-When compiled as an image, it's stored in the local Docker image store.
-
-Building binary:
-```bash
-$ make binary
-```
-
-Building Docker image:
-```bash
-$ make image
-```
 
 ## Configuration
 

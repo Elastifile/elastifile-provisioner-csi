@@ -10,14 +10,14 @@ Demonstrates how to create a pod using a volume created by ECFS provisioner
 IMPORTANT: Make sure the secrets and the configmap manifests are updated before running this script
 Demonstrates full functionality using a single command
 * `make-deploy-plugin-create-pod.sh` - builds the plugin, then calls `deploy-plugin-create-pod.sh`.
-Only useful when developing the plugin
+Only useful during plugin development
 
 ## Teardown
 
 * `teardown-plugin.sh` - removes the provisioner plugin
 * `teardown-pod-plugin.sh` - deletes the pod, then calls `teardown-plugin.sh`
 
-## Troubleshoot
+## Troubleshooting
 
 * `logs.sh` tails the output of the plugin container
 * `logs-all.sh` shows the output of all the plugin containers, recommended to be used in combination with grep
