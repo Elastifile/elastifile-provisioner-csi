@@ -11,8 +11,6 @@ import (
 
 	"github.com/elastifile/emanage-go/src/emanage-client"
 	"github.com/elastifile/errors"
-	"optional"
-	"size"
 )
 
 type emanageClient struct {
@@ -24,7 +22,7 @@ const exportName = "root"
 var emsConfig *config
 
 // Connect to eManage
-func newEmanageClient() (client *emanage.Client, err error) {
+func newEmanageClient() (client *emanageClient, err error) {
 	if emsConfig == nil {
 		glog.V(2).Infof("AAAAA GetClient - initializing new eManage client") // TODO: DELME
 		emsConfig, err = pluginConfig()
@@ -44,7 +42,8 @@ func newEmanageClient() (client *emanage.Client, err error) {
 		return
 	}
 	glog.V(2).Info("AAAAA newEmanageClient - calling NewClient()") // TODO: DELME
-	client = emanage.NewClient(baseURL)
+	legacyClient := emanage.NewClient(baseURL)
+	client = &emanageClient{legacyClient}
 	glog.V(2).Infof("AAAAA newEmanageClient - got new client: %+v", client) // TODO: DELME
 	err = client.Sessions.Login(emsConfig.Username, emsConfig.Password)
 	glog.V(2).Infof("AAAAA newEmanageClient - login err: %v", err) // TODO: DELME
@@ -56,19 +55,18 @@ func newEmanageClient() (client *emanage.Client, err error) {
 	return
 }
 
-func (ems *emanageClient) GetClient() *emanage.Client {
-	var err error
-
+func (ems *emanageClient) GetClient() *emanageClient {
 	if ems.Client == nil {
-		glog.Infof("AAAAA CreateVolume - creating eManage client") // TODO: DELME
-		ems.Client, err = newEmanageClient()
+		glog.V(5).Infof("Initializing eManage client")
+		tmpClient, err := newEmanageClient()
 		if err != nil {
 			panic(fmt.Sprintf("Failed to create eManage client. err: %v", err))
 		}
+		ems.Client = tmpClient.Client
 		glog.Infof("AAAAA GetClient - initialized new eManage client - %+v", ems.Client) // TODO: DELME
 	}
 
-	return ems.Client
+	return ems
 }
 
 func (ems *emanageClient) GetDcByName(dcName string) (*emanage.DataContainer, error) {

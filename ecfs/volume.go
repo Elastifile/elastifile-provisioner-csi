@@ -26,12 +26,11 @@ import (
 
 	"github.com/elastifile/emanage-go/src/emanage-client"
 	"github.com/elastifile/errors"
-	"optional"
 )
 
 const dcPolicy = 1 // TODO: Consider making the policy (e.g. compress/dedup) configurable
 
-func dcExists(emsClient *emanage.Client, opt *volumeOptions) (found bool, err error) {
+func dcExists(emsClient *emanageClient, opt *volumeOptions) (found bool, err error) {
 	dcList, err := emsClient.DataContainers.GetAll(&emanage.DcGetAllOpts{})
 	if err != nil {
 		err = errors.WrapPrefix(err, "Failed to list Data Containers", 0)
@@ -48,7 +47,7 @@ func dcExists(emsClient *emanage.Client, opt *volumeOptions) (found bool, err er
 	return
 }
 
-func exportExists(emsClient *emanage.Client, exportName string, opt *volumeOptions) (found bool, export emanage.Export, err error) {
+func exportExists(emsClient *emanageClient, exportName string, opt *volumeOptions) (found bool, export emanage.Export, err error) {
 	exports, err := emsClient.Exports.GetAll(nil)
 	if err != nil {
 		err = errors.WrapPrefix(err, "Failed to get exports", 0)
@@ -71,7 +70,7 @@ func alreadyCreatedError(err error) bool {
 		strings.Contains(err.Error(), "already exist")
 }
 
-func createDc(emsClient *emanage.Client, opt *volumeOptions) (*emanage.DataContainer, error) {
+func createDc(emsClient *emanageClient, opt *volumeOptions) (*emanage.DataContainer, error) {
 	dc, err := emsClient.DataContainers.Create(opt.Name, dcPolicy, &emanage.DcCreateOpts{
 		SoftQuota:      int(opt.Capacity), // TODO: Consider setting soft quota at 80% of hard quota
 		HardQuota:      int(opt.Capacity),
@@ -81,7 +80,7 @@ func createDc(emsClient *emanage.Client, opt *volumeOptions) (*emanage.DataConta
 	return &dc, err
 }
 
-func createExport(emsClient *emanage.Client, volOptions *volumeOptions) (export emanage.Export, err error) {
+func createExportForVolume(emsClient *emanageClient, volOptions *volumeOptions) (export emanage.Export, err error) {
 	found, export, err := exportExists(emsClient, exportName, volOptions)
 	if err != nil {
 		err = errors.WrapPrefix(err, fmt.Sprintf("Failed to check if export %v exists on DC %v",
@@ -93,19 +92,19 @@ func createExport(emsClient *emanage.Client, volOptions *volumeOptions) (export 
 		return
 	}
 
-	var exportOpt = &emanage.ExportCreateOpts{
+	exportOpt := &emanage.ExportCreateForVolumeOpts{
 		DcId:        int(volOptions.DataContainer.Id),
 		Path:        "/",
 		UserMapping: volOptions.UserMapping,
-		Uid:         optional.NewInt(volOptions.UserMappingUid),
-		Gid:         optional.NewInt(volOptions.UserMappingGid),
+		Uid:         volOptions.UserMappingUid,
+		Gid:         volOptions.UserMappingGid,
 		Access:      emanage.ExportAccessModeType(volOptions.Access),
 	}
 
-	export, err = emsClient.Exports.Create(exportName, exportOpt)
+	export, err = emsClient.Exports.CreateForVolume(exportName, exportOpt)
 	if err != nil {
 		if alreadyCreatedError(err) {
-			glog.V(3).Infof("ecfs: Export %v was recently created - nothing to do", volOptions.Name)
+			glog.V(3).Infof("ecfs: Export for volume %v was recently created - nothing to do", volOptions.Name)
 			err = nil
 		} else {
 			err = errors.Wrap(err, 0)
@@ -116,7 +115,7 @@ func createExport(emsClient *emanage.Client, volOptions *volumeOptions) (export 
 	return
 }
 
-func createVolume(emsClient *emanage.Client, volOptions *volumeOptions) (err error) {
+func createVolume(emsClient *emanageClient, volOptions *volumeOptions) (err error) {
 	glog.V(2).Infof("AAAAA createVolume - volOptions: %+v client: %+v", volOptions, emsClient) // TODO: DELME
 
 	// Create Data Container
@@ -149,7 +148,7 @@ func createVolume(emsClient *emanage.Client, volOptions *volumeOptions) (err err
 	}
 
 	// Create Export
-	export, err := createExport(emsClient, volOptions)
+	export, err := createExportForVolume(emsClient, volOptions)
 	if err != nil {
 		return status.Error(codes.Internal, err.Error())
 	} else {
@@ -160,7 +159,7 @@ func createVolume(emsClient *emanage.Client, volOptions *volumeOptions) (err err
 	return nil
 }
 
-func deleteExport(emsClient *emanage.Client, dc *emanage.DataContainer) (err error) {
+func deleteExport(emsClient *emanageClient, dc *emanage.DataContainer) (err error) {
 	exports, err := emsClient.Exports.GetAll(&emanage.GetAllOpts{})
 	if err != nil {
 		return errors.WrapPrefix(err, "Failed to get exports", 0)
@@ -185,7 +184,7 @@ func deleteExport(emsClient *emanage.Client, dc *emanage.DataContainer) (err err
 	return nil
 }
 
-func deleteDataContainer(emsClient *emanage.Client, dc *emanage.DataContainer) (err error) {
+func deleteDataContainer(emsClient *emanageClient, dc *emanage.DataContainer) (err error) {
 	_, err = emsClient.DataContainers.Delete(dc)
 	if err != nil {
 		err = errors.WrapPrefix(err, fmt.Sprintf("Failed to delete Data Container %v", dc.Name), 0)
@@ -193,7 +192,7 @@ func deleteDataContainer(emsClient *emanage.Client, dc *emanage.DataContainer) (
 	return
 }
 
-func deleteVolume(emsClient *emanage.Client, volId string) error {
+func deleteVolume(emsClient *emanageClient, volId string) error {
 	var (
 		found bool
 		dc    emanage.DataContainer
