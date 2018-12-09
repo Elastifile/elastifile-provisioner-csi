@@ -17,15 +17,16 @@
 #REGISTRY ?= hub.docker.com
 #IMAGE_NAME = $(REGISTRY)/elastifileio/ecfs-provisioner-csi
 IMAGE_NAME = elastifileio/ecfs-provisioner-csi
-PLUGIN_TAG ?= next
+PLUGIN_TAG ?= dev
 
-TEMP_DIR=_output
-DOCKER_DIR=deploy/docker
-PLUGIN_BINARY=ecfsplugin
+TEMP_DIR = _output
+DOCKER_DIR = deploy/docker
+PLUGIN_BINARY = ecfsplugin
 
 PROJECT_ROOT = $(shell dirname $(shell dirname $(value CURDIR)))
 GOPATH = "$(PROJECT_ROOT):$(CURDIR)/vendor"
 
+$(info ecfs image settings: $(IMAGE_NAME) tag $(PLUGIN_TAG))
 
 # Compile, create image and push it
 all: image push
