@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 
+set -x
 kubectl delete -f pod-with-volume.yaml
-./teardown-plugin.sh
+../deploy/teardown-plugin.sh
+set +x
 

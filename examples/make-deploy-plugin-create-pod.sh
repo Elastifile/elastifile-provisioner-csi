@@ -7,4 +7,3 @@ pushd ..
 time make all
 popd
 ./deploy-plugin-create-pod.sh ${POD_MANIFEST}
-

@@ -3,7 +3,7 @@
 There are several helper scripts, that can be used to deploy/teardown the configuration and make your life a bit easier in general
 
 ## Deploy/create
-* `deploy-plugin.sh` - deploys the provisioner plugin
+* `../deploy/deploy-plugin.sh` - deploys the provisioner plugin
 * `create-pod.sh` - creates a pod, takes pod manifest as an optional argument 
 Demonstrates how to create a pod using a volume created by ECFS provisioner
 * `deploy-plugin-create-pod.sh` - deploys the plugin, then calls `create-pod.sh`
@@ -14,7 +14,7 @@ Only useful during plugin development
 
 ## Teardown
 
-* `teardown-plugin.sh` - removes the provisioner plugin
+* `../deploy/teardown-plugin.sh` - removes the provisioner plugin
 * `teardown-pod-plugin.sh` - deletes the pod, then calls `teardown-plugin.sh`
 
 ## Troubleshooting

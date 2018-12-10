@@ -6,6 +6,8 @@
 : ${MGMT_USER:="admin"} # Management user
 : ${MGMT_PASS:="Y2hhbmdlbWU="} # Management user's password (base64 encoded)
 : ${NFS_ADDR:="10.255.255.1"} # NFS load balancer's address
+# In order to set one of the above values, run this script prefixed by the variable assignment. For example:
+# PLUGIN_TAG=v0.1.0 MGMT_USER=manager ./deploy-plugin.sh
 
 # Other variables
 MYNAME=$(basename $0)

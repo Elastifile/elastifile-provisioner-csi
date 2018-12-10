@@ -12,7 +12,6 @@ YAML manifests are located under `deploy/`.
 
 ### Deploy plugin
 ```bash
-cd examples
 PLUGIN_TAG=v0.1.0 MGMT_ADDR=10.10.10.10 MGMT_USER=admin MGMT_PASS=Y2hhbmdlbWU= NFS_ADDR=10.255.255.1 ./deploy-plugin.sh
 ```
 
@@ -21,7 +20,6 @@ In `deploy/storageclass.yaml`, `parameters` such as `userMapping` can be customi
 
 ### Teardown plugin
 ```bash
-cd examples
 ./teardown-plugin.sh
 ```
 
