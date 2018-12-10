@@ -1,6 +1,9 @@
 package main
 
 import (
+	"fmt"
+	"strings"
+
 	"github.com/elastifile/errors"
 	"github.com/golang/glog"
 
@@ -18,13 +21,17 @@ type config struct {
 	EmanageURL string `parameter:"emanageURL"`
 	Username   string `parameter:"username"`
 	Password   string
-	namespace  string
 	//SecretName      string `parameter:"secretName"`
 	//SecretNamespace string `parameter:"secretNamespace"`
 }
 
+func (conf *config) String() string {
+	return fmt.Sprintf("NFS Server: %v, Management URL: %v, Management username: %v, Management password: %v",
+		conf.NFSServer, conf.EmanageURL, conf.Username, strings.Repeat("*", len(conf.Password)))
+}
+
 func GetProvisionerSettings() (configMap map[string]string, secrets map[string][]byte, err error) {
-	namespace := "default" // TODO: Support user-specified (or automatically detected) namespace
+	namespace := "default"
 
 	configMap, err = co.GetConfigMap(namespace, configMapName)
 	if err != nil {
@@ -56,9 +63,12 @@ func pluginConfig() (conf *config, err error) {
 		Password:   string(secret[managementPassword]),
 	}
 
-	// TODO: Make sure conf.EmanageURL starts with https
+	const tlsPrefix = "https://"
+	if !strings.HasPrefix(strings.ToLower(conf.EmanageURL), tlsPrefix) {
+		glog.Warningf("ECFS management URL has to start with https:// - got %v", conf.EmanageURL)
+		conf.EmanageURL = tlsPrefix + conf.EmanageURL
+	}
 
-	// TODO: Mask the password in the log using Stringer
-	glog.Infof("Parsed config map and secrets %+v", conf)
+	glog.Infof("Parsed config map and secrets: %+v", conf)
 	return
 }
