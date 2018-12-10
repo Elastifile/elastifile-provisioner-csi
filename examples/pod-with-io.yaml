@@ -7,7 +7,6 @@ spec:
   - ReadWriteMany
   resources:
     requests:
-
       storage: 55Gi
   storageClassName: elastifile
 ---
@@ -25,12 +24,9 @@ spec:
          mountPath: /mnt
      command: ["dd"]
      args: ["if=/dev/zero", "of=/mnt/ddfile", "bs=1M", "count=1000000"]
-#     command: ["tail"]
-#     args: ["-f", "/dev/null"]
   volumes:
    - name: volume1
      persistentVolumeClaim:
        claimName: demo-pvc
        readOnly: false
   restartPolicy: Never
-

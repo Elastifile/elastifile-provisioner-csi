@@ -1,17 +1,18 @@
 #!/usr/bin/env bash
 
+# Template expansion variables with default values
+: ${PLUGIN_TAG:="dev"} # Docker image tag
+: ${MGMT_ADDR:="10.10.10.10"} # Management address
+: ${MGMT_USER:="admin"} # Management user
+: ${MGMT_PASS:="Y2hhbmdlbWU="} # Management user's password (base64 encoded)
+: ${NFS_ADDR:="10.255.255.1"} # NFS load balancer's address
+
+# Other variables
 MYNAME=$(basename $0)
 MYPATH=$(dirname $0)
 DEPLOYMENT_BASE="${1}"
 : ${DRY_RUN:=false}
 : ${DEPLOYMENT_BASE:="../deploy"}
-
-# Template expansion values
-: ${PLUGIN_TAG:="dev"}
-: ${MGMT_ADDR:="1.1.1.1"}
-: ${MGMT_USER:="admin"}
-: ${MGMT_PASS:="Y2hhbmdlbWU="} # base64
-: ${NFS_ADDR:="10.255.255.1"}
 
 source ${MYPATH}/functions.sh
 
@@ -40,4 +41,3 @@ for OBJ in ${OBJECTS[@]}; do
 	    kubectl create -f "${DEPLOYMENT_BASE}/${OBJ}.yaml" ${DRY_RUN_FLAG}
     fi
 done
-

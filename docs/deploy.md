@@ -1,98 +1,53 @@
 # Deploying Elastifile's ECFS CSI provisioner
 
-// TODO: Remove Ceph, add actual deploy actions and supported arguments
-
-The CSI ECFS plugin is able to both provision new ECFS volumes and attach and mount existing ones to workloads.
-
-## Configuration
-
-**Available command line arguments:**
-
-Option | Default value | Description
------- | ------------- | -----------
-`--endpoint` | `unix://tmp/csi.sock` | CSI endpoint, must be a UNIX socket
-`--drivername` | `csi-ecfsplugin` | name of the driver (Kubernetes: `provisioner` field in StorageClass must correspond to this value)
-`--nodeid` | _empty_ | This node's ID
-`--volumemounter` | _empty_ | default volume mounter. Available options are `kernel` and `fuse`. This is the mount method used if volume parameters don't specify otherwise. If left unspecified, the driver will first probe for `ceph-fuse` in system's path and will choose Ceph kernel client if probing failed.
-
-**Available volume parameters:**
-
-Parameter | Required | Description
---------- | -------- | -----------
-`monitors` | yes | Comma separated list of Ceph monitors (e.g. `192.168.100.1:6789,192.168.100.2:6789,192.168.100.3:6789`)
-`mounter` | no | Mount method to be used for this volume. Available options are `kernel` for Ceph kernel client and `fuse` for Ceph FUSE driver. Defaults to "default mounter", see command line arguments.
-`provisionVolume` | yes | Mode of operation. BOOL value. If `true`, a new CephFS volume will be provisioned. If `false`, an existing CephFS will be used.
-`pool` | for `provisionVolume=true` | Ceph pool into which the volume shall be created
-`rootPath` | for `provisionVolume=false` | Root path of an existing CephFS volume
-`csiProvisionerSecretName`, `csiNodeStageSecretName` | for Kubernetes | name of the Kubernetes Secret object containing Ceph client credentials. Both parameters should have the same value
-`csiProvisionerSecretNamespace`, `csiNodeStageSecretNamespace` | for Kubernetes | namespaces of the above Secret objects
-
-**Required secrets for `provisionVolume=true`:**  
-Admin credentials are required for provisioning new volumes
-* `adminID`: ID of an admin client
-* `adminKey`: key of the admin client
-
-**Required secrets for `provisionVolume=false`:**  
-User credentials with access to an existing volume
-* `userID`: ID of a user client
-* `userKey`: key of a user client
-
 ## Deployment with Kubernetes
 
-Requires Kubernetes 1.11
+Requires Kubernetes 1.11+
 
 Your Kubernetes cluster must allow privileged pods (i.e. `--allow-privileged` flag must be set to true for both the API server and the kubelet). Moreover, as stated in the [mount propagation docs](https://kubernetes.io/docs/concepts/storage/volumes/#mount-propagation), the Docker daemon of the cluster nodes must allow shared mounts.
 
-YAML manifests are located in `deploy/cephfs/kubernetes`.
+YAML manifests are located under `deploy/`.
 
-**Deploy RBACs for sidecar containers and node plugins:**
+## Configuration
 
+### Deploy plugin
 ```bash
-$ kubectl create -f csi-attacher-rbac.yaml
-$ kubectl create -f csi-provisioner-rbac.yaml
-$ kubectl create -f csi-nodeplugin-rbac.yaml
+cd examples
+PLUGIN_TAG=v0.1.0 MGMT_ADDR=10.10.10.10 MGMT_USER=admin MGMT_PASS=Y2hhbmdlbWU= NFS_ADDR=10.255.255.1 ./deploy-plugin.sh
 ```
 
-Those manifests deploy service accounts, cluster roles and cluster role bindings. These are shared for both RBD and CephFS CSI plugins, as they require the same permissions.
+### Volume defaults
+In `deploy/storageclass.yaml`, `parameters` such as `userMapping` can be customized to suit your persistent volume needs
 
-**Deploy CSI sidecar containers:**
-
+### Teardown plugin
 ```bash
-$ kubectl create -f csi-ecfsplugin-attacher.yaml
-$ kubectl create -f csi-ecfsplugin-provisioner.yaml
+cd examples
+./teardown-plugin.sh
 ```
 
-Deploys stateful sets for external-attacher and external-provisioner sidecar containers for CSI CephFS.
+### Verifying the deployment in Kubernetes
 
-**Deploy CSI ECFS driver:**
-
+After successfully completing the steps above, you should see output similar to this:
 ```bash
-$ kubectl create -f csi-ecfsplugin.yaml
+$ kubectl get pod,storageclass
+NAME                               READY   STATUS    RESTARTS   AGE
+pod/csi-ecfsplugin-attacher-0      1/1     Running   0          37s
+pod/csi-ecfsplugin-provisioner-0   1/1     Running   0          35s
+pod/csi-ecfsplugin-rvzz2           2/2     Running   0          31s
+pod/csi-ecfsplugin-wkbhz           2/2     Running   0          31s
+pod/csi-ecfsplugin-wkpxx           2/2     Running   0          31s
+
+NAME                                             PROVISIONER            AGE
+storageclass.storage.k8s.io/elastifile           csi-ecfsplugin         32s
+storageclass.storage.k8s.io/standard (default)   kubernetes.io/gce-pd   3h
 ```
 
-Deploys a daemon set with two containers: CSI driver-registrar and the CSI CephFS driver.
-
-## Verifying the deployment in Kubernetes
-
-After successfuly completing the steps above, you should see output similar to this:
-```bash
-$ kubectl get all
-NAME                                 READY     STATUS    RESTARTS   AGE
-pod/csi-ecfsplugin-attacher-0      1/1       Running   0          26s
-pod/csi-ecfsplugin-provisioner-0   1/1       Running   0          25s
-pod/csi-ecfsplugin-rljcv           2/2       Running   0          24s
-
-NAME                                   TYPE        CLUSTER-IP       EXTERNAL-IP   PORT(S)     AGE
-service/csi-ecfsplugin-attacher      ClusterIP   10.104.116.218   <none>        12345/TCP   27s
-service/csi-ecfsplugin-provisioner   ClusterIP   10.101.78.75     <none>        12345/TCP   26s
-
-...
-```
-
-You can try deploying a demo pod from `examples/cephfs` to test the deployment further.
+You can try deploying a demo pod from `examples/` to test the deployment further.
+The recommended manifests are
+* `pod-with-volume.yaml` - creates a pvc and a pod, which mounts the resulting volume on /mnt
+* `pod-with-io.yaml` - similar to `pod-with-volume.yaml`, but also starts `dd` to generate some traffic, which can be observed via stats of ECFS management console
 
 ### Notes on volume deletion
 
-Volumes that were provisioned dynamically (i.e. `provisionVolume=true`) are allowed to be deleted by the driver as well, 
-if the user chooses to do so. Otherwise, the driver is forbidden to delete such volumes - attempting to delete them is a no-op.
-
+Upon PVC deletion, ECFS Data Container is going to be deleted.
+In case there's data in the Data Container, volume deletion will success, but the Data Container will be kept intact. 
