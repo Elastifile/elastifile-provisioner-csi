@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 : ${PROJECT:=elastifile-gce-lab-c340}
 : ${CLUSTER:=cluster-1}

@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 deployment_base="${1}"
 
@@ -8,7 +8,7 @@ fi
 
 cd "$deployment_base" || exit 1
 
-objects=(csi-ecfsplugin-attacher csi-ecfsplugin-provisioner csi-ecfsplugin csi-snapshotter-rbac csi-snapshotter snapshotclass storageclass csi-attacher-rbac csi-provisioner-rbac csi-nodeplugin-rbac configmap secret)
+objects=(csi-ecfsplugin-attacher csi-ecfsplugin-provisioner templates/csi-ecfsplugin csi-snapshotter-rbac csi-snapshotter snapshotclass storageclass csi-attacher-rbac csi-provisioner-rbac csi-nodeplugin-rbac templates/configmap templates/secret)
 
 for obj in ${objects[@]}; do
     echo "=== Deleting ${obj}"

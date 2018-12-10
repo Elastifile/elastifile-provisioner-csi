@@ -119,7 +119,9 @@ func (ems *emanageClient) GetSnapshotByName(snapshotName string) (snapshot *eman
 	}
 
 	for _, snap := range snapshots {
-		if snap.Name == snapshotName { // TODO: Check if name is unique across ECFS cluster
+		// TODO: Fix the potential issue with snapshot names being unique per-DC, while in K8s they *might* be cluster-wide
+		// Find a way to make sure snapshot belongs to a specific volume (e.g. by prepending the volume name)
+		if snap.Name == snapshotName {
 			glog.V(6).Infof("ecfs: GetSnapshotByName - matched snapshot by name %v on DC %v", snap.Name, snap.DataContainerID)
 			return
 		}

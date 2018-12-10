@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 : ${POD_ID:=2}
 : ${CONTAINER_NAME:=csi-ecfsplugin}

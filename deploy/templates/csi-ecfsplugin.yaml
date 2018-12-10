@@ -45,7 +45,7 @@ spec:
             capabilities:
               add: ["SYS_ADMIN"]
             allowPrivilegeEscalation: true
-          image: docker.io/elastifileio/ecfs-provisioner-csi:next
+          image: docker.io/elastifileio/ecfs-provisioner-csi:${PLUGIN_TAG}
           imagePullPolicy: "Always"
           args:
             - "--nodeid=$(NODE_ID)"

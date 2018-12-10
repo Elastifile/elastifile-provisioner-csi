@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 CONTAINER_NAME=csi-ecfsplugin
 POD_NAME=$(kubectl get pods -l app=$CONTAINER_NAME -o=name | head -n 1)
