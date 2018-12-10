@@ -177,6 +177,6 @@ func newVolumeOptions(volumeName string, volOptions map[string]string) (opts *vo
 	}
 	opts.Access = paramStr
 
-	glog.Infof("AAAAA newVolumeOptions - returning: %+v", opts) // TODO: DELME
+	glog.V(6).Infof("ecfs: Volume %v options: %+v", volumeName, opts)
 	return
 }

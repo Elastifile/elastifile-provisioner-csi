@@ -50,8 +50,8 @@ func (cs *controllerServer) CreateVolume(ctx context.Context, req *csi.CreateVol
 	}
 
 	// TODO: Don't create eManage client for each action (will need relogin support)
+	// This has to wait until the new unified emanage client is available, since that one has generic relogin handler support
 	var ems emanageClient
-	// TODO: Here we can get User Mapping, mount options and other user-specified params (How?)
 	volOptions, err := newVolumeOptions(req.GetName(), req.GetParameters())
 	if err != nil {
 		glog.Errorf("Validation of volume options failed: %v", err)

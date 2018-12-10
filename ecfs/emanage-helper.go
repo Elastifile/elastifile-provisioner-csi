@@ -35,23 +35,19 @@ func newEmanageClient() (client *emanageClient, err error) {
 		}
 	}
 
-	// TODO: Add retries
-
-	glog.V(2).Infof("AAAAA newEmanageClient - config: %+v", emsConfig) // TODO: DELME
-	glog.Infof("newEmanageClient on %s", emsConfig.EmanageURL)
 	baseURL, err := url.Parse(strings.TrimSuffix(emsConfig.EmanageURL, "\n"))
 	if err != nil {
 		err = status.Error(codes.InvalidArgument, err.Error())
 		return
 	}
 
-	glog.V(2).Info("AAAAA newEmanageClient - calling NewClient()") // TODO: DELME
+	glog.V(5).Infof("ecfs: Connecting on ECFS management server on %v", emsConfig.EmanageURL)
 	legacyClient := emanage.NewClient(baseURL)
 	client = &emanageClient{legacyClient}
-	glog.V(2).Infof("AAAAA newEmanageClient - got new client: %+v", client) // TODO: DELME
-	err = client.Sessions.Login(emsConfig.Username, emsConfig.Password)
-	glog.V(2).Infof("AAAAA newEmanageClient - login err: %v", err) // TODO: DELME
+	glog.V(5).Infof("ecfs:  into ECFS management as %v", emsConfig.Username)
+	err = client.Sessions.RetriedLoginTimeout(emsConfig.Username, emsConfig.Password, 3*time.Minute)
 	if err != nil {
+		glog.Warningf("Failed to log into ECFS management (%v) - %v", emsConfig, err)
 		err = errors.WrapPrefix(err, fmt.Sprintf("Failed to log into eManage on %v", emsConfig.EmanageURL), 0)
 		err = status.Error(codes.Unauthenticated, err.Error())
 		return
@@ -61,20 +57,20 @@ func newEmanageClient() (client *emanageClient, err error) {
 
 func (ems *emanageClient) GetClient() *emanageClient {
 	if ems.Client == nil {
-		glog.V(5).Infof("Initializing eManage client")
+		glog.V(5).Infof("ecfs: Initializing eManage client")
 		tmpClient, err := newEmanageClient()
 		if err != nil {
 			panic(fmt.Sprintf("Failed to create eManage client. err: %v", err))
 		}
 		ems.Client = tmpClient.Client
-		glog.Infof("AAAAA GetClient - initialized new eManage client - %+v", ems.Client) // TODO: DELME
+		glog.V(6).Infof("ecfs: Initialized new eManage client")
 	}
 
 	return ems
 }
 
 func (ems *emanageClient) GetDcByName(dcName string) (*emanage.DataContainer, error) {
-	glog.V(2).Infof("AAAAA GetDcByName - getting DCs from ems: %+v", ems) // TODO: DELME
+	glog.V(6).Infof("ecfs: GetDcByName - getting DCs from ECFS management")
 	dcs, err := ems.GetClient().DataContainers.GetAll(nil)
 	if err != nil {
 		return nil, errors.WrapPrefix(err, "Failed to list Data Containers", 0)
@@ -89,7 +85,7 @@ func (ems *emanageClient) GetDcByName(dcName string) (*emanage.DataContainer, er
 
 func (ems *emanageClient) GetDcExportByName(dcName string) (*emanage.DataContainer, *emanage.Export, error) {
 	// Here we assume the Dc and the Export have the same name
-	glog.V(2).Infof("AAAAA GetDcExportByName - enter. Looking for Dc & export named: %v", dcName) // TODO: DELME
+	glog.V(6).Infof("ecfs: GetDcExportByName - Looking for Dc & export by volume name %v", dcName)
 	dc, err := ems.GetDcByName(dcName)
 	if err != nil {
 		return nil, nil, errors.Wrap(err, 0)
