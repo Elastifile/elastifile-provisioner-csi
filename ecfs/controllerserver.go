@@ -153,7 +153,23 @@ func (cs *controllerServer) ControllerUnpublishVolume(ctx context.Context, req *
 }
 
 func (cs *controllerServer) CreateSnapshot(ctx context.Context, req *csi.CreateSnapshotRequest) (response *csi.CreateSnapshotResponse, err error) {
-	var ems *emanageClient
+	var ems emanageClient
+
+	glog.V(6).Infof("ecfs: Received snapshot create request - %+v", req.GetName())
+	if isWorkaround("80 chars limit") {
+		const maxSnapshotNameLen = 36
+		var snapshotName = req.GetName()
+		k8sSnapshotPrefix := "snapshot-"
+		snapshotName = strings.TrimPrefix(snapshotName, k8sSnapshotPrefix)
+		if len(snapshotName) > maxSnapshotNameLen {
+			err = errors.Errorf("Snapshot name exceeds max allowed length of %v - %v (short version: %v)",
+				maxSnapshotNameLen, req.GetName(), snapshotName)
+			//snapshotName = truncateStr(req.Name, maxSnapshotNameLen)
+			return
+		}
+		req.Name = snapshotName
+	}
+
 	glog.V(2).Infof("ecfs: Creating snapshot %v on volume %v", req.GetName(), req.GetSourceVolumeId())
 	glog.V(6).Infof("ecfs: CreateSnapshot - enter. req: %+v", req)
 	ecfsSnapshot, err := createSnapshot(ems.GetClient(), req.GetName(), req.GetSourceVolumeId(), req.GetParameters())
@@ -163,6 +179,8 @@ func (cs *controllerServer) CreateSnapshot(ctx context.Context, req *csi.CreateS
 		return
 	}
 
+	glog.V(6).Infof("ecfs: Parsing snapshot's CreatedAt timestamp: %v", ecfsSnapshot.CreatedAt)
+	glog.V(10).Infof("ecfs: CreateSnapshot - ecfsSnapshot.CreatedAt: %+v", ecfsSnapshot.CreatedAt) // TODO: DELME
 	creationTimestamp, err := parseTimestampRFC3339(ecfsSnapshot.CreatedAt)
 	if err != nil {
 		err = errors.Wrap(err, 0)
@@ -187,7 +205,7 @@ func (cs *controllerServer) CreateSnapshot(ctx context.Context, req *csi.CreateS
 func (cs *controllerServer) DeleteSnapshot(ctx context.Context, req *csi.DeleteSnapshotRequest) (response *csi.DeleteSnapshotResponse, err error) {
 	glog.V(2).Infof("ecfs: Deleting snapshot %v", req.GetSnapshotId())
 	glog.V(6).Infof("ecfs: DeleteSnapshot - enter. req: %+v", req)
-	var ems *emanageClient
+	var ems emanageClient
 	err = deleteSnapshot(ems.GetClient(), req.GetSnapshotId())
 	if err != nil {
 		err = errors.WrapPrefix(err, fmt.Sprintf("Failed to delete snapshot by id %v", req.GetSnapshotId()), 0)
@@ -217,21 +235,24 @@ func (cs *controllerServer) ListSnapshots(ctx context.Context, req *csi.ListSnap
 		args = append(args, fmt.Sprintf("starting token: %v", req.GetStartingToken()))
 	}
 	if len(args) > 0 {
-		description = "(" + strings.Join(args, ",")
+		description = " - " + strings.Join(args, ", ")
 	}
 	glog.V(2).Infof("ecfs: Listing snapshots %v", description)
 	glog.V(6).Infof("ecfs: ListSnapshots - enter. req: %+v", req)
 
-	var ems *emanageClient
+	var ems emanageClient
 	ecfsSnapshots, nextToken, err := listSnapshots(ems.GetClient(), req.GetSnapshotId(), req.GetSourceVolumeId(), req.GetMaxEntries(), req.GetStartingToken())
 	if err != nil {
 		err = errors.WrapPrefix(err, fmt.Sprintf("Failed to list snapshots. Request: %+v", req), 0)
 		return
 	}
 
+	glog.Warningf("AAAAA ListSnapshots - ecfsSnapshots: %+v", ecfsSnapshots) // TODO: DELME
+
 	var listEntries []*csi.ListSnapshotsResponse_Entry
 	for _, ecfsSnapshot := range ecfsSnapshots {
 		var csiSnapshot *csi.Snapshot
+		glog.V(6).Infof("ecfs: Converting ECFS snapshot struct to CSI: %+v", ecfsSnapshot)
 		csiSnapshot, err = snapshotEcfsToCsi(ems.GetClient(), ecfsSnapshot)
 		if err != nil {
 			err = errors.Wrap(err, 0)

@@ -12,21 +12,30 @@
 # Other variables
 MYNAME=$(basename $0)
 MYPATH=$(dirname $0)
+
+source ${MYPATH}/functions.sh
+
 DEPLOYMENT_BASE="${1}"
 : ${DRY_RUN:=false}
 : ${DEPLOYMENT_BASE:="../deploy"}
 
-source ${MYPATH}/functions.sh
+DEFAULT_K8S_USER=${USER}
+if which gcloud > /dev/null 2>&1; then
+    log_info Found gcloud
+    DEFAULT_K8S_USER=$(gcloud config get-value account)
+fi
+
+: ${K8S_USER:=${DEFAULT_K8S_USER}}
 
 DRY_RUN_FLAG=""
-if [ "$DRY_RUN" = true ]; then
+if [[ "$DRY_RUN" = true ]]; then
     log_info "WARNING: DRY RUN"
     DRY_RUN_FLAG="--dry-run"
 fi
 
 test -d "${DEPLOYMENT_BASE}" || exit 1
 
-kubectl create clusterrolebinding cluster-admin-binding --clusterrole cluster-admin --user $(gcloud config get-value account) ${DRY_RUN_FLAG}
+kubectl create clusterrolebinding cluster-admin-binding --clusterrole cluster-admin --user ${K8S_USER} ${DRY_RUN_FLAG}
 
 OBJECTS=(templates/configmap templates/secret csi-attacher-rbac csi-provisioner-rbac csi-nodeplugin-rbac csi-snapshotter-rbac csi-ecfsplugin-attacher csi-ecfsplugin-provisioner csi-snapshotter snapshotclass storageclass templates/csi-ecfsplugin)
 

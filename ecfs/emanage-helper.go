@@ -41,10 +41,10 @@ func newEmanageClient() (client *emanageClient, err error) {
 		return
 	}
 
-	glog.V(5).Infof("ecfs: Connecting on ECFS management server on %v", emsConfig.EmanageURL)
+	glog.V(5).Infof("ecfs: Connecting to ECFS management server on %v", emsConfig.EmanageURL)
 	legacyClient := emanage.NewClient(baseURL)
 	client = &emanageClient{legacyClient}
-	glog.V(5).Infof("ecfs:  into ECFS management as %v", emsConfig.Username)
+	glog.V(5).Infof("ecfs: Logging into ECFS management server as %v", emsConfig.Username)
 	err = client.Sessions.RetriedLoginTimeout(emsConfig.Username, emsConfig.Password, 3*time.Minute)
 	if err != nil {
 		glog.Warningf("Failed to log into ECFS management (%v) - %v", emsConfig, err)
@@ -119,22 +119,23 @@ func (ems *emanageClient) GetSnapshotByName(snapshotName string) (snapshot *eman
 		// Find a way to make sure snapshot belongs to a specific volume (e.g. by prepending the volume name)
 		if snap.Name == snapshotName {
 			glog.V(6).Infof("ecfs: GetSnapshotByName - matched snapshot by name %v on DC %v", snap.Name, snap.DataContainerID)
-			return
+			return snap, nil
 		}
 	}
 	return nil, errors.Errorf("Snapshot not found by name %v", snapshotName)
 }
 
 func parseTimestampRFC3339(timestamp string) (int64, error) {
-	const RFC3339 = "2016-01-01T10:02:00.000Z"
-	ts, err := time.Parse(RFC3339, timestamp)
+	ts, err := time.Parse(time.RFC3339, timestamp)
 	if err != nil {
-		return 0, errors.WrapPrefix(err, "Failed to parse timestamp '%v' - expected format '%v'", 0)
+		return 0, errors.WrapPrefix(err,
+			fmt.Sprintf("Failed to parse timestamp '%v' - expected format '%v'", timestamp, time.RFC3339), 0)
 	}
 	return ts.Unix(), nil
 }
 
 func snapshotEcfsToCsi(ems *emanageClient, ecfsSnapshot *emanage.Snapshot) (csiSnapshot *csi.Snapshot, err error) {
+	glog.V(6).Infof("ecfs: Converting ECFS snapshot struct to CSI: %+v", *ecfsSnapshot)
 	dcId := ecfsSnapshot.DataContainerID
 	dc, err := ems.DataContainers.GetFull(dcId)
 	if err != nil {

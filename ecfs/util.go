@@ -159,3 +159,15 @@ func isErrorDoesNotExist(err error) bool {
 	return strings.Contains(err.Error(), "not found") ||
 		strings.Contains(err.Error(), "not exist")
 }
+
+func isWorkaround(desc string) bool {
+	glog.Warningf("USING WORKAROUND FOR %v", desc)
+	return true
+}
+
+func truncateStr(str string, maxLen int) string {
+	if len(str) > maxLen {
+		return str[:maxLen]
+	}
+	return str
+}
