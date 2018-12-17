@@ -19,6 +19,7 @@ package main
 import (
 	"fmt"
 
+	"github.com/container-storage-interface/spec/lib/go/csi/v0"
 	"github.com/golang/glog"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -75,14 +76,14 @@ func createDc(emsClient *emanageClient, opt *volumeOptions) (*emanage.DataContai
 }
 
 func createExportForVolume(emsClient *emanageClient, volOptions *volumeOptions) (export emanage.Export, err error) {
-	found, export, err := exportExists(emsClient, exportName, volOptions)
+	found, export, err := exportExists(emsClient, volumeExportName, volOptions)
 	if err != nil {
 		err = errors.WrapPrefix(err, fmt.Sprintf("Failed to check if export %v exists on DC %v",
-			exportName, volOptions.Name), 0)
+			volumeExportName, volOptions.Name), 0)
 		return
 	}
 	if found {
-		glog.V(3).Infof("ecfs: Export %v for volume %v already exists - nothing to do", exportName, volOptions.Name)
+		glog.V(3).Infof("ecfs: Export %v for volume %v already exists - nothing to do", volumeExportName, volOptions.Name)
 		return
 	}
 
@@ -95,7 +96,7 @@ func createExportForVolume(emsClient *emanageClient, volOptions *volumeOptions) 
 		Access:      emanage.ExportAccessModeType(volOptions.Access),
 	}
 
-	export, err = emsClient.Exports.CreateForVolume(exportName, exportOpt)
+	export, err = emsClient.Exports.CreateForVolume(volumeExportName, exportOpt)
 	if err != nil {
 		if isErrorAlreadyExists(err) {
 			glog.V(3).Infof("ecfs: Export for volume %v was recently created - nothing to do", volOptions.Name)
@@ -122,7 +123,8 @@ func createVolume(emsClient *emanageClient, volOptions *volumeOptions) (err erro
 	glog.V(2).Infof("AAAAA createVolume - DC found: %v", found) // TODO: DELME
 
 	if !found { // Create Data Container
-		dc, err := createDc(emsClient, volOptions)
+		var dc *emanage.DataContainer
+		dc, err = createDc(emsClient, volOptions)
 		glog.V(2).Infof("AAAAA createVolume - createDc() err: %v, result: %+v", err, volOptions.DataContainer) // TODO: DELME
 		if err != nil {
 			if isErrorAlreadyExists(err) {
@@ -153,6 +155,37 @@ func createVolume(emsClient *emanageClient, volOptions *volumeOptions) (err erro
 	return nil
 }
 
+func createVolumeFromSnapshot(emsClient *emanageClient, volOptions *volumeOptions, volSource *csi.VolumeContentSource) (err error) {
+	glog.V(2).Infof("AAAAA createVolumeFromSnapshot - volOptions: %+v client: %+v", volOptions, emsClient) // TODO: DELME
+
+	// Verify volSource type
+	_, ok := volSource.GetType().(*csi.VolumeContentSource_Snapshot)
+	if !ok {
+		return errors.Errorf("Received bad volume volSource type - %v", volSource.GetType())
+	}
+
+	snapSource := volSource.GetSnapshot()
+
+	// Get snapshot
+	// Create export on snapshot
+	ecfsSnapshot, err := emsClient.GetSnapshotByName(snapSource.GetId())
+	if err != nil {
+		return errors.WrapPrefix(err, "Failed to get ECFS snapshot by name", 0)
+	}
+
+	// Create Export
+	export, err := createExportOnSnapshot(emsClient, ecfsSnapshot)
+	if err != nil {
+		err = errors.Wrap(err, 0)
+		return status.Error(codes.Internal, err.Error())
+	} else {
+		volOptions.Export = export
+	}
+	glog.V(5).Infof("Export %v from snapshot %v created", export.Name, ecfsSnapshot.Name)
+
+	return nil
+}
+
 func deleteExport(emsClient *emanageClient, dc *emanage.DataContainer) (err error) {
 	exports, err := emsClient.Exports.GetAll(&emanage.GetAllOpts{})
 	if err != nil {
@@ -161,7 +194,7 @@ func deleteExport(emsClient *emanageClient, dc *emanage.DataContainer) (err erro
 
 	var found bool
 	for _, export := range exports {
-		if export.DataContainerId == dc.Id && export.Name == exportName {
+		if export.DataContainerId == dc.Id && export.Name == volumeExportName {
 			found = true
 			_, err := emsClient.Exports.Delete(&export)
 			if err != nil {
@@ -172,7 +205,7 @@ func deleteExport(emsClient *emanageClient, dc *emanage.DataContainer) (err erro
 
 	if !found {
 		glog.V(3).Infof("ecfs: Export %v for volume %v not found. Assuming already deleted",
-			exportName, dc.Name)
+			volumeExportName, dc.Name)
 	}
 
 	return nil

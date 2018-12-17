@@ -20,6 +20,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/container-storage-interface/spec/lib/go/csi/v0"
 	//"github.com/container-storage-interface/spec/lib/go/csi" // TODO: Uncomment when switching to CSI 1.0
@@ -36,7 +37,6 @@ type nodeServer struct {
 }
 
 func (ns *nodeServer) nodePublishVolume(ctx context.Context, req *csi.NodePublishVolumeRequest) (*csi.NodePublishVolumeResponse, error) {
-	glog.V(2).Infof("AAAAA NodePublishVolume - enter. ctx: %+v req: %+v", ctx, req) // TODO: DELME
 	if err := validateNodePublishVolumeRequest(req); err != nil {
 		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
@@ -71,13 +71,14 @@ func (ns *nodeServer) nodePublishVolume(ctx context.Context, req *csi.NodePublis
 
 	glog.V(2).Infof("AAAAA NodePublishVolume - done. volId: %v, targetPath: %v", volId, targetPath) // TODO: DELME
 
-	glog.Infof("ecfs: successfully bind-mounted volume %s to %s", volId, targetPath)
+	glog.Infof("ecfs: Bind-mounted volume %s to %s", volId, targetPath)
 
 	return &csi.NodePublishVolumeResponse{}, nil
 }
 
 func (ns *nodeServer) NodePublishVolume(ctx context.Context, req *csi.NodePublishVolumeRequest) (*csi.NodePublishVolumeResponse, error) {
-	glog.V(6).Infof("NodePublishVolume - enter. req: %+v", req)
+	glog.V(5).Infof("ecfs: Publishing volume %v", req.VolumeId)
+	glog.V(6).Infof("ecfs: NodePublishVolume - enter. req: %+v", *req)
 	return ns.nodePublishVolume(ctx, req)
 }
 
@@ -127,7 +128,7 @@ func (ns *nodeServer) nodeStageVolume(ctx context.Context, req *csi.NodeStageVol
 }
 
 func (ns *nodeServer) NodeStageVolume(ctx context.Context, req *csi.NodeStageVolumeRequest) (*csi.NodeStageVolumeResponse, error) {
-	glog.V(6).Infof("NodeStageVolume - enter. req: %+v", req)
+	glog.V(6).Infof("NodeStageVolume - enter. req: %+v", *req)
 	return ns.nodeStageVolume(ctx, req)
 }
 
@@ -145,18 +146,20 @@ func (ns *nodeServer) nodeUnpublishVolume(ctx context.Context, req *csi.NodeUnpu
 
 	os.Remove(targetPath)
 
-	glog.Infof("ecfs: successfully unbinded volume %s from %s", req.GetVolumeId(), targetPath)
+	glog.V(3).Infof("ecfs: Unbinded volume %s from %s", req.GetVolumeId(), targetPath)
 
 	return &csi.NodeUnpublishVolumeResponse{}, nil
 }
 
 func (ns *nodeServer) NodeUnpublishVolume(ctx context.Context, req *csi.NodeUnpublishVolumeRequest) (*csi.NodeUnpublishVolumeResponse, error) {
-	glog.V(6).Infof("NodeUnpublishVolume - enter. req: %+v", req)
+	glog.V(5).Infof("ecfs: Unpublishing volume %v", req.VolumeId)
+	glog.V(6).Infof("ecfs: NodeUnpublishVolume - enter. req: %+v", *req)
 	return ns.nodeUnpublishVolume(ctx, req)
 }
 
 func (ns *nodeServer) NodeUnstageVolume(ctx context.Context, req *csi.NodeUnstageVolumeRequest) (*csi.NodeUnstageVolumeResponse, error) {
-	glog.V(6).Infof("NodeUnstageVolume - enter. req: %+v", req)
+	glog.V(5).Infof("ecfs: Unstaging volume %v", req.VolumeId)
+	glog.V(6).Infof("ecfs: NodeUnstageVolume - enter. req: %+v", *req)
 	if err := validateNodeUnstageVolumeRequest(req); err != nil {
 		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
@@ -165,6 +168,12 @@ func (ns *nodeServer) NodeUnstageVolume(ctx context.Context, req *csi.NodeUnstag
 
 	// Unmount the volume
 	if err := unmountVolume(stagingTargetPath); err != nil {
+		const errorNotMounted = "mountpoint not found"
+		if strings.Contains(err.Error(), errorNotMounted) {
+			glog.Warningf("ecfs: Unstaging failed as '%v' does not exist - for idempotency's sake assuming "+
+				"it has already been removed. Error: %v", stagingTargetPath, err.Error())
+			return &csi.NodeUnstageVolumeResponse{}, nil
+		}
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
@@ -183,29 +192,33 @@ func (ns *nodeServer) NodeUnstageVolume(ctx context.Context, req *csi.NodeUnstag
 // Enabled via NodeServiceCapability_RPC_GET_VOLUME_STATS
 // TODO: Uncomment when switching to CSI 1.0
 //func (ns *nodeServer) NodeGetVolumeStats(ctx context.Context, req *csi.NodeGetVolumeStatsRequest) (*csi.NodeGetVolumeStatsResponse, error) {
-//	glog.V(6).Infof("NodeGetVolumeStats - enter. req: %+v", req)
+//	glog.V(6).Infof("NodeGetVolumeStats - enter. req: %+v", *req)
 //	return nil, status.Error(codes.Unimplemented, "QQQQQ - not yet supported")
 //}
 
-func (ns *nodeServer) NodeGetCapabilities(ctx context.Context, req *csi.NodeGetCapabilitiesRequest) (*csi.NodeGetCapabilitiesResponse, error) {
-	glog.V(6).Infof("NodeGetCapabilities - enter. req: %+v", req)
-	return &csi.NodeGetCapabilitiesResponse{
-			Capabilities: []*csi.NodeServiceCapability{
-				{
-					Type: &csi.NodeServiceCapability_Rpc{
-						Rpc: &csi.NodeServiceCapability_RPC{
-							Type: csi.NodeServiceCapability_RPC_STAGE_UNSTAGE_VOLUME,
-						},
+func (ns *nodeServer) NodeGetCapabilities(ctx context.Context, req *csi.NodeGetCapabilitiesRequest) (capabilities *csi.NodeGetCapabilitiesResponse, err error) {
+	glog.V(6).Infof("ecfs: NodeGetCapabilities - enter. req: %+v", *req)
+
+	capabilities = &csi.NodeGetCapabilitiesResponse{
+		Capabilities: []*csi.NodeServiceCapability{
+			{
+				Type: &csi.NodeServiceCapability_Rpc{
+					Rpc: &csi.NodeServiceCapability_RPC{
+						Type: csi.NodeServiceCapability_RPC_STAGE_UNSTAGE_VOLUME,
 					},
 				},
-				//{
-				//	Type: &csi.NodeServiceCapability_Rpc{
-				//		Rpc: &csi.NodeServiceCapability_RPC{
-				//			Type: csi.NodeServiceCapability_RPC_GET_VOLUME_STATS,
-				//		},
-				//	},
-				//},
 			},
+			//{
+			//	Type: &csi.NodeServiceCapability_Rpc{
+			//		Rpc: &csi.NodeServiceCapability_RPC{
+			//			Type: csi.NodeServiceCapability_RPC_GET_VOLUME_STATS,
+			//		},
+			//	},
+			//},
 		},
-		nil
+	}
+
+	glog.V(5).Infof("ecfs: Returning node capabilities")
+	glog.V(6).Infof("ecfs: Returning node capabilities: %+v", capabilities)
+	return
 }

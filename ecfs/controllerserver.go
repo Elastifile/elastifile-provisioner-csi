@@ -37,7 +37,7 @@ type controllerServer struct {
 
 func (cs *controllerServer) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest) (*csi.CreateVolumeResponse, error) {
 	glog.V(2).Infof("ecfs: Creating volume: %v", req.GetName())
-	glog.V(6).Infof("ecfs: Received CreateVolumeRequest: %+v", req)
+	glog.V(6).Infof("ecfs: Received CreateVolumeRequest: %+v", *req)
 	if err := cs.validateCreateVolumeRequest(req); err != nil {
 		glog.Errorf("CreateVolumeRequest validation failed: %v", err)
 		err = status.Error(codes.InvalidArgument, err.Error())
@@ -65,15 +65,32 @@ func (cs *controllerServer) CreateVolume(ctx context.Context, req *csi.CreateVol
 	}
 	volOptions.NfsAddress = pluginConfig.NFSServer
 
-	glog.Infof("AAAAA CreateVolume - calling createVolume()") // TODO: DELME
-	err = createVolume(ems.GetClient(), volOptions)
-	if err != nil {
-		glog.Errorf("failed to create volume %s: %v", req.GetName(), err)
-		return nil, status.Error(codes.Internal, err.Error())
+	if req.VolumeContentSource == nil { // Create a regular volume, i.e. new Data Container
+		glog.V(6).Infof("ecfs: Creating regular volume %v", req.GetName())
+		err = createVolume(ems.GetClient(), volOptions)
+		if err != nil {
+			glog.Errorf("Failed to create volume %v - %v", req.GetName(), err)
+			err = errors.Wrap(err, 0)
+			return nil, status.Error(codes.Internal, err.Error())
+		}
+	} else { // Volume from snapshot
+		source := req.GetVolumeContentSource()
+		glog.V(6).Infof("ecfs: Creating volume %v from snapshot %v",
+			req.GetName(), source.GetSnapshot().GetId())
+		err = createVolumeFromSnapshot(ems.GetClient(), volOptions, source)
+		// ecfs/controllerserver.go:79:89: cannot use req.GetVolumeContentSource() (type
+		// *"github.com/container-storage-interface/spec/lib/go/csi/v0".VolumeContentSource
+		// ) as type
+		// *"csi-provisioner-elastifile/vendor/src/github.com/container-storage-interface/spec/lib/go/csi/v0".VolumeContentSource in argument to createVolumeFromSnapshot
+		if err != nil {
+			glog.Errorf("Failed to create volume %v from snapshot %v - %v",
+				req.GetName(), req.VolumeContentSource.GetSnapshot().GetId(), err)
+			err = errors.Wrap(err, 0)
+			return nil, status.Error(codes.Internal, err.Error())
+		}
 	}
-	glog.Info("AAAAA CreateVolume - after createVolume()") // TODO: DELME
 
-	glog.Infof("ecfs: successfully created volume %s", volOptions.Name)
+	glog.V(3).Infof("ecfs: Created volume %v", volOptions.Name)
 
 	return &csi.CreateVolumeResponse{
 		Volume: &csi.Volume{
@@ -109,8 +126,7 @@ func (cs *controllerServer) DeleteVolume(ctx context.Context, req *csi.DeleteVol
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	glog.Infof("ecfs: successfully deleted volume %s", volId)
-
+	glog.V(3).Infof("ecfs: Deleted volume %s", volId)
 	return &csi.DeleteVolumeResponse{}, nil
 }
 
@@ -142,13 +158,13 @@ func (cs *controllerServer) ValidateVolumeCapabilities(ctx context.Context, req 
 
 func (cs *controllerServer) ControllerPublishVolume(ctx context.Context, req *csi.ControllerPublishVolumeRequest) (*csi.ControllerPublishVolumeResponse, error) {
 	glog.V(2).Infof("ecfs: Publishing volume %v on node %v", req.GetVolumeId(), req.GetNodeId())
-	glog.V(6).Infof("ecfs: ControllerPublishVolume - enter. req: %+v", req)
+	glog.V(6).Infof("ecfs: ControllerPublishVolume - enter. req: %+v", *req)
 	return nil, status.Error(codes.Unimplemented, "QQQQQ - not yet supported")
 }
 
 func (cs *controllerServer) ControllerUnpublishVolume(ctx context.Context, req *csi.ControllerUnpublishVolumeRequest) (*csi.ControllerUnpublishVolumeResponse, error) {
 	glog.V(2).Infof("ecfs: Unpublishing volume %v on node", req.GetVolumeId(), req.GetNodeId())
-	glog.V(6).Infof("ecfs: ControllerUnpublishVolume - enter. req: %+v", req)
+	glog.V(6).Infof("ecfs: ControllerUnpublishVolume - enter. req: %+v", *req)
 	return nil, status.Error(codes.Unimplemented, "QQQQQ - not yet supported")
 }
 
@@ -171,7 +187,7 @@ func (cs *controllerServer) CreateSnapshot(ctx context.Context, req *csi.CreateS
 	//}
 
 	glog.V(2).Infof("ecfs: Creating snapshot %v on volume %v", req.GetName(), req.GetSourceVolumeId())
-	glog.V(6).Infof("ecfs: CreateSnapshot - enter. req: %+v", req)
+	glog.V(6).Infof("ecfs: CreateSnapshot - enter. req: %+v", *req)
 	ecfsSnapshot, err := createSnapshot(ems.GetClient(), req.GetName(), req.GetSourceVolumeId(), req.GetParameters())
 	if err != nil {
 		err = errors.WrapPrefix(err,
@@ -199,12 +215,13 @@ func (cs *controllerServer) CreateSnapshot(ctx context.Context, req *csi.CreateS
 		},
 	}
 
+	glog.V(3).Infof("ecfs: Created snapshot %v", req.Name)
 	return
 }
 
 func (cs *controllerServer) DeleteSnapshot(ctx context.Context, req *csi.DeleteSnapshotRequest) (response *csi.DeleteSnapshotResponse, err error) {
 	glog.V(2).Infof("ecfs: Deleting snapshot %v", req.GetSnapshotId())
-	glog.V(6).Infof("ecfs: DeleteSnapshot - enter. req: %+v", req)
+	glog.V(6).Infof("ecfs: DeleteSnapshot - enter. req: %+v", *req)
 	var ems emanageClient
 	err = deleteSnapshot(ems.GetClient(), req.GetSnapshotId())
 	if err != nil {
@@ -212,6 +229,7 @@ func (cs *controllerServer) DeleteSnapshot(ctx context.Context, req *csi.DeleteS
 		return
 	}
 	response = &csi.DeleteSnapshotResponse{}
+	glog.V(3).Infof("ecfs: Deleted snapshot %v", req.SnapshotId)
 	return
 }
 
@@ -238,12 +256,12 @@ func (cs *controllerServer) ListSnapshots(ctx context.Context, req *csi.ListSnap
 		description = " - " + strings.Join(args, ", ")
 	}
 	glog.V(2).Infof("ecfs: Listing snapshots %v", description)
-	glog.V(6).Infof("ecfs: ListSnapshots - enter. req: %+v", req)
+	glog.V(6).Infof("ecfs: ListSnapshots - enter. req: %+v", *req)
 
 	var ems emanageClient
 	ecfsSnapshots, nextToken, err := listSnapshots(ems.GetClient(), req.GetSnapshotId(), req.GetSourceVolumeId(), req.GetMaxEntries(), req.GetStartingToken())
 	if err != nil {
-		err = errors.WrapPrefix(err, fmt.Sprintf("Failed to list snapshots. Request: %+v", req), 0)
+		err = errors.WrapPrefix(err, fmt.Sprintf("Failed to list snapshots. Request: %+v", *req), 0)
 		return
 	}
 
@@ -268,12 +286,14 @@ func (cs *controllerServer) ListSnapshots(ctx context.Context, req *csi.ListSnap
 		Entries:   listEntries,
 		NextToken: nextToken,
 	}
+
+	glog.V(3).Infof("ecfs: Listed %v snapshots", len(listEntries))
 	return
 }
 
 // TODO: Implement
 // Found in master of https://github.com/container-storage-interface/spec/blob/master/spec.md#rpc-interface, but not in 1.0.0
 //func (cs *controllerServer) ControllerExpandVolume(ctx context.Context, req *csi.ControllerExpandVolumeRequest) (*csi.ControllerExpandVolumeResponse, error) {
-//	glog.V(6).Infof("ControllerExpandVolume - enter. req: %+v", req)
+//	glog.V(6).Infof("ControllerExpandVolume - enter. req: %+v", *req)
 //	// Set VolumeExpansion = ONLINE
 //}

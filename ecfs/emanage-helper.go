@@ -20,7 +20,10 @@ type emanageClient struct {
 	*emanage.Client
 }
 
-const exportName = "root"
+const (
+	volumeExportName   = "root"
+	snapshotExportName = "se" // SE stands for Snapshot Export
+)
 
 var emsConfig *config
 
@@ -97,7 +100,7 @@ func (ems *emanageClient) GetDcExportByName(dcName string) (*emanage.DataContain
 	}
 
 	for _, export := range exports {
-		if dc.Id == export.DataContainerId && export.Name == exportName {
+		if dc.Id == export.DataContainerId && export.Name == volumeExportName {
 			glog.V(2).Infof("AAAAA GetDcExportByName - success. Returning DC: %+v EXPORT: %+v", dc, export) // TODO: DELME
 			return dc, &export, nil
 		}
@@ -176,4 +179,25 @@ func snapshotStatusEcfsToCsi(ecfsSnapshotStatus string) csi.SnapshotStatus_Type 
 	}
 
 	return csiSnapshotStatus
+}
+
+func createExportOnSnapshot(emsClient *emanageClient, snapshot *emanage.Snapshot) (*emanage.Export, error) {
+	var (
+		exportOpts = emanage.ExportCreateForSnapshotOpts{
+			Path:        "/",
+			SnapShotId:  snapshot.ID,
+			Access:      emanage.ExportAccessRO,
+			UserMapping: emanage.UserMappingNone, // TODO: Reuse global user mapping
+		}
+	)
+
+	glog.V(5).Infof("Creating export %v on snapshot %v", snapshotExportName, snapshot.Name)
+	export, err := emsClient.Exports.CreateForSnapshot(snapshotExportName, &exportOpts)
+	if err != nil {
+		errors.WrapPrefix(err, "Failed to create export on snapshot", 0)
+		return nil, err
+	}
+
+	glog.V(5).Infof("Created export %v on snapshot %v")
+	return &export, nil
 }
