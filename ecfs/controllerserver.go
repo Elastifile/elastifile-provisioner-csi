@@ -171,20 +171,20 @@ func (cs *controllerServer) ControllerUnpublishVolume(ctx context.Context, req *
 func (cs *controllerServer) CreateSnapshot(ctx context.Context, req *csi.CreateSnapshotRequest) (response *csi.CreateSnapshotResponse, err error) {
 	var ems emanageClient
 
-	//if isWorkaround("80 chars limit") {
-	//	glog.V(6).Infof("ecfs: Received snapshot create request - %+v", req.GetName())
-	//	const maxSnapshotNameLen = 36
-	//	var snapshotName = req.GetName()
-	//	k8sSnapshotPrefix := "snapshot-"
-	//	snapshotName = strings.TrimPrefix(snapshotName, k8sSnapshotPrefix)
-	//	if len(snapshotName) > maxSnapshotNameLen {
-	//		err = errors.Errorf("Snapshot name exceeds max allowed length of %v - %v (short version: %v)",
-	//			maxSnapshotNameLen, req.GetName(), snapshotName)
-	//		//snapshotName = truncateStr(req.Name, maxSnapshotNameLen)
-	//		return
-	//	}
-	//	req.Name = snapshotName
-	//}
+	if isWorkaround("80 chars limit") {
+		glog.V(6).Infof("ecfs: Received snapshot create request - %+v", req.GetName())
+		const maxSnapshotNameLen = 36
+		var snapshotName = req.GetName()
+		k8sSnapshotPrefix := "snapshot-"
+		snapshotName = strings.TrimPrefix(snapshotName, k8sSnapshotPrefix)
+		if len(snapshotName) > maxSnapshotNameLen {
+			err = errors.Errorf("Snapshot name exceeds max allowed length of %v - %v (short version: %v)",
+				maxSnapshotNameLen, req.GetName(), snapshotName)
+			//snapshotName = truncateStr(req.Name, maxSnapshotNameLen)
+			return
+		}
+		req.Name = snapshotName
+	}
 
 	glog.V(2).Infof("ecfs: Creating snapshot %v on volume %v", req.GetName(), req.GetSourceVolumeId())
 	glog.V(6).Infof("ecfs: CreateSnapshot - enter. req: %+v", *req)
