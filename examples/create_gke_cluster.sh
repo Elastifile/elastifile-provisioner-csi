@@ -7,7 +7,7 @@ DEFAULT_GCP_REGION=$(gcloud config get-value compute/region) # e.g. europe-west1
 DEFAULT_GCP_ZONE=$(gcloud config get-value compute/zone) # europe-west1-b
 
 : ${GCP_PROJECT_ID:="340"}
-: ${K8S_VERSION:="1.11.4"}
+: ${K8S_VERSION:="1.11.5"}
 
 : ${GKE_CLUSTER_NAME:="cluster-1"}
 : ${GCP_REGION:="${DEFAULT_GCP_REGION}"}
