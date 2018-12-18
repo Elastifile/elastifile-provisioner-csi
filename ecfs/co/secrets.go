@@ -27,3 +27,45 @@ func GetSecretValue(namespace string, secretName string, key string) (value stri
 	value = string(data)
 	return
 }
+
+func UpdateSecrets(namespace string, secretsName string, data map[string][]byte) (err error) {
+	clientSet := clientSet()
+	secrets, err := clientSet.CoreV1().Secrets(namespace).Get(secretsName, metav1.GetOptions{})
+	if err != nil {
+		err = errors.Wrap(err, 0)
+		return
+	}
+
+	for key, value := range data {
+		secrets.Data[key] = value
+	}
+
+	_, err = clientSet.CoreV1().Secrets(namespace).Update(secrets)
+	if err != nil {
+		err = errors.Wrap(err, 0)
+		return
+	}
+
+	return
+}
+
+func CreateSecrets(namespace string, secretsName string, data map[string][]byte) (err error) {
+	clientSet := clientSet()
+	secrets, err := clientSet.CoreV1().Secrets(namespace).Get(secretsName, metav1.GetOptions{})
+	if err != nil {
+		err = errors.Wrap(err, 0)
+		return
+	}
+
+	for key, value := range data {
+		secrets.Data[key] = value
+	}
+
+	_, err = clientSet.CoreV1().Secrets(namespace).Create(secrets)
+	if err != nil {
+		err = errors.Wrap(err, 0)
+		return
+	}
+
+	return
+}

@@ -30,3 +30,45 @@ func GetConfigMapValue(namespace string, configMapName string, key string) (valu
 	value = string(data)
 	return
 }
+
+func UpdateConfigMap(namespace string, configMapName string, data map[string]string) (err error) {
+	clientSet := clientSet()
+	configMap, err := clientSet.CoreV1().ConfigMaps(namespace).Get(configMapName, metav1.GetOptions{})
+	if err != nil {
+		err = errors.Wrap(err, 0)
+		return
+	}
+
+	for key, value := range data {
+		configMap.Data[key] = value
+	}
+
+	_, err = clientSet.CoreV1().ConfigMaps(namespace).Update(configMap)
+	if err != nil {
+		err = errors.Wrap(err, 0)
+		return
+	}
+
+	return
+}
+
+func CreateConfigMap(namespace string, configMapName string, data map[string]string) (err error) {
+	clientSet := clientSet()
+	configMap, err := clientSet.CoreV1().ConfigMaps(namespace).Get(configMapName, metav1.GetOptions{})
+	if err != nil {
+		err = errors.Wrap(err, 0)
+		return
+	}
+
+	for key, value := range data {
+		configMap.Data[key] = value
+	}
+
+	_, err = clientSet.CoreV1().ConfigMaps(namespace).Create(configMap)
+	if err != nil {
+		err = errors.Wrap(err, 0)
+		return
+	}
+
+	return
+}
