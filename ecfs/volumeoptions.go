@@ -17,9 +17,9 @@ limitations under the License.
 package main
 
 import (
-	"fmt"
-	"github.com/golang/glog"
 	"strconv"
+
+	"github.com/golang/glog"
 
 	"github.com/elastifile/emanage-go/src/emanage-client"
 	"github.com/elastifile/errors"
@@ -29,10 +29,13 @@ import (
 )
 
 type volumeOptions struct {
-	Name          string
-	NfsAddress    string
+	//Name string
+	VolumeId volumeIdType
+
 	Export        *emanage.Export
 	DataContainer *emanage.DataContainer
+
+	NfsAddress string
 
 	Capacity          int64
 	UserMapping       emanage.UserMappingType
@@ -79,8 +82,8 @@ const (
 	Access            StorageClassCustomParameter = "access"
 )
 
-func newVolumeOptions(volumeName string, volOptions map[string]string) (opts *volumeOptions, err error) {
-	var ems emanageClient
+func newVolumeOptions(volOptions map[string]string) (opts *volumeOptions, err error) {
+	//var ems emanageClient
 	opts = &volumeOptions{}
 
 	glog.V(2).Infof("AAAAA newVolumeOptions - enter. volOptions: %+v", volOptions) // TODO: DELME
@@ -91,15 +94,15 @@ func newVolumeOptions(volumeName string, volOptions map[string]string) (opts *vo
 		return
 	}
 
-	opts.Name = volumeName
+	//opts.VolumeId = volumeName
 	opts.NfsAddress = configMap[nfsAddress]
 
 	// Opportunistically fill out Dc and Export (these are required when not creating a new volume, e.g. during mount)
-	opts.DataContainer, opts.Export, err = ems.GetDcExportByName(volumeName)
-	if err != nil {
-		err = errors.WrapPrefix(err, fmt.Sprintf("No Data Container & Export found for volume %v", volumeName), 0)
-		glog.Infof(err.Error())
-	}
+	//opts.DataContainer, opts.Export, err = ems.GetDcExportByName(volumeName)
+	//if err != nil {
+	//	err = errors.WrapPrefix(err, fmt.Sprintf("No Data Container & Export found for volume %v", volumeName), 0)
+	//	glog.Infof(err.Error())
+	//}
 
 	var (
 		paramStr  string
@@ -177,6 +180,7 @@ func newVolumeOptions(volumeName string, volOptions map[string]string) (opts *vo
 	}
 	opts.Access = paramStr
 
-	glog.V(6).Infof("ecfs: Volume %v options: %+v", volumeName, opts)
+	//glog.V(6).Infof("ecfs: Volume %v options: %+v", volumeName, opts)
+	glog.V(6).Infof("ecfs: Volume options: %+v", opts)
 	return
 }

@@ -38,6 +38,8 @@ type controllerServer struct {
 func (cs *controllerServer) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest) (*csi.CreateVolumeResponse, error) {
 	glog.V(2).Infof("ecfs: Creating volume: %v", req.GetName())
 	glog.V(6).Infof("ecfs: Received CreateVolumeRequest: %+v", *req)
+
+	// TODO: Convert Errorf() calls into WrapPrefix() ones
 	if err := cs.validateCreateVolumeRequest(req); err != nil {
 		glog.Errorf("CreateVolumeRequest validation failed: %v", err)
 		err = status.Error(codes.InvalidArgument, err.Error())
@@ -52,7 +54,7 @@ func (cs *controllerServer) CreateVolume(ctx context.Context, req *csi.CreateVol
 	// TODO: Don't create eManage client for each action (will need relogin support)
 	// This has to wait until the new unified emanage client is available, since that one has generic relogin handler support
 	var ems emanageClient
-	volOptions, err := newVolumeOptions(req.GetName(), req.GetParameters())
+	volOptions, err := newVolumeOptions(req.GetParameters())
 	if err != nil {
 		glog.Errorf("Validation of volume options failed: %v", err)
 		return nil, status.Error(codes.InvalidArgument, err.Error())
@@ -65,9 +67,10 @@ func (cs *controllerServer) CreateVolume(ctx context.Context, req *csi.CreateVol
 	}
 	volOptions.NfsAddress = pluginConfig.NFSServer
 
+	var volumeId volumeIdType
 	if req.VolumeContentSource == nil { // Create a regular volume, i.e. new Data Container
 		glog.V(6).Infof("ecfs: Creating regular volume %v", req.GetName())
-		err = createVolume(ems.GetClient(), volOptions)
+		volumeId, err = createVolume(ems.GetClient(), volOptions)
 		if err != nil {
 			glog.Errorf("Failed to create volume %v - %v", req.GetName(), err)
 			err = errors.Wrap(err, 0)
@@ -77,11 +80,7 @@ func (cs *controllerServer) CreateVolume(ctx context.Context, req *csi.CreateVol
 		source := req.GetVolumeContentSource()
 		glog.V(6).Infof("ecfs: Creating volume %v from snapshot %v",
 			req.GetName(), source.GetSnapshot().GetId())
-		err = createVolumeFromSnapshot(ems.GetClient(), volOptions, source)
-		// ecfs/controllerserver.go:79:89: cannot use req.GetVolumeContentSource() (type
-		// *"github.com/container-storage-interface/spec/lib/go/csi/v0".VolumeContentSource
-		// ) as type
-		// *"csi-provisioner-elastifile/vendor/src/github.com/container-storage-interface/spec/lib/go/csi/v0".VolumeContentSource in argument to createVolumeFromSnapshot
+		volumeId, err = createVolumeFromSnapshot(ems.GetClient(), volOptions, source)
 		if err != nil {
 			glog.Errorf("Failed to create volume %v from snapshot %v - %v",
 				req.GetName(), req.VolumeContentSource.GetSnapshot().GetId(), err)
@@ -89,18 +88,19 @@ func (cs *controllerServer) CreateVolume(ctx context.Context, req *csi.CreateVol
 			return nil, status.Error(codes.Internal, err.Error())
 		}
 	}
+	volOptions.VolumeId = volumeId
 
-	glog.V(3).Infof("ecfs: Created volume %v", volOptions.Name)
+	glog.V(3).Infof("ecfs: Created volume %v", volOptions.VolumeId)
 
 	return &csi.CreateVolumeResponse{
 		Volume: &csi.Volume{
-			Id:            volOptions.Name,
+			Id:            string(volumeId),
 			CapacityBytes: int64(volOptions.Capacity),
 			Attributes:    req.GetParameters(),
 		},
 		// TODO: Uncomment when switching to CSI 1.0
 		//Volume: &csi.Volume{
-		//	VolumeId:      volOptions.Name,
+		//	VolumeId:      string(volumeId),
 		//	CapacityBytes: int64(volOptions.Capacity),
 		//	VolumeContext: req.GetParameters(),
 		//},
@@ -115,15 +115,28 @@ func (cs *controllerServer) DeleteVolume(ctx context.Context, req *csi.DeleteVol
 	}
 
 	var (
-		volId = volumeID(req.GetVolumeId())
+		volId = volumeIdType(req.GetVolumeId())
 		err   error
+		ems   emanageClient
 	)
 
-	var ems emanageClient
-	err = deleteVolume(ems.GetClient(), req.GetVolumeId())
+	volDesc, err := parseVolumeId(volId)
 	if err != nil {
-		glog.Errorf("failed to delete volume %s: %v", req.GetVolumeId(), err)
-		return nil, status.Error(codes.Internal, err.Error())
+		return nil, errors.Wrap(err, 0)
+	}
+
+	if volDesc.SnapshotId == 0 { // Regular volume
+		err = deleteVolume(ems.GetClient(), volDesc)
+		if err != nil {
+			glog.Errorf("failed to delete volume %s: %v", volId, err)
+			return nil, status.Error(codes.Internal, err.Error())
+		}
+	} else { // Volume from snapshot
+		err = deleteVolumeFromSnapshot(ems.GetClient(), volDesc)
+		if err != nil {
+			glog.Errorf("failed to delete volume from snapshot %s: %v", volId, err)
+			return nil, status.Error(codes.Internal, err.Error())
+		}
 	}
 
 	glog.V(3).Infof("ecfs: Deleted volume %s", volId)
@@ -186,12 +199,13 @@ func (cs *controllerServer) CreateSnapshot(ctx context.Context, req *csi.CreateS
 		req.Name = snapshotName
 	}
 
-	glog.V(2).Infof("ecfs: Creating snapshot %v on volume %v", req.GetName(), req.GetSourceVolumeId())
+	volumeId := volumeIdType(req.GetSourceVolumeId())
+	glog.V(2).Infof("ecfs: Creating snapshot %v on volume %v", req.GetName(), volumeId)
 	glog.V(6).Infof("ecfs: CreateSnapshot - enter. req: %+v", *req)
-	ecfsSnapshot, err := createSnapshot(ems.GetClient(), req.GetName(), req.GetSourceVolumeId(), req.GetParameters())
+	ecfsSnapshot, err := createSnapshot(ems.GetClient(), req.GetName(), volumeId, req.GetParameters())
 	if err != nil {
 		err = errors.WrapPrefix(err,
-			fmt.Sprintf("Failed to create snapshot for volume %v with name %v", req.GetSourceVolumeId(), req.GetName()), 0)
+			fmt.Sprintf("Failed to create snapshot for volume %v with name %v", volumeId, req.GetName()), 0)
 		return
 	}
 
@@ -207,7 +221,7 @@ func (cs *controllerServer) CreateSnapshot(ctx context.Context, req *csi.CreateS
 	response = &csi.CreateSnapshotResponse{
 		Snapshot: &csi.Snapshot{
 			Id:             ecfsSnapshot.Name,
-			SourceVolumeId: req.GetSourceVolumeId(),
+			SourceVolumeId: string(volumeId),
 			CreatedAt:      creationTimestamp,
 			Status: &csi.SnapshotStatus{
 				Type: csiSnapshotStatus,

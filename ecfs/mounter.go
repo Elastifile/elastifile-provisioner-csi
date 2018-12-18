@@ -25,37 +25,87 @@ import (
 	"github.com/elastifile/errors"
 )
 
-func mountEcfs(mountPoint string, volOptions *volumeOptions, volId volumeID) error {
+func mountNfs(args ...string) error {
+	out, err := execCommand("mount", args[:]...)
+	if err != nil {
+		return errors.WrapPrefix(err, fmt.Sprintf("Mount failed. Output: %v", out), 0)
+	}
+	return nil
+}
+
+func mountEcfs(mountPoint string, volOptions *volumeOptions, volId volumeIdType) error {
 	if err := createMountPoint(mountPoint); err != nil {
 		return err
 	}
 
 	glog.Infof("ECFS: Mounting volume %v on %v", volId, mountPoint)
-	//glog.V(2).Infof("AAAAA mountEcfs. volId: %v, mountPoint: %v, volOptions: %+v", volId, mountPoint, volOptions) // TODO: DELME
-	glog.V(2).Infof("AAAAA mountEcfs. Export: %+v", volOptions.Export) // TODO: DELME
-	if volOptions.Export == nil {
-		// TODO: Don't create eManage client for each action (will need relogin support)
-		var emsClient emanageClient
-		_, export, err := emsClient.GetDcExportByName(volOptions.Name)
-		if err != nil {
-			return errors.WrapPrefix(err, fmt.Sprintf("Failed to get export for volume %s", volOptions.Name), 0)
-		}
-		volOptions.Export = export
+	// TODO: Don't create eManage client for each action (will need relogin support)
+	var emsClient emanageClient
+	dc, export, err := emsClient.GetDcDefaultExportByVolumeId(volId)
+	if err != nil {
+		return errors.WrapPrefix(err, fmt.Sprintf("Failed to get DC/export for Volume Id %s", volId), 0)
 	}
 
 	// TODO: Add support for mount options once mountOptions and SupportsMountOption() are supported in K8s
 	// https://kubernetes.io/docs/concepts/storage/persistent-volumes/#mount-options
-	args := [...]string{
+	args := []string{
 		"-vvv",
 		"-t", "nfs",
 		"-o", "nolock,vers=3", // TODO: Remove these defaults once mount works
-		fmt.Sprintf("%v:%v/%v", volOptions.NfsAddress, volOptions.DataContainer.Name, volOptions.Export.Name),
+		fmt.Sprintf("%v:%v/%v", volOptions.NfsAddress, dc.Name, export.Name),
 		mountPoint,
 	}
 
-	out, err := execCommand("mount", args[:]...)
+	err = mountNfs(args...)
 	if err != nil {
-		return fmt.Errorf("ecfs: mount failed with following error: %s\necfs: mount output: %s", err, out)
+		return errors.WrapPrefix(err, "Failed to mount ECFS export", 0)
+	}
+
+	return nil
+}
+
+func mountEcfsSnapshotExport(mountPoint string, volOptions *volumeOptions, volId volumeIdType) error {
+	if err := createMountPoint(mountPoint); err != nil {
+		return err
+	}
+
+	glog.Infof("ECFS: Mounting volume from snapshot %v on %v", volId, mountPoint)
+
+	volDesc, err := parseVolumeId(volId)
+	if err != nil {
+		return errors.Wrap(err, 0)
+	}
+
+	var emsClient emanageClient
+	snapshotExportPath, err := getSnapshotExportPath(emsClient.GetClient(), volDesc.SnapshotId)
+	if err != nil {
+		return errors.WrapPrefix(err,
+			fmt.Sprintf("Failed to get snapshot export path by snapshot id: %v", volDesc.SnapshotId), 0)
+	}
+
+	//snapshot, err := emsClient.GetClient().Snapshots.GetById(volDesc.SnapshotId)
+	//if err != nil {
+	//	return errors.Wrap(err, 0)
+	//}
+
+	//dc, export, err := emsClient.GetDcSnapshotExportByVolumeId(volId)
+	//if err != nil {
+	//	return errors.WrapPrefix(err, fmt.Sprintf("Failed to get DC/export for Volume Id %s", volId), 0)
+	//}
+
+	// TODO: Add support for mount options once mountOptions and SupportsMountOption() are supported in K8s
+	// https://kubernetes.io/docs/concepts/storage/persistent-volumes/#mount-options
+	args := []string{
+		"-vvv",
+		"-t", "nfs",
+		"-o", "ro,nolock,vers=3", // TODO: Remove these defaults once mount works
+		fmt.Sprintf("%v:%v", volOptions.NfsAddress, snapshotExportPath),
+		mountPoint,
+	}
+
+	err = mountNfs(args...)
+	if err != nil {
+		return errors.WrapPrefix(err, "Failed to mount ECFS snapshot export", 0)
 	}
 
 	return nil
@@ -63,12 +113,12 @@ func mountEcfs(mountPoint string, volOptions *volumeOptions, volId volumeID) err
 
 func bindMount(from, to string, readOnly bool) error {
 	if err := execCommandAndValidate("mount", "--bind", from, to); err != nil {
-		return fmt.Errorf("failed to bind-mount %s to %s: %v", from, to, err)
+		return errors.WrapPrefix(err, fmt.Sprintf("failed to bind-mount %s to %s", from, to), 0)
 	}
 
 	if readOnly {
 		if err := execCommandAndValidate("mount", "-o", "remount,ro,bind", to); err != nil {
-			return fmt.Errorf("failed read-only remount of %s: %v", to, err)
+			return errors.WrapPrefix(err, fmt.Sprintf("failed read-only remount of %s", to), 0)
 		}
 	}
 

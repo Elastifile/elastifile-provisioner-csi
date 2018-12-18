@@ -33,11 +33,11 @@ package main
 //)
 //
 //type controllerCacheEntry struct {
-//	VolumeID   volumeID
+//	VolumeID   volumeIdType
 //	VolOptions volumeOptions
 //}
 //
-//type controllerCacheMap map[volumeID]*controllerCacheEntry
+//type controllerCacheMap map[volumeIdType]*controllerCacheEntry
 //
 //var (
 //	ctrCache    = make(controllerCacheMap)
@@ -81,7 +81,7 @@ package main
 //	return nil
 //}
 //
-//func getControllerCacheEntryPath(volId volumeID) string {
+//func getControllerCacheEntryPath(volId volumeIdType) string {
 //	return path.Join(controllerCacheRoot, string(volId)+".json")
 //}
 //
@@ -107,7 +107,7 @@ package main
 //	return nil
 //}
 //
-//func (m controllerCacheMap) pop(volId volumeID) (*controllerCacheEntry, error) {
+//func (m controllerCacheMap) pop(volId volumeIdType) (*controllerCacheEntry, error) {
 //	ctrCacheMtx.Lock()
 //	defer ctrCacheMtx.Unlock()
 //

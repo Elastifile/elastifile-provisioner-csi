@@ -1,0 +1,36 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: demo-snap-vol
+spec:
+  storageClassName: elastifile
+  dataSource:
+    name: demo-snap
+    kind: VolumeSnapshot
+    apiGroup: snapshot.storage.k8s.io
+  accessModes:
+    - ReadOnlyMany
+  resources:
+    requests:
+      storage: 1Gi
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: demo-snap-pod
+spec:
+  containers:
+   - name: container1
+     image: alpine
+     volumeMounts:
+       - name: snapvol1
+         mountPath: /mnt
+     command: ["tail"]
+     args: ["-f", "/dev/null"]
+  volumes:
+   - name: snapvol1
+     persistentVolumeClaim:
+       claimName: demo-snap-vol
+       readOnly: true
+  restartPolicy: Never
+

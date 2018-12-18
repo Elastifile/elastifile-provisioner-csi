@@ -25,7 +25,7 @@ import (
 
 const (
 	PluginFolder = "/var/lib/kubelet/plugins/csi-ecfsfsplugin"
-	Version      = "0.1.0"
+	Version      = "0.2.0"
 )
 
 type ecfsDriver struct {

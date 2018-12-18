@@ -19,6 +19,8 @@ package main
 import (
 	"fmt"
 	"os/exec"
+	"src/github.com/go-errors/errors"
+	"strconv"
 	"strings"
 
 	"github.com/container-storage-interface/spec/lib/go/csi/v0"
@@ -29,7 +31,46 @@ import (
 	"k8s.io/kubernetes/pkg/util/mount"
 )
 
-type volumeID string
+type volumeDescriptorType struct {
+	DcId       int
+	SnapshotId int
+}
+
+type volumeIdType string
+
+func newVolumeId(volumeDescriptor volumeDescriptorType) volumeIdType {
+	const volumeIdTemplate = "csi-dc-%v-snap-%v"
+	return volumeIdType(fmt.Sprintf(volumeIdTemplate, volumeDescriptor.DcId, volumeDescriptor.SnapshotId))
+}
+
+func parseVolumeId(volumeId volumeIdType) (volDesc *volumeDescriptorType, err error) {
+	glog.V(10).Infof("ecfs: Parsing Volume Id %v", volumeId)
+	parts := strings.Split(string(volumeId), "-")
+	if len(parts) != 5 {
+		err = errors.Errorf("Invalid volume id: %v", volumeId)
+		return
+	}
+
+	dcId, err := strconv.Atoi(parts[2])
+	if err != nil {
+		err = errors.WrapPrefix(err, fmt.Sprintf("Illegal Data Container Id %v in Volume Id %v", parts[2], volumeId), 0)
+		return
+	}
+
+	snapshotId, err := strconv.Atoi(parts[4])
+	if err != nil {
+		err = errors.WrapPrefix(err, fmt.Sprintf("Illegal Snapshot Id %v in Volume Id %v", parts[2], volumeId), 0)
+		return
+	}
+
+	volDesc = &volumeDescriptorType{
+		DcId:       dcId,
+		SnapshotId: snapshotId,
+	}
+
+	glog.V(10).Infof("ecfs: Parsed Volume Id %v into %+v", volumeId, volDesc)
+	return
+}
 
 func execCommand(command string, args ...string) ([]byte, error) {
 	glog.V(3).Infof("ecfs: Running command: %s %s", command, args)
