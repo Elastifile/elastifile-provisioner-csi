@@ -7,11 +7,13 @@
 : ${POD_MANIFEST:="pod-with-io.yaml"}
 : ${SNAPSHOT_MANIFEST:="snapshot.yaml"}
 : ${SNAPSHOT_DELAY:=60}
-: ${SNAPVOL_MANIFEST:="volume-from-snapshot.yaml"}
+: ${SNAPPOD_MANIFEST:="pod-with-snapvol.yaml"}
 
 ../deploy/deploy-plugin.sh
 ./create-pod.sh ${POD_MANIFEST}
 echo Waiting for ${SNAPSHOT_DELAY} before taking a snapshot
 sleep ${SNAPSHOT_DELAY}
 ./create-snapshot.sh ${SNAPSHOT_MANIFEST}
-./create-snapvol.sh ${SNAPVOL_MANIFEST}
+echo Waiting for ${SNAPSHOT_DELAY} before using the snapshot
+sleep ${SNAPSHOT_DELAY}
+./create-snappod.sh ${SNAPPOD_MANIFEST}
