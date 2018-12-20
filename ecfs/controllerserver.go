@@ -39,11 +39,10 @@ func (cs *controllerServer) CreateVolume(ctx context.Context, req *csi.CreateVol
 	glog.V(2).Infof("ecfs: Creating volume: %v", req.GetName())
 	glog.V(6).Infof("ecfs: Received CreateVolumeRequest: %+v", *req)
 
-	// TODO: Convert Errorf() calls into WrapPrefix() ones
 	if err := cs.validateCreateVolumeRequest(req); err != nil {
-		glog.Errorf("CreateVolumeRequest validation failed: %v", err)
-		err = status.Error(codes.InvalidArgument, err.Error())
-		return nil, err
+		err = errors.WrapPrefix(err, "CreateVolumeRequest validation failed", 0)
+		glog.Errorf(err.Error())
+		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
 
 	pluginConfig, err := pluginConfig()
@@ -56,7 +55,8 @@ func (cs *controllerServer) CreateVolume(ctx context.Context, req *csi.CreateVol
 	var ems emanageClient
 	volOptions, err := newVolumeOptions(req.GetParameters())
 	if err != nil {
-		glog.Errorf("Validation of volume options failed: %v", err)
+		err = errors.WrapPrefix(err, "Validation of volume options failed", 0)
+		glog.Errorf(err.Error())
 		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
 	glog.Warningf("AAAAA CreateVolume - volOptions: %+v", volOptions) // TODO: DELME
@@ -72,8 +72,8 @@ func (cs *controllerServer) CreateVolume(ctx context.Context, req *csi.CreateVol
 		glog.V(6).Infof("ecfs: Creating regular volume %v", req.GetName())
 		volumeId, err = createVolume(ems.GetClient(), volOptions)
 		if err != nil {
-			glog.Errorf("Failed to create volume %v - %v", req.GetName(), err)
-			err = errors.Wrap(err, 0)
+			err = errors.WrapPrefix(err, fmt.Sprintf("Failed to create volume %v", req.GetName()), 0)
+			glog.Errorf(err.Error())
 			return nil, status.Error(codes.Internal, err.Error())
 		}
 	} else { // Volume from snapshot
