@@ -82,9 +82,9 @@ func (cs *controllerServer) CreateVolume(ctx context.Context, req *csi.CreateVol
 			req.GetName(), source.GetSnapshot().GetId())
 		volumeId, err = createVolumeFromSnapshot(ems.GetClient(), volOptions, source)
 		if err != nil {
-			glog.Errorf("Failed to create volume %v from snapshot %v - %v",
-				req.GetName(), req.VolumeContentSource.GetSnapshot().GetId(), err)
-			err = errors.Wrap(err, 0)
+			err = errors.WrapPrefix(err, fmt.Sprintf("Failed to create volume %v from snapshot %v",
+				req.GetName(), req.VolumeContentSource.GetSnapshot().GetId()), 0)
+			glog.Errorf(err.Error())
 			return nil, status.Error(codes.Internal, err.Error())
 		}
 	}
@@ -110,7 +110,8 @@ func (cs *controllerServer) CreateVolume(ctx context.Context, req *csi.CreateVol
 func (cs *controllerServer) DeleteVolume(ctx context.Context, req *csi.DeleteVolumeRequest) (*csi.DeleteVolumeResponse, error) {
 	glog.V(2).Infof("ecfs: Deleting volume %v", req.GetVolumeId())
 	if err := cs.validateDeleteVolumeRequest(req); err != nil {
-		glog.Errorf("DeleteVolumeRequest validation failed: %v", err)
+		err = errors.WrapPrefix(err, "DeleteVolumeRequest validation failed", 0)
+		glog.Errorf(err.Error())
 		return nil, err
 	}
 
@@ -196,9 +197,9 @@ func (cs *controllerServer) CreateSnapshot(ctx context.Context, req *csi.CreateS
 		k8sSnapshotPrefix := "snapshot-"
 		snapshotName = strings.TrimPrefix(snapshotName, k8sSnapshotPrefix)
 		if len(snapshotName) > maxSnapshotNameLen {
-			err = errors.Errorf("Snapshot name exceeds max allowed length of %v - %v (short version: %v)",
-				maxSnapshotNameLen, req.GetName(), snapshotName)
 			//snapshotName = truncateStr(req.Name, maxSnapshotNameLen)
+			err = errors.Errorf("Snapshot name exceeds max allowed length of %v characters - %v "+
+				"(truncated version: %v)", maxSnapshotNameLen, req.GetName(), snapshotName)
 			return
 		}
 		req.Name = snapshotName

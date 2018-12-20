@@ -83,7 +83,7 @@ func (ems *emanageClient) GetDcByName(dcName string) (*emanage.DataContainer, er
 			return &dc, nil
 		}
 	}
-	return nil, errors.Errorf("Container '%v' not found", dcName)
+	return nil, errors.Errorf("Data Container '%v' not found", dcName)
 }
 
 func (ems *emanageClient) GetDcDefaultExportByVolumeId(volId volumeIdType) (*emanage.DataContainer, *emanage.Export, error) {
@@ -109,7 +109,7 @@ func (ems *emanageClient) GetDcDefaultExportByVolumeId(volId volumeIdType) (*ema
 			return &dc, &export, nil
 		}
 	}
-	return nil, nil, errors.Errorf("Export not found by Volume Id", volId)
+	return nil, nil, errors.Errorf("Export not found by Volume Id %v", volId)
 }
 
 func (ems *emanageClient) GetDcSnapshotExportByVolumeId(volId volumeIdType) (*emanage.DataContainer, *emanage.Export, error) {
@@ -135,7 +135,7 @@ func (ems *emanageClient) GetDcSnapshotExportByVolumeId(volId volumeIdType) (*em
 			return &dc, &export, nil
 		}
 	}
-	return nil, nil, errors.Errorf("Export not found by Volume Id", volId)
+	return nil, nil, errors.Errorf("Export not found by Volume Id %v", volId)
 }
 
 //func (ems *emanageClient) GetDcExportByName(dcName string) (*emanage.DataContainer, *emanage.Export, error) {
@@ -294,7 +294,7 @@ func getSnapshotExport(emsClient *emanageClient, snapshotId int) (snapshotRef *e
 		return
 	}
 
-	glog.V(10).Infof("AAAAA getSnapshotExport - returning snapshot: %+v export: ", snapshotRef, exportRef) // TODO: DELME
+	glog.V(10).Infof("Found by Snapshot Id %v - snapshot: %+v export: %+v", *snapshotRef, *exportRef)
 	return
 }
 

@@ -82,7 +82,7 @@ func execCommand(command string, args ...string) ([]byte, error) {
 func execCommandAndValidate(program string, args ...string) error {
 	out, err := execCommand(program, args...)
 	if err != nil {
-		return fmt.Errorf("ecfs: %s failed with following error: %s\necfs: %s output: %s", program, err, program, out)
+		return errors.WrapPrefix(err, fmt.Sprintf("Command %v failed with following output: %v", program, out), 0)
 	}
 
 	return nil
@@ -105,7 +105,8 @@ func isMountPoint(path string) (bool, error) {
 
 func (cs *controllerServer) validateCreateVolumeRequest(req *csi.CreateVolumeRequest) error {
 	if err := cs.Driver.ValidateControllerServiceRequest(csi.ControllerServiceCapability_RPC_CREATE_DELETE_VOLUME); err != nil {
-		return fmt.Errorf("invalid CreateVolumeRequest: %v", err)
+		err = errors.WrapPrefix(err, fmt.Sprintf("Invalid CreateVolumeRequest: %+v", req), 0)
+		return err
 	}
 
 	if req.GetName() == "" {
@@ -121,7 +122,7 @@ func (cs *controllerServer) validateCreateVolumeRequest(req *csi.CreateVolumeReq
 
 func (cs *controllerServer) validateDeleteVolumeRequest(req *csi.DeleteVolumeRequest) error {
 	if err := cs.Driver.ValidateControllerServiceRequest(csi.ControllerServiceCapability_RPC_CREATE_DELETE_VOLUME); err != nil {
-		return fmt.Errorf("invalid DeleteVolumeRequest: %v", err)
+		return errors.WrapPrefix(err, fmt.Sprintf("Invalid DeleteVolumeRequest: %+v", req), 0)
 	}
 
 	return nil
