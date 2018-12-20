@@ -192,13 +192,34 @@ func validateNodeUnpublishVolumeRequest(req *csi.NodeUnpublishVolumeRequest) err
 }
 
 func isErrorAlreadyExists(err error) bool {
-	return strings.Contains(err.Error(), "has already been taken") ||
-		strings.Contains(err.Error(), "already exist")
+	var errorAlreadyExists = []string{
+		"has already been taken",
+		"already exist",
+	}
+
+	for _, text := range errorAlreadyExists {
+		if strings.Contains(err.Error(), text) {
+			glog.V(10).Infof("ecfs: Entity already exists. Error: %v", err)
+			return true
+		}
+	}
+	return false
 }
 
 func isErrorDoesNotExist(err error) bool {
-	return strings.Contains(err.Error(), "not found") ||
-		strings.Contains(err.Error(), "not exist")
+	var errorDoesNotExist = []string{
+		"not found",
+		"not exist",
+		"RecordNotFound",
+	}
+
+	for _, text := range errorDoesNotExist {
+		if strings.Contains(err.Error(), text) {
+			glog.V(10).Infof("ecfs: Entity does not exist. Error: %v", err)
+			return true
+		}
+	}
+	return false
 }
 
 func isWorkaround(desc string) bool {
