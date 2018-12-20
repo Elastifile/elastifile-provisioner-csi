@@ -31,7 +31,6 @@ func createSnapshot(emsClient *emanageClient, name string, volumeId volumeIdType
 	if err != nil {
 		if isErrorAlreadyExists(err) {
 			glog.V(6).Infof("ecfs: Snapshot %v for volume %v already exists - assuming duplicate request", name, volumeId)
-			// TODO: Make sure snapshot name is unique
 			snapshot, err = emsClient.GetSnapshotByName(name)
 			if err != nil {
 				err = errors.WrapPrefix(err, fmt.Sprintf("Failed to get snapshot by name %v", name), 0)

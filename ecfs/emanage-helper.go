@@ -30,7 +30,6 @@ var emsConfig *config
 // Connect to eManage
 func newEmanageClient() (client *emanageClient, err error) {
 	if emsConfig == nil {
-		glog.V(10).Infof("AAAAA GetClient - initializing new eManage client") // TODO: DELME
 		emsConfig, err = pluginConfig()
 		if err != nil {
 			err = errors.WrapPrefix(err, "Failed to get plugin configuration", 0)
@@ -105,7 +104,7 @@ func (ems *emanageClient) GetDcDefaultExportByVolumeId(volId volumeIdType) (*ema
 	}
 	for _, export := range exports {
 		if dc.Id == export.DataContainerId && export.Name == volumeExportName {
-			glog.V(10).Infof("AAAAA GetDcDefaultExportByVolumeId - success. Returning DC: %+v EXPORT: %+v", dc, export) // TODO: DELME
+			glog.V(10).Infof("ecfs: Found Dc and Export by Volume Id - DC: %+v EXPORT: %+v", dc, export)
 			return &dc, &export, nil
 		}
 	}
@@ -131,38 +130,15 @@ func (ems *emanageClient) GetDcSnapshotExportByVolumeId(volId volumeIdType) (*em
 	}
 	for _, export := range exports {
 		if dc.Id == export.DataContainerId && export.Name == volumeExportName {
-			glog.V(10).Infof("AAAAA GetDcDefaultExportByVolumeId - success. Returning DC: %+v EXPORT: %+v", dc, export) // TODO: DELME
+			glog.V(10).Infof("ecfs: Found Snapshot Export by Volume Id - success. Returning DC: %+v EXPORT: %+v", dc, export)
 			return &dc, &export, nil
 		}
 	}
 	return nil, nil, errors.Errorf("Export not found by Volume Id %v", volId)
 }
 
-//func (ems *emanageClient) GetDcExportByName(dcName string) (*emanage.DataContainer, *emanage.Export, error) {
-//	// Here we assume the Dc and the Export have the same name
-//	glog.V(6).Infof("ecfs: GetDcExportByName - Looking for Dc & export by volume name %v", dcName)
-//	dc, err := ems.GetDcByName(dcName)
-//	if err != nil {
-//		return nil, nil, errors.Wrap(err, 0)
-//	}
-//
-//	exports, err := ems.GetClient().Exports.GetAll(nil)
-//	if err != nil {
-//		return nil, nil, errors.WrapPrefix(err, "Failed to get exports from eManage", 0)
-//	}
-//
-//	for _, export := range exports {
-//		if dc.Id == export.DataContainerId && export.Name == volumeExportName {
-//			glog.V(2).Infof("AAAAA GetDcExportByName - success. Returning DC: %+v EXPORT: %+v", dc, export) // TODO: DELME
-//			return dc, &export, nil
-//		}
-//	}
-//	return nil, nil, errors.Errorf("Export not found by DataContainer&Export name", dcName)
-//}
-
 func (ems *emanageClient) GetSnapshotByName(snapshotName string) (snapshot *emanage.Snapshot, err error) {
-	// Here we assume the Dc and the Export have the same name
-	glog.V(2).Infof("AAAAA GetSnapshotByName - enter. Looking for snapshot named: %v", snapshotName) // TODO: DELME
+	glog.V(6).Infof("ecfs: Looking for snapshot named: %v", snapshotName)
 	snapshots, err := ems.GetClient().Snapshots.Get()
 	if err != nil {
 		err = errors.Wrap(err, 0)
@@ -170,8 +146,6 @@ func (ems *emanageClient) GetSnapshotByName(snapshotName string) (snapshot *eman
 	}
 
 	for _, snap := range snapshots {
-		// TODO: Fix the potential issue with snapshot names being unique per-DC, while in K8s they *might* be cluster-wide
-		// Find a way to make sure snapshot belongs to a specific volume (e.g. by prepending the volume name)
 		if snap.Name == snapshotName {
 			glog.V(6).Infof("ecfs: GetSnapshotByName - matched snapshot by name %v on DC %v", snap.Name, snap.DataContainerID)
 			return snap, nil
@@ -242,13 +216,15 @@ func snapshotStatusEcfsToCsi(ecfsSnapshotStatus string) csi.SnapshotStatus_Type 
 	return csiSnapshotStatus
 }
 
-func createExportOnSnapshot(emsClient *emanageClient, snapshot *emanage.Snapshot) (volumeDescriptor volumeDescriptorType, exportRef *emanage.Export, err error) {
+func createExportOnSnapshot(emsClient *emanageClient, snapshot *emanage.Snapshot, volOptions *volumeOptions) (volumeDescriptor volumeDescriptorType, exportRef *emanage.Export, err error) {
 	var (
 		exportOpts = emanage.ExportCreateForSnapshotOpts{
 			Path:        "/",
 			SnapShotId:  snapshot.ID,
 			Access:      emanage.ExportAccessRO,
-			UserMapping: emanage.UserMappingNone, // TODO: Reuse global user mapping
+			UserMapping: volOptions.UserMapping,
+			Uid:         volOptions.UserMappingUid,
+			Gid:         volOptions.UserMappingGid,
 		}
 	)
 
@@ -305,17 +281,13 @@ func getSnapshotExportPath(emsClient *emanageClient, snapshotId int) (snapshotEx
 		return
 	}
 
-	glog.V(10).Infof("AAAAA getSnapshotExportPath - snapshot: %+v", snapshot) // TODO: DELME
-	glog.V(10).Infof("AAAAA getSnapshotExportPath - export: %+v", export)     // TODO: DELME
-
 	dc, err := emsClient.GetClient().DataContainers.GetFull(export.DataContainerId)
 	if err != nil {
 		err = errors.WrapPrefix(err, fmt.Sprintf("Failed to get Data Container by id: %v", export.DataContainerId), 0)
 		return
 	}
 
-	glog.V(10).Infof("AAAAA getSnapshotExportPath - snapshot: %+v", snapshot) // TODO: DELME
-
 	snapshotExportPath = fmt.Sprintf("%v/%v_%v", dc.Name, snapshot.Name, export.Name)
+	glog.V(6).Infof("ecfs: using Snapshot Export Path: %v", snapshotExportPath)
 	return
 }

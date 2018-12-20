@@ -45,7 +45,7 @@ func (ns *nodeServer) nodePublishVolume(ctx context.Context, req *csi.NodePublis
 	targetPath := req.GetTargetPath()
 	volId := req.GetVolumeId()
 
-	glog.V(2).Infof("AAAAA NodePublishVolume - createMountPoint: %v", targetPath) // TODO: DELME
+	glog.V(10).Infof("ecfs: Creating mount point: %v", targetPath)
 	if err := createMountPoint(targetPath); err != nil {
 		err = errors.WrapPrefix(err, fmt.Sprintf("Failed to create mount point at %v", targetPath), 0)
 		glog.Errorf(err.Error())
@@ -96,8 +96,8 @@ func (ns *nodeServer) nodeStageVolume(ctx context.Context, req *csi.NodeStageVol
 		return nil, errors.Wrap(err, 0)
 	}
 
-	volOptions, err := newVolumeOptions(req.GetVolumeAttributes()) // TODO: Here we rely on volume id being identical to its name. Check if the actual name is stored in its attributes
-	//volOptions, err := newVolumeOptions(req.VolumeId, req.GetVolumeContext())              // TODO: Uncomment when switching to CSI 1.0
+	volOptions, err := newVolumeOptions(req.GetVolumeAttributes())
+	//volOptions, err := newVolumeOptions(req.GetVolumeContext()) // TODO: Uncomment when switching to CSI 1.0
 	if err != nil {
 		err = errors.WrapPrefix(err, fmt.Sprintf("Error reading volume options for volume %v", volId), 0)
 		glog.Errorf(err.Error())

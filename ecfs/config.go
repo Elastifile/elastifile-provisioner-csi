@@ -14,6 +14,12 @@ const (
 	//SecretNamespace = "csiProvisionerSecretNamespace"
 	configMapName = "elastifile"
 	secretsName   = "elastifile"
+
+	// Config map / secret keys
+	managementAddress  = "managementAddress"
+	managementUserName = "managementUserName"
+	managementPassword = "password"
+	nfsAddress         = "nfsAddress"
 )
 
 type config struct {
@@ -45,8 +51,8 @@ func GetProvisionerSettings() (configMap map[string]string, secrets map[string][
 		err = errors.WrapPrefix(err, "Failed to get secrets", 0)
 	}
 
-	glog.Infof("CCCCC GetProvisionerSettings - config map: %+v", configMap) // TODO: DELME
-	glog.Infof("CCCCC GetProvisionerSettings - secrets: %+v", secrets)      // TODO: DELME
+	glog.V(10).Infof("Provisioner settings - config map: %+v", configMap)
+	glog.V(10).Infof("Provisioner settings - secrets: %+v", secrets)
 
 	return
 }

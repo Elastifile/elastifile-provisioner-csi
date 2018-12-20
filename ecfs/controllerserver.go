@@ -59,7 +59,7 @@ func (cs *controllerServer) CreateVolume(ctx context.Context, req *csi.CreateVol
 		glog.Errorf(err.Error())
 		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
-	glog.Warningf("AAAAA CreateVolume - volOptions: %+v", volOptions) // TODO: DELME
+	glog.V(10).Infof("CreateVolume options: %+v", volOptions)
 
 	capacity := req.GetCapacityRange().GetRequiredBytes()
 	if capacity > 0 {
@@ -216,7 +216,6 @@ func (cs *controllerServer) CreateSnapshot(ctx context.Context, req *csi.CreateS
 	}
 
 	glog.V(6).Infof("ecfs: Parsing snapshot's CreatedAt timestamp: %v", ecfsSnapshot.CreatedAt)
-	glog.V(10).Infof("ecfs: CreateSnapshot - ecfsSnapshot.CreatedAt: %+v", ecfsSnapshot.CreatedAt) // TODO: DELME
 	creationTimestamp, err := parseTimestampRFC3339(ecfsSnapshot.CreatedAt)
 	if err != nil {
 		err = errors.Wrap(err, 0)
@@ -276,7 +275,7 @@ func (cs *controllerServer) ListSnapshots(ctx context.Context, req *csi.ListSnap
 		description = " - " + strings.Join(args, ", ")
 	}
 	glog.V(2).Infof("ecfs: Listing snapshots %v", description)
-	glog.V(6).Infof("ecfs: ListSnapshots - enter. req: %+v", *req)
+	glog.V(10).Infof("ecfs: ListSnapshots - enter. req: %+v", *req)
 
 	var ems emanageClient
 	ecfsSnapshots, nextToken, err := listSnapshots(ems.GetClient(), req.GetSnapshotId(), req.GetSourceVolumeId(), req.GetMaxEntries(), req.GetStartingToken())
@@ -285,7 +284,7 @@ func (cs *controllerServer) ListSnapshots(ctx context.Context, req *csi.ListSnap
 		return
 	}
 
-	glog.Warningf("AAAAA ListSnapshots - ecfsSnapshots: %+v", ecfsSnapshots) // TODO: DELME
+	glog.V(10).Infof("Listing snapshots: %+v", ecfsSnapshots)
 
 	var listEntries []*csi.ListSnapshotsResponse_Entry
 	for _, ecfsSnapshot := range ecfsSnapshots {

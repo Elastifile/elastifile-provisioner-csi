@@ -47,9 +47,6 @@ type volumeOptions struct {
 	Access            string
 }
 
-// TODO: Defaults should be passed via storageclass YAML (parameters:)
-// TODO: Volume-specific parameters should be passed via pvc yaml ???
-
 func extractOptionString(paramName StorageClassCustomParameter, options map[string]string) (value string, err error) {
 	if opt, ok := options[string(paramName)]; !ok {
 		err = errors.New("Missing volume parameter: " + paramName)
@@ -58,15 +55,6 @@ func extractOptionString(paramName StorageClassCustomParameter, options map[stri
 	}
 	return
 }
-
-//func extractOptionInt64(dest *int64, optionLabel string, options map[string]string) (err error) {
-//	if opt, ok := options[optionLabel]; !ok {
-//		err = errors.New("Missing mandatory option " + optionLabel)
-//	} else {
-//		*dest, err = strconv.ParseInt(opt, 0, 64)
-//	}
-//	return
-//}
 
 // Strings used in storageclass configuration file
 type StorageClassCustomParameter string
@@ -83,10 +71,7 @@ const (
 )
 
 func newVolumeOptions(volOptions map[string]string) (opts *volumeOptions, err error) {
-	//var ems emanageClient
 	opts = &volumeOptions{}
-
-	glog.V(2).Infof("AAAAA newVolumeOptions - enter. volOptions: %+v", volOptions) // TODO: DELME
 
 	configMap, _, err := GetProvisionerSettings()
 	if err != nil {
@@ -94,15 +79,7 @@ func newVolumeOptions(volOptions map[string]string) (opts *volumeOptions, err er
 		return
 	}
 
-	//opts.VolumeId = volumeName
 	opts.NfsAddress = configMap[nfsAddress]
-
-	// Opportunistically fill out Dc and Export (these are required when not creating a new volume, e.g. during mount)
-	//opts.DataContainer, opts.Export, err = ems.GetDcExportByName(volumeName)
-	//if err != nil {
-	//	err = errors.WrapPrefix(err, fmt.Sprintf("No Data Container & Export found for volume %v", volumeName), 0)
-	//	glog.Infof(err.Error())
-	//}
 
 	var (
 		paramStr  string
@@ -180,7 +157,6 @@ func newVolumeOptions(volOptions map[string]string) (opts *volumeOptions, err er
 	}
 	opts.Access = paramStr
 
-	//glog.V(6).Infof("ecfs: Volume %v options: %+v", volumeName, opts)
-	glog.V(6).Infof("ecfs: Volume options: %+v", opts)
+	glog.V(6).Infof("ecfs: Current volume options: %+v", opts)
 	return
 }
