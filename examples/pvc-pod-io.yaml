@@ -18,12 +18,11 @@ spec:
   containers:
    - name: container1
      image: alpine
-     # imagePullPolicy: Always
      volumeMounts:
        - name: volume1
          mountPath: /mnt
      command: ["dd"]
-     args: ["if=/dev/zero", "of=/mnt/ddfile", "bs=1M", "count=1000000"]
+     args: ["if=/dev/zero", "of=/mnt/demofile", "bs=1M", "count=1000000"]
   volumes:
    - name: volume1
      persistentVolumeClaim:

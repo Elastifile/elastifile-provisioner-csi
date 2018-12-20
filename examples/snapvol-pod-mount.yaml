@@ -25,8 +25,8 @@ spec:
      volumeMounts:
        - name: snapvol1
          mountPath: /mnt
-     command: ["tail"]
-     args: ["-f", "/dev/null"]
+     command: ["/bin/sh","-c"]
+     args: ["ls -l /mnt/demofile; tail -f /dev/null"]
   volumes:
    - name: snapvol1
      persistentVolumeClaim:
