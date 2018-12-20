@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/golang/glog"
@@ -77,6 +78,13 @@ func deleteSnapshot(emsClient *emanageClient, name string) error {
 		if isErrorDoesNotExist(err) { // This operation has to be idempotent
 			glog.V(6).Infof("ecfs: Snapshot %v not found - assuming already deleted", name)
 			return nil
+		}
+		if isWorkaround("EL-13618 - Failed read-dir") {
+			const EL13618 = "Failed read-dir"
+			if strings.Contains(err.Error(), EL13618) {
+				glog.Warningf("ecfs: Data Container delete failed due to EL-13618 - returning success to cleanup the pv. Actual error: %v", err)
+				return nil
+			}
 		}
 		return errors.WrapPrefix(err, fmt.Sprintf("Failed to get snapshot by name %v", name), 0)
 	}
