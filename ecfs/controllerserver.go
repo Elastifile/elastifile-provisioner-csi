@@ -125,18 +125,23 @@ func (cs *controllerServer) DeleteVolume(ctx context.Context, req *csi.DeleteVol
 		return nil, errors.Wrap(err, 0)
 	}
 
-	if volDesc.SnapshotId == 0 { // Regular volume
-		err = deleteVolume(ems.GetClient(), volDesc)
-		if err != nil {
-			glog.Errorf("failed to delete volume %s: %v", volId, err)
-			return nil, status.Error(codes.Internal, err.Error())
+	//if volDesc.SnapshotId == 0 { // Regular volume
+	//	err = deleteVolume(ems.GetClient(), volDesc) // Error is handled below
+	//} else { // Volume from snapshot
+	//	err = deleteVolumeFromSnapshot(ems.GetClient(), volDesc) // Error is handled below
+	//}
+	deleteVolumeFunc := deleteVolume
+	if volDesc.SnapshotId != 0 { // Regular volume
+		deleteVolumeFunc = deleteVolumeFromSnapshot
+	}
+	err = deleteVolumeFunc(ems.GetClient(), volDesc)
+	if err != nil {
+		if isErrorDoesNotExist(err) { // Operation MUST be idempotent
+			glog.V(5).Infof("ecfs: Volume id %v not found - assuming already deleted", volId)
+			return &csi.DeleteVolumeResponse{}, nil
 		}
-	} else { // Volume from snapshot
-		err = deleteVolumeFromSnapshot(ems.GetClient(), volDesc)
-		if err != nil {
-			glog.Errorf("failed to delete volume from snapshot %s: %v", volId, err)
-			return nil, status.Error(codes.Internal, err.Error())
-		}
+		glog.Warningf("Failed to delete volume %v: %v", volId, err)
+		return nil, status.Error(codes.Internal, err.Error())
 	}
 
 	glog.V(3).Infof("ecfs: Deleted volume %s", volId)
