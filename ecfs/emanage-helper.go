@@ -215,18 +215,27 @@ func snapshotEcfsToCsi(ems *emanageClient, ecfsSnapshot *emanage.Snapshot) (csiS
 	return
 }
 
+const (
+	ecfsSnapshotStatus_ADDING    = "status_adding"
+	ecfsSnapshotStatus_VALID     = "status_valid"
+	ecfsSnapshotStatus_REMOVING  = "status_removing"
+	ecfsSnapshotStatus_MODIFYING = "status_modifying"
+	ecfsSnapshotStatus_REMOVED   = "status_removed"
+)
+
 func snapshotStatusEcfsToCsi(ecfsSnapshotStatus string) csi.SnapshotStatus_Type {
 	var snapEcfs2CsiMap = map[string]csi.SnapshotStatus_Type{
-		"status_adding":    csi.SnapshotStatus_UPLOADING,
-		"status_valid":     csi.SnapshotStatus_READY,
-		"status_removing":  csi.SnapshotStatus_UNKNOWN,
-		"status_modifying": csi.SnapshotStatus_UNKNOWN,
-		"status_removed":   csi.SnapshotStatus_UNKNOWN,
-		"":                 csi.SnapshotStatus_UNKNOWN,
+		ecfsSnapshotStatus_ADDING:    csi.SnapshotStatus_UPLOADING,
+		ecfsSnapshotStatus_VALID:     csi.SnapshotStatus_READY,
+		ecfsSnapshotStatus_REMOVING:  csi.SnapshotStatus_UNKNOWN,
+		ecfsSnapshotStatus_MODIFYING: csi.SnapshotStatus_UNKNOWN,
+		ecfsSnapshotStatus_REMOVED:   csi.SnapshotStatus_UNKNOWN,
+		"":                           csi.SnapshotStatus_UNKNOWN,
 	}
+
 	csiSnapshotStatus, ok := snapEcfs2CsiMap[ecfsSnapshotStatus]
 	if !ok {
-		glog.Warningf("ecfs: Unrecognized snapshot status %v - using csi.SnapshotStatus_UNKNOWN")
+		glog.Warningf("ecfs: Unrecognized snapshot status %v - using csi.SnapshotStatus_UNKNOWN", ecfsSnapshotStatus)
 		csiSnapshotStatus = csi.SnapshotStatus_UNKNOWN
 	}
 

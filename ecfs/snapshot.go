@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/golang/glog"
 
@@ -43,6 +44,32 @@ func createSnapshot(emsClient *emanageClient, name string, volumeId volumeIdType
 	return
 }
 
+func waitForSnapshotToBeDeleted(emsClient *emanageClient, snapshotId int, timeout time.Duration) (err error) {
+	timeoutExpired := time.After(timeout)
+	tick := time.Tick(10 * time.Second)
+	var snapshot *emanage.Snapshot
+	for {
+		select {
+		case <-tick:
+			snapshot, err = emsClient.GetClient().Snapshots.GetById(snapshotId)
+			if err != nil {
+				if isErrorDoesNotExist(err) {
+					glog.V(6).Infof("ecfs: Snapshot id %v not found - assuming already deleted", snapshotId)
+					return nil
+				}
+				return errors.WrapPrefix(err, fmt.Sprintf("Failed to get snapshot by id %v", snapshot.ID), 0)
+			}
+			if snapshot.Status == ecfsSnapshotStatus_REMOVED {
+				glog.V(5).Infof("ecfs: Snapshot delete operation reported completed by EMS - snapshot %v, dcId: %v, status: %v",
+					snapshot.Name, snapshot.DataContainerID, snapshot.Status)
+				return err
+			}
+		case <-timeoutExpired:
+			return errors.Errorf("Timed out waiting for snapshot %v to be deleted after %v", snapshotId, timeout)
+		}
+	}
+}
+
 func deleteSnapshot(emsClient *emanageClient, name string) error {
 	glog.V(2).Infof("ecfs: Deleting snapshot %v", name)
 	snapshot, err := emsClient.GetSnapshotByName(name)
@@ -54,8 +81,17 @@ func deleteSnapshot(emsClient *emanageClient, name string) error {
 		return errors.WrapPrefix(err, fmt.Sprintf("Failed to get snapshot by name %v", name), 0)
 	}
 
-	glog.V(6).Infof("AAAAA snapshot: %+v", snapshot) // TODO: DELME
-	glog.V(5).Infof("ecfs: Calling emanage snapshot.Delete on snapshot %v, dcId: %v, status: %v",
+	// Handle subsequent requests to remove snapshot
+	if snapshot.Status == ecfsSnapshotStatus_REMOVING { // Operation MUST be idempotent
+		glog.V(5).Infof("ecfs: Requested to delete snapshot that's already being removed - snapshot %v, dcId: %v, status: %v",
+			snapshot.Name, snapshot.DataContainerID, snapshot.Status)
+		err = waitForSnapshotToBeDeleted(emsClient, snapshot.ID, 3*time.Minute)
+		if err != nil {
+
+		}
+	}
+
+	glog.V(5).Infof("ecfs: Calling emanage snapshot.Delete - snapshot %v, dcId: %v, status: %v",
 		snapshot.Name, snapshot.DataContainerID, snapshot.Status)
 	tasks := snapshot.Delete()
 	if tasks.Error() != nil {
