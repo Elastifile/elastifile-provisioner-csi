@@ -195,12 +195,24 @@ func createVolumeFromSnapshot(emsClient *emanageClient, volOptions *volumeOption
 	// Create Export
 	volumeDescriptor, export, err := createExportOnSnapshot(emsClient, ecfsSnapshot, volOptions)
 	if err != nil {
-		err = errors.Wrap(err, 0)
-		err = status.Error(codes.Internal, err.Error())
+		if isErrorAlreadyExists(err) { // Snapshot volume creation MUST be idempotent
+			volumeDescriptor = volumeDescriptorType{
+				DcId:       ecfsSnapshot.DataContainerID,
+				SnapshotId: ecfsSnapshot.ID,
+			}
+			volumeId = newVolumeId(volumeDescriptor)
+			glog.V(5).Infof("Snapshot export already exists on volume %v", volumeId)
+			_, export, err = getSnapshotExport(emsClient.GetClient(), ecfsSnapshot.ID)
+			if err != nil {
+				err = errors.WrapPrefix(err, fmt.Sprintf("Failed to get Snapshot Export by snapshot Id %v",
+					ecfsSnapshot.ID), 0)
+			}
+		}
+		err = status.Error(codes.Internal, errors.Wrap(err, 0).Error())
 		return
-	} else {
-		volOptions.Export = export
 	}
+
+	volOptions.Export = export // TODO: Bad design, check if this is used anywhere
 	glog.V(5).Infof("Export %v from snapshot %v created", export.Name, ecfsSnapshot.Name)
 
 	volumeId = newVolumeId(volumeDescriptor)
