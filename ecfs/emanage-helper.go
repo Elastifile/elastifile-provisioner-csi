@@ -270,7 +270,7 @@ func getSnapshotExport(emsClient *emanageClient, snapshotId int) (snapshotRef *e
 		return
 	}
 
-	glog.V(10).Infof("Found by Snapshot Id %v - snapshot: %+v export: %+v", *snapshotRef, *exportRef)
+	glog.V(10).Infof("Found by Snapshot Id %v - snapshot: %+v export: %+v", snapshotRef.ID, *snapshotRef, *exportRef)
 	return
 }
 

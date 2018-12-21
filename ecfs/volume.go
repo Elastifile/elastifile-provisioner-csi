@@ -18,7 +18,6 @@ package main
 
 import (
 	"fmt"
-
 	"github.com/container-storage-interface/spec/lib/go/csi/v0"
 	"github.com/golang/glog"
 	"github.com/pborman/uuid"
@@ -119,18 +118,6 @@ func createVolume(emsClient *emanageClient, volOptions *volumeOptions) (volumeId
 
 	glog.V(6).Infof("ecfs: Creating Volume - settings: %+v", volOptions)
 
-	// TODO: IMPORTANT: For idempotency's sake, make sure duplicate requests with the same volume name are treated as such
-
-	// Create Data Container
-	//found, err := dcExists(emsClient, volOptions)
-	//if err != nil {
-	//	err = errors.WrapPrefix(err, fmt.Sprintf("Failed to check if volume %v exists", volOptions.VolumeId), 0)
-	//	err = status.Error(codes.Internal, err.Error())
-	//	return
-	//}
-	//glog.V(2).Infof("AAAAA createVolume - DC found: %v", found) // TODO: DELME
-	//
-	//if !found { // Create Data Container
 	var dc *emanage.DataContainer
 	dc, err = createDc(emsClient, volOptions)
 	if err != nil {
@@ -147,14 +134,6 @@ func createVolume(emsClient *emanageClient, volOptions *volumeOptions) (volumeId
 	volumeDescriptor.DcId = dc.Id
 	volOptions.DataContainer = dc
 	glog.V(6).Infof("ecfs: Data Container created: %+v", volOptions.DataContainer.Name)
-	//} else {
-	//	glog.V(3).Infof("ecfs: Volume (data container) %v already exists - nothing to do", volOptions.VolumeId)
-	//
-	//	//TODO: Find the dc and return its id
-	//	panic("Fetching DC is not implemented")
-	//
-	//	//return status.Error(codes.AlreadyExists, err.Error())
-	//}
 
 	// Create Export
 	export, err := createExportForVolume(emsClient, volOptions)
@@ -163,7 +142,7 @@ func createVolume(emsClient *emanageClient, volOptions *volumeOptions) (volumeId
 	} else {
 		volOptions.Export = &export
 	}
-	glog.V(6).Infof("ecfs: Export %v created on Data Container",
+	glog.V(6).Infof("ecfs: Export %v created on Data Container %v",
 		volOptions.Export.Name, volOptions.DataContainer.Name)
 
 	volumeId = newVolumeId(volumeDescriptor)

@@ -35,24 +35,31 @@ type controllerServer struct {
 	*csicommon.DefaultControllerServer
 }
 
-func (cs *controllerServer) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest) (*csi.CreateVolumeResponse, error) {
+func getCreateVolumeResponse(volumeId volumeIdType, volOptions *volumeOptions, req *csi.CreateVolumeRequest) (response *csi.CreateVolumeResponse) {
+	return &csi.CreateVolumeResponse{
+		Volume: &csi.Volume{
+			Id:            string(volumeId),
+			CapacityBytes: int64(volOptions.Capacity),
+			Attributes:    req.GetParameters(),
+		},
+		// TODO: Uncomment when switching to CSI 1.0
+		//Volume: &csi.Volume{
+		//	VolumeId:      string(volumeId),
+		//	CapacityBytes: int64(volOptions.Capacity),
+		//	VolumeContext: req.GetParameters(),
+		//},
+	}
+}
+
+func (cs *controllerServer) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest) (response *csi.CreateVolumeResponse, err error) {
 	glog.V(2).Infof("ecfs: Creating volume: %v", req.GetName())
 	glog.V(6).Infof("ecfs: Received CreateVolumeRequest: %+v", *req)
 
-	if err := cs.validateCreateVolumeRequest(req); err != nil {
-		err = errors.WrapPrefix(err, "CreateVolumeRequest validation failed", 0)
-		glog.Errorf(err.Error())
-		return nil, status.Error(codes.InvalidArgument, err.Error())
-	}
-
-	pluginConfig, err := pluginConfig()
+	pluginConf, err := pluginConfig()
 	if err != nil {
 		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
 
-	// TODO: Don't create eManage client for each action (will need relogin support)
-	// This has to wait until the new unified emanage client is available, since that one has generic relogin handler support
-	var ems emanageClient
 	volOptions, err := newVolumeOptions(req.GetParameters())
 	if err != nil {
 		err = errors.WrapPrefix(err, "Validation of volume options failed", 0)
@@ -65,9 +72,25 @@ func (cs *controllerServer) CreateVolume(ctx context.Context, req *csi.CreateVol
 	if capacity > 0 {
 		volOptions.Capacity = capacity
 	}
-	volOptions.NfsAddress = pluginConfig.NFSServer
+	volOptions.NfsAddress = pluginConf.NFSServer
 
-	var volumeId volumeIdType
+	// Check if volume with this name has already been requested - this operation MUST be idempotent
+	volumeId, cacheHit := cacheVolumeGet(req.GetName())
+	if cacheHit {
+		response = getCreateVolumeResponse(volumeId, volOptions, req)
+		return
+	}
+
+	if err = cs.validateCreateVolumeRequest(req); err != nil {
+		err = errors.WrapPrefix(err, "CreateVolumeRequest validation failed", 0)
+		glog.Errorf(err.Error())
+		return nil, status.Error(codes.InvalidArgument, err.Error())
+	}
+
+	// TODO: Don't create eManage client for each action (will need relogin support)
+	// This has to wait until the new unified emanage client is available, since that one has generic relogin handler support
+	var ems emanageClient
+
 	if req.VolumeContentSource == nil { // Create a regular volume, i.e. new Data Container
 		glog.V(6).Infof("ecfs: Creating regular volume %v", req.GetName())
 		volumeId, err = createVolume(ems.GetClient(), volOptions)
@@ -90,21 +113,11 @@ func (cs *controllerServer) CreateVolume(ctx context.Context, req *csi.CreateVol
 	}
 	volOptions.VolumeId = volumeId
 
+	cacheVolumeAdd(req.GetName(), volumeId)
 	glog.V(3).Infof("ecfs: Created volume %v", volOptions.VolumeId)
 
-	return &csi.CreateVolumeResponse{
-		Volume: &csi.Volume{
-			Id:            string(volumeId),
-			CapacityBytes: int64(volOptions.Capacity),
-			Attributes:    req.GetParameters(),
-		},
-		// TODO: Uncomment when switching to CSI 1.0
-		//Volume: &csi.Volume{
-		//	VolumeId:      string(volumeId),
-		//	CapacityBytes: int64(volOptions.Capacity),
-		//	VolumeContext: req.GetParameters(),
-		//},
-	}, nil
+	response = getCreateVolumeResponse(volumeId, volOptions, req)
+	return
 }
 
 func (cs *controllerServer) DeleteVolume(ctx context.Context, req *csi.DeleteVolumeRequest) (*csi.DeleteVolumeResponse, error) {
@@ -126,11 +139,6 @@ func (cs *controllerServer) DeleteVolume(ctx context.Context, req *csi.DeleteVol
 		return nil, errors.Wrap(err, 0)
 	}
 
-	//if volDesc.SnapshotId == 0 { // Regular volume
-	//	err = deleteVolume(ems.GetClient(), volDesc) // Error is handled below
-	//} else { // Volume from snapshot
-	//	err = deleteVolumeFromSnapshot(ems.GetClient(), volDesc) // Error is handled below
-	//}
 	deleteVolumeFunc := deleteVolume
 	if volDesc.SnapshotId != 0 { // Regular volume
 		deleteVolumeFunc = deleteVolumeFromSnapshot
@@ -145,6 +153,7 @@ func (cs *controllerServer) DeleteVolume(ctx context.Context, req *csi.DeleteVol
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
+	cacheVolumeRemove(volumeIdType(req.GetVolumeId()))
 	glog.V(3).Infof("ecfs: Deleted volume %s", volId)
 	return &csi.DeleteVolumeResponse{}, nil
 }
@@ -182,7 +191,7 @@ func (cs *controllerServer) ControllerPublishVolume(ctx context.Context, req *cs
 }
 
 func (cs *controllerServer) ControllerUnpublishVolume(ctx context.Context, req *csi.ControllerUnpublishVolumeRequest) (*csi.ControllerUnpublishVolumeResponse, error) {
-	glog.V(2).Infof("ecfs: Unpublishing volume %v on node", req.GetVolumeId(), req.GetNodeId())
+	glog.V(2).Infof("ecfs: Unpublishing volume %v on node %v", req.GetVolumeId(), req.GetNodeId())
 	glog.V(6).Infof("ecfs: ControllerUnpublishVolume - enter. req: %+v", *req)
 	return nil, status.Error(codes.Unimplemented, "QQQQQ - not yet supported")
 }
