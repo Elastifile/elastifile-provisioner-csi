@@ -149,6 +149,14 @@ func (cs *controllerServer) DeleteVolume(ctx context.Context, req *csi.DeleteVol
 			glog.V(5).Infof("ecfs: Volume id %v not found - assuming already deleted", volId)
 			return &csi.DeleteVolumeResponse{}, nil
 		}
+		if isWorkaround("EL-13618 - Failed read-dir for volume deletion") {
+			const EL13618 = "Failed read-dir"
+			if strings.Contains(err.Error(), EL13618) {
+				glog.Warningf("ecfs: Data Container delete failed due to EL-13618 - returning success to cleanup the pv. Actual error: %v", err)
+				return &csi.DeleteVolumeResponse{}, nil
+			}
+		}
+
 		glog.Warningf("Failed to delete volume %v: %v", volId, err)
 		return nil, status.Error(codes.Internal, err.Error())
 	}

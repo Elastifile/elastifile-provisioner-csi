@@ -81,7 +81,7 @@ func deleteSnapshot(emsClient *emanageClient, name string) error {
 		if isWorkaround("EL-13618 - Failed read-dir") {
 			const EL13618 = "Failed read-dir"
 			if strings.Contains(err.Error(), EL13618) {
-				glog.Warningf("ecfs: Data Container delete failed due to EL-13618 - returning success to cleanup the pv. Actual error: %v", err)
+				glog.Warningf("ecfs: Snapshot delete failed due to EL-13618 - returning success to cleanup the pv. Actual error: %v", err)
 				return nil
 			}
 		}
