@@ -3,7 +3,9 @@
 ### Make targets
 
 CSI ECFS plugin can be compiled in a form of a binary file or in a form of a Docker image.
+
 When compiled as a binary file, the result is stored in `_output/` directory with the name `ecfsplugin`.
+
 When compiled as an image, it's stored in the local Docker image registry.
 
 #### Building binary
@@ -36,7 +38,8 @@ $ make clean
 ```
 
 ### Changing the defaults
-By default, make will tag the images as 'dev'
+By default, make will tag the images as 'dev'.
+
 If you want to use a different tag, set `PLUGIN_TAG` environment variable accordingly
 
 Example:
@@ -47,5 +50,7 @@ $ PLUGIN_TAG=v0.0.1 make all
 ### Dependency management
 
 This project uses [dep](https://github.com/golang/dep) as it dependency management tool.
+
 After cloning the project, it is recommended to run `dep ensure`.
+
 Another case where it's recommended to run `dep ensure` is after making changes to the project's imports.
