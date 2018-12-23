@@ -1,0 +1,28 @@
+kind: Pod
+apiVersion: v1
+metadata:
+  name: deploy-runner
+spec:
+  serviceAccount: cluster-admin-sa
+  containers:
+    - name: deploy-env
+      #image: elastifileio/ecfs-provisioner-csi-deployrunner:v0.2.0
+      image: elastifileio/ecfs-provisioner-csi-deployrunner:dev
+      imagePullPolicy: Always
+      command: ["/bin/bash", "-c"]
+      args: ["tail", "/dev/null"]
+      stdin: true 
+      tty: true 
+      env:
+      - name: PLUGIN_TAG
+        value: "dev"
+      - name: MGMT_ADDR
+        value: 35.195.253.247
+      - name: MGMT_USER
+        value: admin
+      - name: MGMT_PASS
+        value: Y2hhbmdlbWU=
+      - name: NFS_ADDR
+        value: 10.255.255.1
+  restartPolicy: Never
+

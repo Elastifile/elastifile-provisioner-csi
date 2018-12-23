@@ -1,5 +1,5 @@
 FROM ubuntu:16.04
-LABEL maintainers="Kubernetes Authors"
+LABEL maintainers="jean.spector@elastifile.com"
 LABEL description="ECFS CSI Plugin"
 
 COPY ecfsplugin /ecfsplugin

@@ -12,21 +12,25 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-.PHONY: all plugin binary push clean
+.PHONY: all binary image deployrunner push clean
 
 #REGISTRY ?= hub.docker.com
-#IMAGE_NAME = $(REGISTRY)/elastifileio/ecfs-provisioner-csi
-IMAGE_NAME = elastifileio/ecfs-provisioner-csi
+#PLUGIN_IMAGE_NAME = $(REGISTRY)/elastifileio/ecfs-provisioner-csi
+PLUGIN_IMAGE_NAME = elastifileio/ecfs-provisioner-csi
 PLUGIN_TAG ?= dev
 
 TEMP_DIR = _output
-DOCKER_DIR = deploy/docker
+PLUGIN_DOCKER_DIR = images/plugin
 PLUGIN_BINARY = ecfsplugin
 
 PROJECT_ROOT = $(shell dirname $(shell dirname $(value CURDIR)))
 GOPATH = "$(PROJECT_ROOT):$(CURDIR)/vendor"
 
-$(info ecfs image settings: $(IMAGE_NAME) tag $(PLUGIN_TAG))
+$(info ecfs image settings: $(PLUGIN_IMAGE_NAME) tag $(PLUGIN_TAG))
+
+DEPLOYRUNNER_IMAGE_NAME = elastifileio/ecfs-provisioner-csi-deployrunner
+DEPLOYRUNNER_DOCKER_DIR = images/deployrunner
+DEPLOYRUNNER_COPY_DIR = $(DEPLOYRUNNER_DOCKER_DIR)/deploy
 
 # Compile, create image and push it
 all: image push
@@ -39,15 +43,25 @@ binary:
 
 # Create docker image
 image: binary
-	cp $(TEMP_DIR)/$(PLUGIN_BINARY) $(DOCKER_DIR)
-	docker build -t $(IMAGE_NAME):$(PLUGIN_TAG) $(DOCKER_DIR)
+	cp $(TEMP_DIR)/$(PLUGIN_BINARY) $(PLUGIN_DOCKER_DIR)
+	docker build -t $(PLUGIN_IMAGE_NAME):$(PLUGIN_TAG) $(PLUGIN_DOCKER_DIR)
 
 # Push image to docker registry
 push:
-	docker push $(IMAGE_NAME):$(PLUGIN_TAG)
+	docker push $(PLUGIN_IMAGE_NAME):$(PLUGIN_TAG)
+
+deployrunner:
+	mkdir -p $(DEPLOYRUNNER_COPY_DIR)
+	cp -r deploy/* $(DEPLOYRUNNER_COPY_DIR)
+	# kubectl version installed on the host running make is used in the resulting image
+	cp -f $(shell which kubectl) $(DEPLOYRUNNER_DOCKER_DIR)/
+	docker build -t $(DEPLOYRUNNER_IMAGE_NAME):$(PLUGIN_TAG) $(DEPLOYRUNNER_DOCKER_DIR)
+	docker push $(DEPLOYRUNNER_IMAGE_NAME):$(PLUGIN_TAG)
 
 # Remove previous build's artifacts
 clean:
 	go clean -r -x
-	rm -f $(DOCKER_DIR)/$(PLUGIN_BINARY)
 	rm -f $(TEMP_DIR)/$(PLUGIN_BINARY)
+	rm -f $(PLUGIN_DOCKER_DIR)/$(PLUGIN_BINARY)
+	rm -rf $(DEPLOYRUNNER_COPY_DIR)/*
+	rm -rf $(DEPLOYRUNNER_DOCKER_DIR)/kubectl

@@ -48,7 +48,17 @@ if ! which envsubst; then
     exit 1
 fi
 
-kubectl create clusterrolebinding cluster-admin-binding --clusterrole cluster-admin --user ${K8S_USER} ${DRY_RUN_FLAG}
+if [[ -z "${K8S_USER}" ]]; then
+    log_info \$K8S_USER not specified - assuming the script is running under service account with cluster-admin role
+    echo "Checking permissions"
+    if ! kubectl auth can-i create clusterrolebinding; then
+        echo "ERROR: Current user/sa doesn't have enough permissions"
+        exit 1
+    fi
+
+else
+    kubectl create clusterrolebinding cluster-admin-binding --clusterrole cluster-admin --user ${K8S_USER} ${DRY_RUN_FLAG}
+fi
 
 OBJECTS=(templates/configmap templates/secret csi-attacher-rbac csi-provisioner-rbac csi-nodeplugin-rbac csi-snapshotter-rbac csi-ecfsplugin-attacher csi-ecfsplugin-provisioner csi-snapshotter snapshotclass storageclass templates/csi-ecfsplugin)
 
