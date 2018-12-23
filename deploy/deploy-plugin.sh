@@ -2,7 +2,7 @@
 
 # Template expansion variables with default values
 : ${PLUGIN_TAG:="dev"} # Docker image tag
-: ${MGMT_ADDR:="10.10.10.10"} # Management address
+: ${MGMT_ADDR:="UNDEFINED"} # Management address
 : ${MGMT_USER:="admin"} # Management user
 : ${MGMT_PASS:="Y2hhbmdlbWU="} # Management user's password (base64 encoded)
 : ${NFS_ADDR:="10.255.255.1"} # NFS load balancer's address
@@ -17,7 +17,7 @@ source ${MYPATH}/functions.sh
 
 DEPLOYMENT_BASE="${1}"
 : ${DRY_RUN:=false}
-: ${DEPLOYMENT_BASE:="../deploy"}
+: ${DEPLOYMENT_BASE:="${MYPATH}"}
 
 DEFAULT_K8S_USER=${USER}
 if which gcloud > /dev/null 2>&1; then
@@ -33,7 +33,20 @@ if [[ "$DRY_RUN" = true ]]; then
     DRY_RUN_FLAG="--dry-run"
 fi
 
-test -d "${DEPLOYMENT_BASE}" || exit 1
+if [[ ! -d "${DEPLOYMENT_BASE}" ]]; then
+    log_error "Deployment base ${DEPLOYMENT_BASE} not found. If not running the the default location, please override \$DEPLOYMENT_BASE"
+    exit 1
+fi
+
+if ! which kubectl; then
+    log_error "kubectl not found"
+    exit 1
+fi
+
+if ! which envsubst; then
+    log_error "envsubst not found"
+    exit 1
+fi
 
 kubectl create clusterrolebinding cluster-admin-binding --clusterrole cluster-admin --user ${K8S_USER} ${DRY_RUN_FLAG}
 
