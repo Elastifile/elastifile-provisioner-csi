@@ -5,20 +5,18 @@ POD_MANIFEST=$1
 : ${PVC_MANIFEST:="pvc.yaml"}
 : ${POD_CLEANUP_MANIFEST:="pod-cleanup-data.yaml"}
 
-echo "Deleting pod"
+echo "Deleting the main pod"
 kubectl delete -f ${POD_MANIFEST}
 
-echo "Waiting for the pod to be deleted - may take some time due to a large amount of I/O"
-#kubectl wait --for=delete -f ${POD_MANIFEST} --timeout=2m
-sleep 180
-
-echo "Creating cleanup pod"
-#kubectl wait --for=condition=Released -f ${PVC_MANIFEST} --timeout=0; kubectl create -f ${POD_CLEANUP_MANIFEST}
+echo "Creating the cleanup pod"
 kubectl create -f ${POD_CLEANUP_MANIFEST}
+#kubectl wait --for=condition=Ready -f ${POD_CLEANUP_MANIFEST} --timeout=2m # Container skips Ready
 
-echo "Waiting for cleanup pod to be gone"
-#kubectl wait --for=delete -f ${POD_CLEANUP_MANIFEST} --timeout=2m
-sleep 90
+echo "Waiting for the cleanup pod to complete"
+POD_CLEANUP_NAME=$(kubectl get -f ${POD_CLEANUP_MANIFEST} -o go-template='{{.metadata.name}}')
+i=0; while [[ $(kubectl get pod ${POD_CLEANUP_NAME} -o go-template='{{(index .status.containerStatuses 0).state.terminated.reason}}') != "Completed" ]]; do sleep 1; let i+=1; echo -n .; if [[ $i -ge 5 ]]; then echo -e "\nDone"; break; fi; done
+
+echo "Deleting the cleanup pod"
 kubectl delete -f ${POD_CLEANUP_MANIFEST}
 
 echo "Deleting pvc"
@@ -28,4 +26,3 @@ sleep 120
 
 echo "Pod delete completed"
 kubectl get pv,pvc,volumesnapshot,volumesnapshotcontent,pod
-

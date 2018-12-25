@@ -9,3 +9,5 @@ POD_MANIFEST=$1
 kubectl create -f ${PVC_MANIFEST}
 kubectl create -f ${POD_MANIFEST}
 
+echo "Waiting for the pod to become Ready"
+kubectl wait --for=condition=Ready -f ${POD_MANIFEST} --timeout=2m
