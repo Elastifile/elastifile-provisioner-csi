@@ -17,7 +17,7 @@ spec:
       - name: PLUGIN_TAG
         value: "dev"
       - name: MGMT_ADDR
-        value: 35.195.253.247
+        value: 35.205.163.242
       - name: MGMT_USER
         value: admin
       - name: MGMT_PASS

@@ -4,6 +4,7 @@ metadata:
   name: demo-snap-vol
 spec:
   storageClassName: elastifile
+  # dataSource is supported starting with K8s 1.12 - https://kubernetes.io/docs/concepts/storage/persistent-volumes/
   dataSource:
     name: demo-snap
     kind: VolumeSnapshot

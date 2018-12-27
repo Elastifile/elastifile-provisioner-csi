@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: demo-snap-vol
+spec:
+  storageClassName: elastifile
+  # dataSource is supported starting with K8s 1.12 - https://kubernetes.io/docs/concepts/storage/persistent-volumes/
+  dataSource:
+    name: demo-snap
+    kind: VolumeSnapshot
+    apiGroup: snapshot.storage.k8s.io
+  accessModes:
+    - ReadOnlyMany
+  resources:
+    requests:
+      storage: 1Gi
+
