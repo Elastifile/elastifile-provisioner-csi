@@ -6,7 +6,6 @@ spec:
   serviceAccount: cluster-admin-sa
   containers:
     - name: deploy-env
-      #image: elastifileio/ecfs-provisioner-csi-deployrunner:v0.2.0
       image: elastifileio/ecfs-provisioner-csi-deployrunner:dev
       imagePullPolicy: Always
       command: ["/bin/bash", "-c"]
@@ -17,12 +16,12 @@ spec:
       - name: PLUGIN_TAG
         value: "dev"
       - name: MGMT_ADDR
-        value: 35.205.163.242
+        value: 35.195.186.32
       - name: MGMT_USER
         value: admin
+      # Password should be base64 encoded
       - name: MGMT_PASS
         value: Y2hhbmdlbWU=
       - name: NFS_ADDR
         value: 10.255.255.1
   restartPolicy: Never
-

@@ -55,12 +55,16 @@ if ${RUN_DEPLOY} || ${RUN_TEARDOWN}; then
     kubectl create -f ${DEPLOY_MANIFEST}
     kubectl wait --for=condition=Ready -f ${DEPLOY_MANIFEST} --timeout=1m
 
-    kubectl cp ${TMP_KUBE_CONFIG} default/deploy-runner:/root/.kube/config
+    CONTAINER_NAME=default/deploy-runner
+    echo "Copying kube config to ${CONTAINER_NAME}"
+    kubectl cp ${TMP_KUBE_CONFIG} ${CONTAINER_NAME}:/root/.kube/config
+    echo "Copying deploy scripts and manifests to ${CONTAINER_NAME}"
+    kubectl cp ${MYPATH}/../deploy ${CONTAINER_NAME}:/
     if ${RUN_TEARDOWN}; then
-        kubectl exec -it deploy-runner deploy/teardown-plugin.sh
+        kubectl exec -it deploy-runner /deploy/teardown-plugin.sh
         echo "Elastifile CSI provisioner removed"
     else
-        kubectl exec -it deploy-runner deploy/deploy-plugin.sh
+        kubectl exec -it deploy-runner /deploy/deploy-plugin.sh
         echo "Elastifile CSI provisioner deployed"
     fi
 
