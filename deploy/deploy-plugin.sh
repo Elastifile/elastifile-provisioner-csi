@@ -44,14 +44,16 @@ assert $? "kubectl not found"
 exec_cmd which envsubst
 assert $? "envsubst not found"
 
-if [[ -z "${K8S_USER}" ]]; then
-    log_info \$K8S_USER not specified - assuming the script is running under service account with cluster-admin role
-    log_info "Checking permissions"
-    exec_cmd kubectl auth can-i create clusterrolebinding
-    assert $? "ERROR: Current user/sa doesn't have enough permissions"
-else
+log_info "Checking permissions"
+exec_cmd kubectl auth can-i create clusterrolebinding
+assert $? "ERROR: Current user/sa doesn't have enough permissions to create clusterrolebinding"
+
+if [[ -n "${K8S_USER}" ]]; then
+    log_info "Assigning cluster role cluster-admin to ${K8S_USER}"
     # On repeat runs clusterrolebinding already exists and it's ok for it to fail with AlreadyExists
     exec_cmd kubectl create clusterrolebinding cluster-admin-binding --clusterrole cluster-admin --user ${K8S_USER} ${DRY_RUN_FLAG} 2&>1 > /dev/null
+else
+    log_info \$K8S_USER not specified - assuming the script is running under service account with cluster-admin role
 fi
 
 OBJECTS=(templates/configmap templates/secret csi-attacher-rbac csi-provisioner-rbac csi-nodeplugin-rbac csi-snapshotter-rbac csi-ecfsplugin-attacher csi-ecfsplugin-provisioner csi-snapshotter storageclass snapshotclass templates/csi-ecfsplugin)
