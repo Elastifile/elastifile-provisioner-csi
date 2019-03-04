@@ -2,10 +2,17 @@
 
 : ${POD_ID:=2}
 : ${CONTAINER_NAME:=csi-ecfsplugin}
-POD_NAME=$(kubectl get pods -l app=$CONTAINER_NAME -o=name | head -n ${POD_ID} | tail -n 1)
+: ${NAMESPACE:="default"}
+
+POD_NAME=$(kubectl get pods -l app=$CONTAINER_NAME -o=name --namespace ${NAMESPACE} | head -n ${POD_ID} | tail -n 1)
+
+if [[ -z "${POD_NAME}" ]]; then
+    echo "Failed to detect pod name in namespace ${NAMESPACE}"
+    exit 1
+fi
 
 function get_pod_status() {
-	echo -n $(kubectl get $POD_NAME -o jsonpath="{.status.phase}")
+	echo -n $(kubectl get $POD_NAME -o jsonpath="{.status.phase}" --namespace ${NAMESPACE})
 }
 
 while [[ "$(get_pod_status)" != "Running" ]]; do
@@ -13,4 +20,5 @@ while [[ "$(get_pod_status)" != "Running" ]]; do
 	echo "Waiting for $POD_NAME (status $(get_pod_status))"
 done
 
-kubectl logs -f $POD_NAME -c $CONTAINER_NAME
+echo "Showing logs for pod ${POD_NAME}"
+kubectl logs -f $POD_NAME -c $CONTAINER_NAME --namespace ${NAMESPACE}

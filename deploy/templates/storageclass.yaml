@@ -24,7 +24,8 @@ parameters:
   # Volume access. Supported values: read_write, read_only, list_only, no_access
   access: "read_write"
 
-  # The config map and secrets have to contain ECFS cluster details (IP addresses and user credentials)
+  # The config map and secrets are expected to contain ECFS cluster details (IP addresses and user credentials)
+  configurationNamespace: ${NAMESPACE}
   csiProvisionerSecretName: elastifile
-  csiProvisionerSecretNamespace: default
+  csiProvisionerSecretNamespace: ${NAMESPACE}
   csiProvisionerConfigMapName: elastifile

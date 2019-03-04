@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 
+: ${NAMESPACE:="default"}
+
 set -x
 ./delete-snappod.sh $1
 ./delete-snapshot.sh $1

@@ -5,8 +5,7 @@ metadata:
 subjects:
   - kind: ServiceAccount
     name: csi-snapshotter # from rbac.yaml
-    # replace with non-default namespace name
-    namespace: default
+    namespace: ${NAMESPACE}
 roleRef:
   kind: ClusterRole
   name: external-provisioner-runner # from rbac-external-provisioner.yaml
@@ -17,13 +16,10 @@ kind: RoleBinding
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   name: csi-snapshotter-provisioner-role-cfg
-  # replace with non-default namespace name
-  namespace: default
 subjects:
   - kind: ServiceAccount
     name: csi-snapshotter # from rbac.yaml
-    # replace with non-default namespace name
-    namespace: default
+    namespace: ${NAMESPACE}
 roleRef:
   kind: Role
   name: external-provisioner-cfg # from rbac-external-provisioner.yaml

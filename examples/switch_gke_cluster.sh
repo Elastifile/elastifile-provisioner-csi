@@ -1,13 +1,15 @@
 #!/usr/bin/env bash
 
-: ${PROJECT:=elastifile-gce-lab-c340}
+: ${PROJECT:=elastifile-gce-lab-c906}
 : ${CLUSTER:=cluster-1}
-: ${ZONE:=europe-west1-b}
+: ${REGION:=us-central1}
+: ${ZONE:=us-central1-a}
 
 set -x
 
 # Set project and zone
 gcloud config set project ${PROJECT}
+gcloud config set compute/region ${REGION}
 gcloud config set compute/zone ${ZONE}
 
 # Set cluster

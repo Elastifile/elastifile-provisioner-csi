@@ -8,6 +8,7 @@
 : ${SNAPSHOT_MANIFEST:="snapshot.yaml"}
 : ${SNAPSHOT_DELAY:=60}
 : ${SNAPPOD_MANIFEST:="snapvol-pod-mount.yaml"}
+: ${NAMESPACE:="default"}
 
 ../deploy/deploy-plugin.sh
 ./create-pod.sh ${POD_MANIFEST}

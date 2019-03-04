@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"os"
 	"strings"
 
 	"github.com/elastifile/errors"
@@ -12,14 +13,17 @@ import (
 
 const (
 	//SecretNamespace = "csiProvisionerSecretNamespace"
-	configMapName = "elastifile"
-	secretsName   = "elastifile"
+	namespaceEnvVar = "CSI_NAMESPACE"
+	configMapName   = "elastifile"
+	secretsName     = "elastifile"
 
 	// Config map / secret keys
 	managementAddress  = "managementAddress"
 	managementUserName = "managementUserName"
 	managementPassword = "password"
 	nfsAddress         = "nfsAddress"
+
+	defaultNamespace = "default"
 )
 
 type config struct {
@@ -36,17 +40,25 @@ func (conf *config) String() string {
 		conf.NFSServer, conf.EmanageURL, conf.Username, strings.Repeat("*", len(conf.Password)))
 }
 
-func GetProvisionerSettings() (configMap map[string]string, secrets map[string][]byte, err error) {
-	namespace := "default"
+func Namespace() (namespace string) {
+	namespace = os.Getenv(namespaceEnvVar)
+	if namespace == "" {
+		namespace = defaultNamespace
+		glog.Warningf("Failed getting environment variable %v - falling back to the default value '%v'",
+			namespaceEnvVar, namespace)
+	}
+	return
+}
 
+func GetProvisionerSettings() (configMap map[string]string, secrets map[string][]byte, err error) {
 	glog.V(5).Infof("ecfs: Loading configuration from config map '%v'", configMapName)
-	configMap, err = co.GetConfigMap(namespace, configMapName)
+	configMap, err = co.GetConfigMap(Namespace(), configMapName)
 	if err != nil {
 		err = errors.WrapPrefix(err, "Failed to get config map", 0)
 	}
 
 	glog.V(5).Infof("ecfs: Loading configuration from secrets '%v'", secretsName)
-	secrets, err = co.GetSecret(namespace, secretsName)
+	secrets, err = co.GetSecret(Namespace(), secretsName)
 	if err != nil {
 		err = errors.WrapPrefix(err, "Failed to get secrets", 0)
 	}
