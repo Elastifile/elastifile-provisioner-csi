@@ -45,7 +45,7 @@ function assert {
     fi
 }
 
-function assert_exec_cmd {
+function assert_cmd {
     exec_cmd $@
     assert $? "Command failed with exit code $?: $@"
 }

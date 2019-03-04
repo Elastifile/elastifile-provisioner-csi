@@ -1,21 +1,24 @@
 #!/usr/bin/env bash
 
-deployment_base="${1}"
+MYPATH=$(dirname $0)
 
+source ${MYPATH}/functions.sh
+
+deployment_base="${1}"
 if [[ -z ${deployment_base} ]]; then
 	deployment_base="../deploy"
 fi
 
-cd "$deployment_base" || exit 1
+cd "${deployment_base}"
+assert $? "Path not found: ${deployment_base}"
 
 objects=(csi-ecfsplugin-attacher csi-ecfsplugin-provisioner templates/csi-ecfsplugin csi-snapshotter-rbac csi-snapshotter snapshotclass storageclass csi-attacher-rbac csi-provisioner-rbac csi-nodeplugin-rbac templates/configmap templates/secret)
 
 for obj in ${objects[@]}; do
-    echo "=== Deleting ${obj}"
-	kubectl delete -f "./$obj.yaml"
+    log_info "Deleting ${obj}"
+	exec_cmd kubectl delete -f "./$obj.yaml"
 done
 
 pushd ${deployment_base}
-./delete_crd.sh
+exec_cmd ./delete_crd.sh
 popd
-

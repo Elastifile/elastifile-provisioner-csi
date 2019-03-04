@@ -1,4 +1,8 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
-kubectl create -f csidriver.yaml --validate=false 
-kubectl create -f csinodeinfo.yaml --validate=false 
+MYPATH=$(dirname $0)
+
+source ${MYPATH}/functions.sh
+
+assert_cmd kubectl create -f csidriver.yaml --validate=false
+assert_cmd kubectl create -f csinodeinfo.yaml --validate=false

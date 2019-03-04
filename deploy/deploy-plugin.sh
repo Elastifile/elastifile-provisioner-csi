@@ -38,40 +38,35 @@ if [[ ! -d "${DEPLOYMENT_BASE}" ]]; then
     exit 1
 fi
 
-if ! which kubectl; then
-    log_error "kubectl not found"
-    exit 1
-fi
+exec_cmd which kubectl
+assert $? "kubectl not found"
 
-if ! which envsubst; then
-    log_error "envsubst not found"
-    exit 1
-fi
+exec_cmd which envsubst
+assert $? "envsubst not found"
 
 if [[ -z "${K8S_USER}" ]]; then
     log_info \$K8S_USER not specified - assuming the script is running under service account with cluster-admin role
-    echo "Checking permissions"
-    if ! kubectl auth can-i create clusterrolebinding; then
-        echo "ERROR: Current user/sa doesn't have enough permissions"
-        exit 1
-    fi
-
+    log_info "Checking permissions"
+    exec_cmd kubectl auth can-i create clusterrolebinding
+    assert $? "ERROR: Current user/sa doesn't have enough permissions"
 else
-    kubectl create clusterrolebinding cluster-admin-binding --clusterrole cluster-admin --user ${K8S_USER} ${DRY_RUN_FLAG}
+    # On repeat runs clusterrolebinding already exists and it's ok for it to fail with AlreadyExists
+    exec_cmd kubectl create clusterrolebinding cluster-admin-binding --clusterrole cluster-admin --user ${K8S_USER} ${DRY_RUN_FLAG} 2&>1 > /dev/null
 fi
 
 OBJECTS=(templates/configmap templates/secret csi-attacher-rbac csi-provisioner-rbac csi-nodeplugin-rbac csi-snapshotter-rbac csi-ecfsplugin-attacher csi-ecfsplugin-provisioner csi-snapshotter storageclass snapshotclass templates/csi-ecfsplugin)
 
 pushd ${DEPLOYMENT_BASE}
-./create_crd.sh
+assert_cmd ./create_crd.sh
 popd
 
 for OBJ in ${OBJECTS[@]}; do
     if [[ "${OBJ}" == *"templates"* ]]; then
         log_info "Creating ${OBJ} from template"
         PLUGIN_TAG=${PLUGIN_TAG} MGMT_ADDR=${MGMT_ADDR} MGMT_USER=${MGMT_USER} MGMT_PASS=${MGMT_PASS} NFS_ADDR=${NFS_ADDR} envsubst < "${DEPLOYMENT_BASE}/${OBJ}.yaml" | kubectl create -f - ${DRY_RUN_FLAG}
+        assert $? "Failed to create ${OBJ} from template"
     else
         log_info "Creating ${OBJ}"
-	    kubectl create -f "${DEPLOYMENT_BASE}/${OBJ}.yaml" ${DRY_RUN_FLAG}
+	    assert_cmd kubectl create -f "${DEPLOYMENT_BASE}/${OBJ}.yaml" ${DRY_RUN_FLAG}
     fi
 done
