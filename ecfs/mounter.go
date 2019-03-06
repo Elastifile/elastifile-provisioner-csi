@@ -28,7 +28,7 @@ import (
 func mountNfs(args ...string) error {
 	out, err := execCommand("mount", args[:]...)
 	if err != nil {
-		return errors.WrapPrefix(err, fmt.Sprintf("Mount failed. Output: %v", out), 0)
+		return errors.WrapPrefix(err, fmt.Sprintf("Mount failed. Output: %v", string(out)), 0)
 	}
 	return nil
 }

@@ -82,7 +82,8 @@ func execCommand(command string, args ...string) ([]byte, error) {
 func execCommandAndValidate(program string, args ...string) error {
 	out, err := execCommand(program, args...)
 	if err != nil {
-		return errors.WrapPrefix(err, fmt.Sprintf("Command %v failed with following output: %v", program, out), 0)
+		return errors.WrapPrefix(err, fmt.Sprintf("Command %v failed with following output: %v",
+			program, string(out)), 0)
 	}
 
 	return nil
