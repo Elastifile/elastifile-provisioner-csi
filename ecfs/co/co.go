@@ -5,8 +5,8 @@ import (
 	"k8s.io/client-go/rest"
 )
 
-// clientSet returns Container orchestration configuration
-func clientSet() (clientSet *kubernetes.Clientset) {
+// getClientSet returns Container Orchestration configuration
+func getClientSet() (clientSet *kubernetes.Clientset) {
 	config, err := rest.InClusterConfig()
 	if err != nil {
 		panic(err.Error())

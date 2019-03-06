@@ -6,7 +6,7 @@ import (
 )
 
 func GetSecret(namespace string, secretName string) (data map[string][]byte, err error) {
-	clientSet := clientSet()
+	clientSet := getClientSet()
 	secret, err := clientSet.CoreV1().Secrets(namespace).Get(secretName, metav1.GetOptions{})
 	data = secret.Data
 	return
@@ -29,7 +29,7 @@ func GetSecretValue(namespace string, secretName string, key string) (value stri
 }
 
 func UpdateSecrets(namespace string, secretsName string, data map[string][]byte) (err error) {
-	clientSet := clientSet()
+	clientSet := getClientSet()
 	secrets, err := clientSet.CoreV1().Secrets(namespace).Get(secretsName, metav1.GetOptions{})
 	if err != nil {
 		err = errors.Wrap(err, 0)
@@ -50,7 +50,7 @@ func UpdateSecrets(namespace string, secretsName string, data map[string][]byte)
 }
 
 func CreateSecrets(namespace string, secretsName string, data map[string][]byte) (err error) {
-	clientSet := clientSet()
+	clientSet := getClientSet()
 	secrets, err := clientSet.CoreV1().Secrets(namespace).Get(secretsName, metav1.GetOptions{})
 	if err != nil {
 		err = errors.Wrap(err, 0)

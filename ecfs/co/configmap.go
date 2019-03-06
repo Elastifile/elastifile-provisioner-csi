@@ -6,7 +6,7 @@ import (
 )
 
 func GetConfigMap(namespace string, configMapName string) (data map[string]string, err error) {
-	clientSet := clientSet()
+	clientSet := getClientSet()
 	configMap, err := clientSet.CoreV1().ConfigMaps(namespace).Get(configMapName, metav1.GetOptions{})
 	if err != nil {
 		err = errors.Wrap(err, 0)
@@ -32,7 +32,7 @@ func GetConfigMapValue(namespace string, configMapName string, key string) (valu
 }
 
 func UpdateConfigMap(namespace string, configMapName string, data map[string]string) (err error) {
-	clientSet := clientSet()
+	clientSet := getClientSet()
 	configMap, err := clientSet.CoreV1().ConfigMaps(namespace).Get(configMapName, metav1.GetOptions{})
 	if err != nil {
 		err = errors.Wrap(err, 0)
@@ -53,7 +53,7 @@ func UpdateConfigMap(namespace string, configMapName string, data map[string]str
 }
 
 func CreateConfigMap(namespace string, configMapName string, data map[string]string) (err error) {
-	clientSet := clientSet()
+	clientSet := getClientSet()
 	configMap, err := clientSet.CoreV1().ConfigMaps(namespace).Get(configMapName, metav1.GetOptions{})
 	if err != nil {
 		err = errors.Wrap(err, 0)
