@@ -24,8 +24,7 @@ import (
 )
 
 const (
-	PluginFolder = "/var/lib/kubelet/plugins/csi-ecfsfsplugin"
-	Version      = "0.2.0"
+	Version = "0.2.0"
 )
 
 type ecfsDriver struct {
@@ -38,11 +37,6 @@ type ecfsDriver struct {
 	caps   []*csi.VolumeCapability_AccessMode
 	cscaps []*csi.ControllerServiceCapability
 }
-
-var (
-	driver               *ecfsDriver
-	DefaultVolumeMounter string
-)
 
 func NewECFSDriver() *ecfsDriver {
 	return &ecfsDriver{}
