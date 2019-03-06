@@ -20,12 +20,12 @@ metadata:
   name: driver-registrar-runner
 rules:
   - apiGroups: [""]
-    resources: ["events"]
+    resources: ["events", "configmaps", "secrets"]
     verbs: ["get", "list", "watch", "create", "update", "patch"]
 
   - apiGroups: [""]
-    resources: ["configmaps", "secrets"]
-    verbs: ["get", "list", "watch"]
+    resources: ["services"]
+    verbs: ["get", "list"]
 
   # The following permissions are only needed when running
   # driver-registrar without the --kubelet-registration-path

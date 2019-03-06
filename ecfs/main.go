@@ -20,6 +20,7 @@ import (
 	"flag"
 	"github.com/golang/glog"
 	"os"
+	"src/github.com/go-errors/errors"
 
 	_ "github.com/elastifile/emanage-go/src/emanage-client"
 )
@@ -38,6 +39,12 @@ var (
 func main() {
 	glog.Info("Entering ECFS plugin")
 	flag.Parse()
+
+	err := updateConfigEkfs()
+	if err != nil {
+		err = errors.WrapPrefix(err, "Failed to update config map from within EKFS", 0)
+		panic(err.Error())
+	}
 
 	driver := NewECFSDriver()
 	driver.Run(*driverName, *nodeId, *endpoint, *mounter)

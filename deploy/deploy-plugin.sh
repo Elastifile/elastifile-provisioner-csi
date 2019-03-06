@@ -7,6 +7,7 @@
 : ${MGMT_PASS:="Y2hhbmdlbWU="} # Management user's password (base64 encoded)
 : ${NFS_ADDR:="10.255.255.1"} # NFS load balancer's address
 : ${NAMESPACE:="default"} # K8s namespace to use for CSI plugin deployment
+: ${EKFS:="false"} # Optional. If true, there's no need to specify MGMT_ADDR and NFS_ADDR
 # In order to set one of the above values, run this script prefixed by the variable assignment. For example:
 # PLUGIN_TAG=v0.1.0 MGMT_USER=manager ./deploy-plugin.sh
 
@@ -66,7 +67,7 @@ popd
 for OBJ in ${OBJECTS[@]}; do
     if [[ "${OBJ}" == *"templates"* ]]; then
         log_info "Creating ${OBJ} from template"
-        PLUGIN_TAG=${PLUGIN_TAG} MGMT_ADDR=${MGMT_ADDR} MGMT_USER=${MGMT_USER} MGMT_PASS=${MGMT_PASS} NFS_ADDR=${NFS_ADDR} envsubst < "${DEPLOYMENT_BASE}/${OBJ}.yaml" | kubectl create -f - --namespace ${NAMESPACE} ${DRY_RUN_FLAG}
+        PLUGIN_TAG=${PLUGIN_TAG} MGMT_ADDR=${MGMT_ADDR} MGMT_USER=${MGMT_USER} MGMT_PASS=${MGMT_PASS} NFS_ADDR=${NFS_ADDR} EKFS=${EKFS} envsubst < "${DEPLOYMENT_BASE}/${OBJ}.yaml" | kubectl create -f - --namespace ${NAMESPACE} ${DRY_RUN_FLAG}
         assert $? "Failed to create ${OBJ} from template"
     else
         log_info "Creating ${OBJ}"
