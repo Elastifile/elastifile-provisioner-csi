@@ -58,7 +58,7 @@ else
     log_info \$K8S_USER not specified - assuming the script is running under service account with cluster-admin role
 fi
 
-OBJECTS=(templates/configmap templates/secret templates/csi-attacher-rbac templates/csi-provisioner-rbac templates/csi-nodeplugin-rbac templates/csi-snapshotter-rbac csi-ecfsplugin-attacher csi-ecfsplugin-provisioner templates/csi-snapshotter templates/storageclass snapshotclass templates/csi-ecfsplugin)
+OBJECTS=(templates/configmap templates/secret templates/csi-attacher-rbac templates/csi-provisioner-rbac templates/csi-nodeplugin-rbac templates/csi-snapshotter-rbac csi-ecfsplugin-attacher csi-ecfsplugin-provisioner templates/csi-snapshotter templates/storageclass templates/csi-ecfsplugin snapshotclass)
 
 pushd ${DEPLOYMENT_BASE}
 assert_cmd ./create_crd.sh
