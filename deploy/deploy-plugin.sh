@@ -53,7 +53,7 @@ assert $? "ERROR: Current user/sa doesn't have enough permissions to create clus
 if [[ -n "${K8S_USER}" ]]; then
     log_info "Assigning cluster role cluster-admin to ${K8S_USER}"
     # On repeat runs clusterrolebinding already exists and it's ok for it to fail with AlreadyExists
-    exec_cmd kubectl create clusterrolebinding cluster-admin-binding --clusterrole cluster-admin --user ${K8S_USER} ${DRY_RUN_FLAG} 2&>1 > /dev/null
+    exec_cmd kubectl create clusterrolebinding cluster-admin-binding --clusterrole cluster-admin --user ${K8S_USER} ${DRY_RUN_FLAG} > /dev/null 2>&1
 else
     log_info \$K8S_USER not specified - assuming the script is running under service account with cluster-admin role
 fi
