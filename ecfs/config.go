@@ -2,8 +2,6 @@ package main
 
 import (
 	"fmt"
-	"os"
-	"strconv"
 	"strings"
 	"time"
 
@@ -14,10 +12,6 @@ import (
 )
 
 const (
-	// Environment variable names
-	envNamespace = "CSI_NAMESPACE"
-	envEKFS      = "EKFS"
-
 	//SecretNamespace = "csiProvisionerSecretNamespace"
 	configMapName = "elastifile"
 	secretsName   = "elastifile"
@@ -28,11 +22,9 @@ const (
 	managementPassword = "password"
 	nfsAddress         = "nfsAddress"
 
-	// K8s service names
-	k8sServiceNfsVip     = "elastifile-app-elastifile-svc"
-	k8sServiceEmanageVip = "elastifile-app-emanage-svc"
-
-	defaultNamespace = "default"
+	// K8s service names' suffixes, appended to APP_NAME, e.g. "elastifile-app"
+	k8sServiceNfsVipSuffix     = "-elastifile-svc"
+	k8sServiceEmanageVipSuffix = "-emanage-svc"
 )
 
 type config struct {
@@ -47,16 +39,6 @@ type config struct {
 func (conf *config) String() string {
 	return fmt.Sprintf("NFS Server: %v, Management URL: %v, Management username: %v, Management password: %v",
 		conf.NFSServer, conf.EmanageURL, conf.Username, strings.Repeat("*", len(conf.Password)))
-}
-
-func Namespace() (namespace string) {
-	namespace = os.Getenv(envNamespace)
-	if namespace == "" {
-		namespace = defaultNamespace
-		glog.Warningf("Failed getting environment variable %v - falling back to the default value '%v'",
-			envNamespace, namespace)
-	}
-	return
 }
 
 func GetProvisionerSettings() (configMap map[string]string, secrets map[string][]byte, err error) {
@@ -102,29 +84,9 @@ func pluginConfig() (conf *config, err error) {
 	return
 }
 
-// isEKFS checks if we're running in EKFS environment
-func isEKFS() bool {
-	isEkfsStr := os.Getenv(envEKFS)
-	if isEkfsStr == "" {
-		return false
-	}
-
-	isEkfs, err := strconv.ParseBool(isEkfsStr)
-	if err != nil {
-		glog.Warningf("Failed to parse environment variable %v's value (%v) as bool - assuming running in EKFS",
-			envEKFS, isEkfsStr)
-		return true
-	}
-
-	return isEkfs
-}
-
 func updateNfsAddress() (err error) {
-	if !isEKFS() {
-		glog.V(6).Infof("ecfs: Running outside EKFS - skipping service-based update of ECFS NFS address")
-		return
-	}
-	service, err := co.GetServiceWithRetries(Namespace(), k8sServiceNfsVip, 5*time.Minute)
+	serviceName := fmt.Sprintf("%v%v", AppName(), k8sServiceNfsVipSuffix)
+	service, err := co.GetServiceWithRetries(Namespace(), serviceName, 5*time.Minute)
 	if err != nil {
 		return errors.Wrap(err, 0)
 	}
@@ -140,7 +102,8 @@ func updateNfsAddress() (err error) {
 }
 
 func updateEmanageAddress() (err error) {
-	service, err := co.GetServiceWithRetries(Namespace(), k8sServiceEmanageVip, 5*time.Minute)
+	serviceName := fmt.Sprintf("%v%v", AppName(), k8sServiceEmanageVipSuffix)
+	service, err := co.GetServiceWithRetries(Namespace(), serviceName, 5*time.Minute)
 	if err != nil {
 		return errors.Wrap(err, 0)
 	}
@@ -156,7 +119,7 @@ func updateEmanageAddress() (err error) {
 }
 
 func updateConfigEkfs() (err error) {
-	if !isEKFS() {
+	if !IsEKFS() {
 		glog.V(6).Infof("ecfs: Running outside EKFS - skipping service-based config map updates")
 		return
 	}
@@ -166,12 +129,10 @@ func updateConfigEkfs() (err error) {
 		return errors.Wrap(err, 0)
 	}
 
-	_ = updateEmanageAddress()
-	// TODO: Uncomment the following block once EKFS adds the corresponding service
-	//err = updateEmanageAddress()
-	//if err != nil {
-	//	return errors.Wrap(err, 0)
-	//}
+	err = updateEmanageAddress()
+	if err != nil {
+		return errors.Wrap(err, 0)
+	}
 
 	return
 }
