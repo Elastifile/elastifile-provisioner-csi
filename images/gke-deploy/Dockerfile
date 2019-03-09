@@ -5,3 +5,7 @@ RUN apk add --update libintl && apk add --virtual build_deps gettext && cp /usr/
 
 COPY kubectl /usr/local/bin/kubectl
 RUN mkdir /root/.kube && chmod +x /usr/local/bin/kubectl
+
+COPY deploy /deploy
+
+ENTRYPOINT ["/deploy/gke-deploy.sh"]

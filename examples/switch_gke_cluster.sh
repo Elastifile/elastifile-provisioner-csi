@@ -1,7 +1,12 @@
 #!/usr/bin/env bash
 
-: ${PROJECT:=elastifile-gce-lab-c906}
-: ${CLUSTER:=cluster-1}
+#: ${PROJECT:=elastifile-gce-lab-c906}
+#: ${CLUSTER:=ekfs-cluster}
+#: ${REGION:=us-central1}
+#: ${ZONE:=us-central1-a}
+
+: ${PROJECT:=elastifile-gce-lab-c945}
+: ${CLUSTER:=ekfs-cluster}
 : ${REGION:=us-central1}
 : ${ZONE:=us-central1-a}
 

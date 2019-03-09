@@ -33,5 +33,6 @@ status:
   acceptedNames:
     kind: ""
     plural: ""
-  conditions: null
-  storedVersions: null
+  # Workaround for https://github.com/kubernetes/cluster-registry/issues/255
+  conditions: []
+  storedVersions: []

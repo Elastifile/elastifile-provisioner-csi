@@ -1,0 +1,20 @@
+kind: Pod
+apiVersion: v1
+metadata:
+  name: gke-deploy
+spec:
+  serviceAccount: ${EKFS_SERVICE_ACCOUNT}
+  containers:
+    - name: deploy-env
+      image: ${REGISTRY}/elastifile-ci/ecfs-provisioner-csi-gke-deploy:${TAG}
+      imagePullPolicy: Always
+      command: ["/bin/bash", "-c", "/deploy/gke-deploy.sh"]
+      env:
+      - name: PLUGIN_TAG
+        value: ${PLUGIN_TAG}
+      - name: MGMT_USER
+        value: admin
+      # Password should be base64 encoded
+      - name: MGMT_PASS
+        value: Y2hhbmdlbWU=
+  restartPolicy: Never

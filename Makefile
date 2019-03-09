@@ -32,6 +32,10 @@ DEPLOYRUNNER_IMAGE_NAME = elastifileio/ecfs-provisioner-csi-deployrunner
 DEPLOYRUNNER_DOCKER_DIR = images/deployrunner
 DEPLOYRUNNER_COPY_DIR = $(DEPLOYRUNNER_DOCKER_DIR)/deploy
 
+GKEDEPLOY_IMAGE_NAME = elastifileio/ecfs-provisioner-csi-gke-deploy
+GKEDEPLOY_DOCKER_DIR = images/gke-deploy
+GKEDEPLOY_COPY_DIR = $(GKEDEPLOY_DOCKER_DIR)/deploy
+
 # Compile, create image and push it
 all: image push
 
@@ -58,6 +62,15 @@ deployrunner:
 	docker build -t $(DEPLOYRUNNER_IMAGE_NAME):$(PLUGIN_TAG) $(DEPLOYRUNNER_DOCKER_DIR)
 	docker push $(DEPLOYRUNNER_IMAGE_NAME):$(PLUGIN_TAG)
 
+gkedeploy:
+	mkdir -p $(GKEDEPLOY_COPY_DIR)
+	cp -r deploy/* $(GKEDEPLOY_COPY_DIR)
+	cp -r gke-deploy/*.sh $(GKEDEPLOY_COPY_DIR)
+	# kubectl version installed on the host running make is used in the resulting image
+	cp -f $(shell which kubectl) $(GKEDEPLOY_DOCKER_DIR)/
+	docker build -t $(GKEDEPLOY_IMAGE_NAME):$(PLUGIN_TAG) $(GKEDEPLOY_DOCKER_DIR)
+	docker push $(GKEDEPLOY_IMAGE_NAME):$(PLUGIN_TAG)
+
 # Remove previous build's artifacts
 clean:
 	go clean -r -x
@@ -65,3 +78,5 @@ clean:
 	rm -f $(PLUGIN_DOCKER_DIR)/$(PLUGIN_BINARY)
 	rm -rf $(DEPLOYRUNNER_COPY_DIR)/*
 	rm -rf $(DEPLOYRUNNER_DOCKER_DIR)/kubectl
+	rm -rf $(GKEDEPLOY_COPY_DIR)/*
+	rm -rf $(GKEDEPLOY_DOCKER_DIR)/kubectl
