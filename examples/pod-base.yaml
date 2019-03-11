@@ -9,4 +9,6 @@ spec:
      command: ["tail"]
      args: ["-f", "/dev/null"]
   restartPolicy: Never
+  terminationGracePeriodSeconds: 30
+
 

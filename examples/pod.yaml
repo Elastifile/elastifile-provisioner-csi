@@ -9,6 +9,7 @@ spec:
      volumeMounts:
        - name: volume1
          mountPath: /var/lib/www
+  terminationGracePeriodSeconds: 30
   volumes:
    - name: volume1
      persistentVolumeClaim:

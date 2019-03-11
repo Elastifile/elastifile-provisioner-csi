@@ -14,4 +14,4 @@ spec:
      persistentVolumeClaim:
        claimName: demo-pvc
        readOnly: false
-
+  terminationGracePeriodSeconds: 30

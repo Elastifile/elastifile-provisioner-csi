@@ -10,10 +10,11 @@ spec:
        - name: volume1
          mountPath: /mnt
      command: ["dd"]
-     args: ["if=/dev/zero", "of=/mnt/demofile", "bs=1M", "count=1000000"]
+     args: ["if=/dev/zero", "of=/mnt/demofile", "bs=1M", "count=1000"]
   volumes:
    - name: volume1
      persistentVolumeClaim:
        claimName: demo-pvc
        readOnly: false
   restartPolicy: Never
+  terminationGracePeriodSeconds: 30

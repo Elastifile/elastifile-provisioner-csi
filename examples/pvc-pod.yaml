@@ -29,4 +29,5 @@ spec:
        claimName: demo-pvc
        readOnly: false
   restartPolicy: Never
+  terminationGracePeriodSeconds: 30
 
