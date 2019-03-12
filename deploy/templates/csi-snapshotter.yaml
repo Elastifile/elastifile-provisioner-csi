@@ -35,9 +35,6 @@ metadata:
 spec:
   selector:
     app: csi-snapshotter
-  ports:
-    - name: dummy
-      port: 12345
 
 ---
 # TODO: It is recommended that sidecar containers External-Snapshotter and External-Provisioner be deployed together with CSI driver in a StatefulSet.
