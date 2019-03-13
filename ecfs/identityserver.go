@@ -19,8 +19,7 @@ package main
 import (
 	"context"
 
-	"github.com/container-storage-interface/spec/lib/go/csi/v0"
-	//"github.com/container-storage-interface/spec/lib/go/csi" // TODO: Uncomment when switching to CSI 1.0
+	"github.com/container-storage-interface/spec/lib/go/csi"
 	"github.com/kubernetes-csi/drivers/pkg/csi-common"
 )
 

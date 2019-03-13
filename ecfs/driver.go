@@ -17,14 +17,13 @@ limitations under the License.
 package main
 
 import (
-	"github.com/container-storage-interface/spec/lib/go/csi/v0"
-	//"github.com/container-storage-interface/spec/lib/go/csi" // TODO: Uncomment when switching to CSI 1.0
+	"github.com/container-storage-interface/spec/lib/go/csi"
 	"github.com/golang/glog"
 	"github.com/kubernetes-csi/drivers/pkg/csi-common"
 )
 
 const (
-	Version = "0.3.0"
+	Version = "0.5.0"
 )
 
 type ecfsDriver struct {

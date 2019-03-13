@@ -21,10 +21,9 @@ required = [
 #  name = "github.com/golang/glog"
 
 # CSI spec version
-# Cannot use [[constraint]] due to missing Go files error
 [[constraint]]
   name = "github.com/container-storage-interface/spec"
-  version = "~0.3.0"
+  version = "~1.1.0"
 
 #[[override]]
 #  name = "k8s.io/kubernetes"
@@ -46,24 +45,24 @@ required = [
 #  name = "k8s.io/client-go"
 #  version = "kubernetes-1.13.0-beta.2"
 
-[[override]]
-  name = "k8s.io/kubernetes"
-  version = "v1.11"
-
-[[override]]
-  name = "k8s.io/api"
-  version = "kubernetes-1.11.0"
-
-[[override]]
-  name = "k8s.io/apimachinery"
-  version = "kubernetes-1.11.0"
-
-[[override]]
-  name = "k8s.io/csi-api"
-  version = "kubernetes-1.11.0"
-
-[[override]]
-  name = "k8s.io/client-go"
-  version = "kubernetes-1.11.0"
-
-
+#[[override]]
+#  name = "k8s.io/kubernetes"
+#  version = "v1.11"
+#
+#[[override]]
+#  name = "k8s.io/api"
+#  version = "kubernetes-1.11.0"
+#
+#[[override]]
+#  name = "k8s.io/apimachinery"
+#  version = "kubernetes-1.11.0"
+#
+#[[override]]
+#  name = "k8s.io/csi-api"
+#  version = "kubernetes-1.11.0"
+#
+#[[override]]
+#  name = "k8s.io/client-go"
+#  version = "kubernetes-1.11.0"
+#
+#

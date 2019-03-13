@@ -6,11 +6,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/container-storage-interface/spec/lib/go/csi/v0"
+	"github.com/container-storage-interface/spec/lib/go/csi"
 	"github.com/golang/glog"
+	"github.com/golang/protobuf/ptypes/timestamp"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
-	//"github.com/container-storage-interface/spec/lib/go/csi" // TODO: Uncomment when switching to CSI 1.0
 
 	"github.com/elastifile/emanage-go/src/emanage-client"
 	"github.com/elastifile/errors"
@@ -154,13 +154,19 @@ func (ems *emanageClient) GetSnapshotByName(snapshotName string) (snapshot *eman
 	return nil, errors.Errorf("Snapshot not found by name %v", snapshotName)
 }
 
-func parseTimestampRFC3339(timestamp string) (int64, error) {
-	ts, err := time.Parse(time.RFC3339, timestamp)
+func parseTimestamp(dateTime string) (ts *timestamp.Timestamp, err error) {
+	parsedDateTime, err := time.Parse(time.RFC3339, dateTime)
 	if err != nil {
-		return 0, errors.WrapPrefix(err,
-			fmt.Sprintf("Failed to parse timestamp '%v' - expected format '%v'", timestamp, time.RFC3339), 0)
+		return ts, errors.WrapPrefix(err,
+			fmt.Sprintf("Failed to parse time/date '%v' - expected format '%v'", dateTime, time.RFC3339), 0)
 	}
-	return ts.Unix(), nil
+
+	ts = &timestamp.Timestamp{
+		Seconds: parsedDateTime.Unix(),
+		Nanos:   int32(parsedDateTime.Nanosecond()),
+	}
+
+	return ts, nil
 }
 
 func snapshotEcfsToCsi(ems *emanageClient, ecfsSnapshot *emanage.Snapshot) (csiSnapshot *csi.Snapshot, err error) {
@@ -172,19 +178,17 @@ func snapshotEcfsToCsi(ems *emanageClient, ecfsSnapshot *emanage.Snapshot) (csiS
 		return
 	}
 
-	csiCreatedAt, err := parseTimestampRFC3339(ecfsSnapshot.CreatedAt)
+	creationTimestamp, err := parseTimestamp(ecfsSnapshot.CreatedAt)
 	if err != nil {
 		err = errors.Wrap(err, 0)
 		return
 	}
 
 	csiSnapshot = &csi.Snapshot{
-		Id:             ecfsSnapshot.Name,
+		SnapshotId:     ecfsSnapshot.Name,
 		SourceVolumeId: dc.Name,
-		CreatedAt:      csiCreatedAt,
-		Status: &csi.SnapshotStatus{
-			Type: csi.SnapshotStatus_READY,
-		},
+		CreationTime:   creationTimestamp,
+		ReadyToUse:     isSnapshotUsable(ecfsSnapshot),
 	}
 	return
 }
@@ -197,23 +201,8 @@ const (
 	ecfsSnapshotStatus_REMOVED   = "status_removed"
 )
 
-func snapshotStatusEcfsToCsi(ecfsSnapshotStatus string) csi.SnapshotStatus_Type {
-	var snapEcfs2CsiMap = map[string]csi.SnapshotStatus_Type{
-		ecfsSnapshotStatus_ADDING:    csi.SnapshotStatus_UPLOADING,
-		ecfsSnapshotStatus_VALID:     csi.SnapshotStatus_READY,
-		ecfsSnapshotStatus_REMOVING:  csi.SnapshotStatus_UNKNOWN,
-		ecfsSnapshotStatus_MODIFYING: csi.SnapshotStatus_UNKNOWN,
-		ecfsSnapshotStatus_REMOVED:   csi.SnapshotStatus_UNKNOWN,
-		"":                           csi.SnapshotStatus_UNKNOWN,
-	}
-
-	csiSnapshotStatus, ok := snapEcfs2CsiMap[ecfsSnapshotStatus]
-	if !ok {
-		glog.Warningf("ecfs: Unrecognized snapshot status %v - using csi.SnapshotStatus_UNKNOWN", ecfsSnapshotStatus)
-		csiSnapshotStatus = csi.SnapshotStatus_UNKNOWN
-	}
-
-	return csiSnapshotStatus
+func isSnapshotUsable(snapshot *emanage.Snapshot) bool {
+	return snapshot.Status == ecfsSnapshotStatus_VALID
 }
 
 func createExportOnSnapshot(emsClient *emanageClient, snapshot *emanage.Snapshot, volOptions *volumeOptions) (volumeDescriptor volumeDescriptorType, exportRef *emanage.Export, err error) {

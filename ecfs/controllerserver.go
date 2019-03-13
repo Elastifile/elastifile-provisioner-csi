@@ -20,8 +20,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/container-storage-interface/spec/lib/go/csi/v0"
-	//"github.com/container-storage-interface/spec/lib/go/csi" // TODO: Uncomment when switching to CSI 1.0
+	"github.com/container-storage-interface/spec/lib/go/csi"
 	"github.com/golang/glog"
 	"github.com/kubernetes-csi/drivers/pkg/csi-common"
 	"golang.org/x/net/context"
@@ -38,16 +37,10 @@ type controllerServer struct {
 func getCreateVolumeResponse(volumeId volumeIdType, volOptions *volumeOptions, req *csi.CreateVolumeRequest) (response *csi.CreateVolumeResponse) {
 	return &csi.CreateVolumeResponse{
 		Volume: &csi.Volume{
-			Id:            string(volumeId),
+			VolumeId:      string(volumeId),
 			CapacityBytes: int64(volOptions.Capacity),
-			Attributes:    req.GetParameters(),
+			VolumeContext: req.GetParameters(),
 		},
-		// TODO: Uncomment when switching to CSI 1.0
-		//Volume: &csi.Volume{
-		//	VolumeId:      string(volumeId),
-		//	CapacityBytes: int64(volOptions.Capacity),
-		//	VolumeContext: req.GetParameters(),
-		//},
 	}
 }
 
@@ -102,11 +95,11 @@ func (cs *controllerServer) CreateVolume(ctx context.Context, req *csi.CreateVol
 	} else { // Volume from snapshot
 		source := req.GetVolumeContentSource()
 		glog.V(6).Infof("ecfs: Creating volume %v from snapshot %v",
-			req.GetName(), source.GetSnapshot().GetId())
+			req.GetName(), source.GetSnapshot().GetSnapshotId())
 		volumeId, err = createVolumeFromSnapshot(ems.GetClient(), volOptions, source)
 		if err != nil {
 			err = errors.WrapPrefix(err, fmt.Sprintf("Failed to create volume %v from snapshot %v",
-				req.GetName(), req.VolumeContentSource.GetSnapshot().GetId()), 0)
+				req.GetName(), req.VolumeContentSource.GetSnapshot().GetSnapshotId()), 0)
 			glog.Errorf(err.Error())
 			return nil, status.Error(codes.Internal, err.Error())
 		}
@@ -174,21 +167,17 @@ func (cs *controllerServer) ValidateVolumeCapabilities(ctx context.Context, req 
 		// TODO: Consider checking the actual requested AccessMode - not the most general one
 		if capability.GetAccessMode().GetMode() != csi.VolumeCapability_AccessMode_MULTI_NODE_MULTI_WRITER {
 			return &csi.ValidateVolumeCapabilitiesResponse{
-				Supported: false,
-				// TODO: Uncomment when switching to CSI 1.0
-				//Confirmed: nil,
-				Message: ""}, nil
+				Confirmed: nil,
+				Message:   ""}, nil
 		}
 	}
 
 	return &csi.ValidateVolumeCapabilitiesResponse{
-		Supported: true,
-		// TODO: Uncomment when switching to CSI 1.0
-		//Confirmed: &csi.ValidateVolumeCapabilitiesResponse_Confirmed{
-		//	VolumeContext:      req.GetVolumeContext(),
-		//	VolumeCapabilities: req.GetVolumeCapabilities(),
-		//	Parameters:         req.GetParameters(),
-		//},
+		Confirmed: &csi.ValidateVolumeCapabilitiesResponse_Confirmed{
+			VolumeContext:      req.GetVolumeContext(),
+			VolumeCapabilities: req.GetVolumeCapabilities(),
+			Parameters:         req.GetParameters(),
+		},
 		Message: ""}, nil
 }
 
@@ -233,21 +222,18 @@ func (cs *controllerServer) CreateSnapshot(ctx context.Context, req *csi.CreateS
 	}
 
 	glog.V(6).Infof("ecfs: Parsing snapshot's CreatedAt timestamp: %v", ecfsSnapshot.CreatedAt)
-	creationTimestamp, err := parseTimestampRFC3339(ecfsSnapshot.CreatedAt)
+	creationTimestamp, err := parseTimestamp(ecfsSnapshot.CreatedAt)
 	if err != nil {
 		err = errors.Wrap(err, 0)
 		return
 	}
 
-	csiSnapshotStatus := snapshotStatusEcfsToCsi(ecfsSnapshot.Status)
 	response = &csi.CreateSnapshotResponse{
 		Snapshot: &csi.Snapshot{
-			Id:             ecfsSnapshot.Name,
+			SnapshotId:     ecfsSnapshot.Name,
 			SourceVolumeId: string(volumeId),
-			CreatedAt:      creationTimestamp,
-			Status: &csi.SnapshotStatus{
-				Type: csiSnapshotStatus,
-			},
+			CreationTime:   creationTimestamp,
+			ReadyToUse:     isSnapshotUsable(ecfsSnapshot),
 		},
 	}
 
@@ -327,9 +313,9 @@ func (cs *controllerServer) ListSnapshots(ctx context.Context, req *csi.ListSnap
 	return
 }
 
-// TODO: Implement
-// Found in master of https://github.com/container-storage-interface/spec/blob/master/spec.md#rpc-interface, but not in 1.0.0
-//func (cs *controllerServer) ControllerExpandVolume(ctx context.Context, req *csi.ControllerExpandVolumeRequest) (*csi.ControllerExpandVolumeResponse, error) {
-//	glog.V(6).Infof("ControllerExpandVolume - enter. req: %+v", *req)
-//	// Set VolumeExpansion = ONLINE
-//}
+// TODO: Implement (CSI 1.1)
+func (cs *controllerServer) ControllerExpandVolume(ctx context.Context, req *csi.ControllerExpandVolumeRequest) (*csi.ControllerExpandVolumeResponse, error) {
+	glog.V(6).Infof("ControllerExpandVolume - enter. req: %+v", *req)
+	// Set VolumeExpansion = ONLINE
+	panic("ControllerExpandVolume not implemented")
+}

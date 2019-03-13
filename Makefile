@@ -26,7 +26,8 @@ PLUGIN_BINARY = ecfsplugin
 PROJECT_ROOT = $(shell dirname $(shell dirname $(value CURDIR)))
 GOPATH = "$(PROJECT_ROOT):$(CURDIR)/vendor"
 
-$(info ecfs image settings: $(PLUGIN_IMAGE_NAME) tag $(PLUGIN_TAG))
+$(info Setting GOPATH to $(GOPATH))
+$(info ECFS image settings: $(PLUGIN_IMAGE_NAME) tag $(PLUGIN_TAG))
 
 DEPLOYRUNNER_IMAGE_NAME = elastifileio/ecfs-provisioner-csi-deployrunner
 DEPLOYRUNNER_DOCKER_DIR = images/deployrunner
@@ -41,7 +42,6 @@ all: image push
 
 # Compile the plugin binary
 binary:
-	@echo Setting GOPATH to $(GOPATH)
 	if [ ! -d ./vendor ]; then dep ensure; fi
 	GOPATH=$(GOPATH) CGO_ENABLED=0 GOOS=linux go build -a -ldflags '-extldflags "-static"' -o  $(TEMP_DIR)/$(PLUGIN_BINARY) ./ecfs
 
@@ -76,7 +76,9 @@ clean:
 	go clean -r -x
 	rm -f $(TEMP_DIR)/$(PLUGIN_BINARY)
 	rm -f $(PLUGIN_DOCKER_DIR)/$(PLUGIN_BINARY)
+
 	rm -rf $(DEPLOYRUNNER_COPY_DIR)/*
-	rm -rf $(DEPLOYRUNNER_DOCKER_DIR)/kubectl
+	rm -f $(DEPLOYRUNNER_DOCKER_DIR)/kubectl
+
 	rm -rf $(GKEDEPLOY_COPY_DIR)/*
-	rm -rf $(GKEDEPLOY_DOCKER_DIR)/kubectl
+	rm -f $(GKEDEPLOY_DOCKER_DIR)/kubectl

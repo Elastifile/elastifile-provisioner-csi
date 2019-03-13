@@ -18,12 +18,12 @@
   revision = "c206103e1f37c0c6c5c039706305ea2aa6e8ad3b"
 
 [[projects]]
-  digest = "1:cf4f5171128e62b46299b0a7cd79543f50e62f483d2ca9364e4957c7bbee7a38"
+  digest = "1:07cbf5aafd467150480c65c770052fd02a1204d9066b6d3d973cc6feb658e25c"
   name = "github.com/container-storage-interface/spec"
-  packages = ["lib/go/csi/v0"]
+  packages = ["lib/go/csi"]
   pruneopts = ""
-  revision = "2178fdeea87f1150a17a63252eee28d4d8141f72"
-  version = "v0.3.0"
+  revision = "f750e6765f5f6b4ac0e13e95214d58901290fb4b"
+  version = "v1.1.0"
 
 [[projects]]
   branch = "renana/_unified_emanage_client"
@@ -104,7 +104,9 @@
   digest = "1:f958a1c137db276e52f0b50efee41a1a389dcdded59a69711f3e872757dab34b"
   name = "github.com/golang/protobuf"
   packages = [
+    "descriptor",
     "proto",
+    "protoc-gen-go/descriptor",
     "ptypes",
     "ptypes/any",
     "ptypes/duration",
@@ -203,12 +205,20 @@
   revision = "69c27309b2d751c576b59ea9c3726597c2375da3"
 
 [[projects]]
-  digest = "1:b395b0e0acec5308219227deb0adf640d29f4632817ca76ab80879624cf13acf"
+  digest = "1:d1f1992c09d7b77bc5102cd8c369025d31d28dd5e6ca2a3a1a4ec9434724a4f5"
+  name = "github.com/kubernetes-csi/csi-lib-utils"
+  packages = ["protosanitizer"]
+  pruneopts = ""
+  revision = "5853414e1d4771302e0df10d1870c444c2135799"
+  version = "v0.2.0"
+
+[[projects]]
+  digest = "1:128c25a3e8dccf011d86443702c8fbe62e3013e013c8fe5f9403ab6989819adc"
   name = "github.com/kubernetes-csi/drivers"
   packages = ["pkg/csi-common"]
   pruneopts = ""
-  revision = "2765a8665f548e9bf7ce5fa4a8a6ff03a8418b44"
-  version = "v0.4.1"
+  revision = "8a4ae6feb47cf7ae29b3dab9e3dc3d1ff796fbf2"
+  version = "v1.0.2"
 
 [[projects]]
   digest = "1:9ea83adf8e96d6304f394d40436f2eb44c1dc3250d223b74088cc253a6cd0a1c"
@@ -570,7 +580,7 @@
   analyzer-version = 1
   input-imports = [
     "github.com/buger/goterm",
-    "github.com/container-storage-interface/spec/lib/go/csi/v0",
+    "github.com/container-storage-interface/spec/lib/go/csi",
     "github.com/elastifile/emanage-go/src/emanage-client",
     "github.com/elastifile/errors",
     "github.com/fatih/structs",
@@ -583,10 +593,12 @@
     "github.com/koding/multiconfig",
     "github.com/kubernetes-csi/drivers/pkg/csi-common",
     "github.com/mattn/go-colorable",
+    "github.com/pborman/uuid",
     "golang.org/x/net/context",
     "google.golang.org/grpc/codes",
     "google.golang.org/grpc/status",
     "gopkg.in/inconshreveable/log15.v2",
+    "k8s.io/api/core/v1",
     "k8s.io/apimachinery/pkg/apis/meta/v1",
     "k8s.io/client-go/kubernetes",
     "k8s.io/client-go/rest",

@@ -22,8 +22,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/container-storage-interface/spec/lib/go/csi/v0"
-	//"github.com/container-storage-interface/spec/lib/go/csi" // TODO: Uncomment when switching to CSI 1.0
+	"github.com/container-storage-interface/spec/lib/go/csi"
 	"github.com/golang/glog"
 	"github.com/kubernetes-csi/drivers/pkg/csi-common"
 	"google.golang.org/grpc/codes"
@@ -96,8 +95,7 @@ func (ns *nodeServer) nodeStageVolume(ctx context.Context, req *csi.NodeStageVol
 		return nil, errors.Wrap(err, 0)
 	}
 
-	volOptions, err := newVolumeOptions(req.GetVolumeAttributes())
-	//volOptions, err := newVolumeOptions(req.GetVolumeContext()) // TODO: Uncomment when switching to CSI 1.0
+	volOptions, err := newVolumeOptions(req.GetVolumeContext())
 	if err != nil {
 		err = errors.WrapPrefix(err, fmt.Sprintf("Error reading volume options for volume %v", volId), 0)
 		glog.Errorf(err.Error())
@@ -205,11 +203,10 @@ func (ns *nodeServer) NodeUnstageVolume(ctx context.Context, req *csi.NodeUnstag
 
 // TODO: Implement. What's the use case? Is it needed?
 // Enabled via NodeServiceCapability_RPC_GET_VOLUME_STATS
-// TODO: Uncomment when switching to CSI 1.0
-//func (ns *nodeServer) NodeGetVolumeStats(ctx context.Context, req *csi.NodeGetVolumeStatsRequest) (*csi.NodeGetVolumeStatsResponse, error) {
-//	glog.V(6).Infof("NodeGetVolumeStats - enter. req: %+v", *req)
-//	return nil, status.Error(codes.Unimplemented, "QQQQQ - not yet supported")
-//}
+func (ns *nodeServer) NodeGetVolumeStats(ctx context.Context, req *csi.NodeGetVolumeStatsRequest) (*csi.NodeGetVolumeStatsResponse, error) {
+	glog.V(6).Infof("NodeGetVolumeStats - enter. req: %+v", *req)
+	return nil, status.Error(codes.Unimplemented, "QQQQQ - not yet supported")
+}
 
 func (ns *nodeServer) NodeGetCapabilities(ctx context.Context, req *csi.NodeGetCapabilitiesRequest) (capabilities *csi.NodeGetCapabilitiesResponse, err error) {
 	glog.V(6).Infof("ecfs: NodeGetCapabilities - enter. req: %+v", *req)

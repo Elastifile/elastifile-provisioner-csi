@@ -23,8 +23,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/container-storage-interface/spec/lib/go/csi/v0"
-	//"github.com/container-storage-interface/spec/lib/go/csi" // TODO: Uncomment when switching to CSI 1.0
+	"github.com/container-storage-interface/spec/lib/go/csi"
 	"github.com/golang/glog"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"

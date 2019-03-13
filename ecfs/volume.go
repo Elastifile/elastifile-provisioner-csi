@@ -18,7 +18,8 @@ package main
 
 import (
 	"fmt"
-	"github.com/container-storage-interface/spec/lib/go/csi/v0"
+
+	"github.com/container-storage-interface/spec/lib/go/csi"
 	"github.com/golang/glog"
 	"github.com/pborman/uuid"
 	"google.golang.org/grpc/codes"
@@ -165,7 +166,7 @@ func createVolumeFromSnapshot(emsClient *emanageClient, volOptions *volumeOption
 
 	// Get snapshot
 	// Create export on snapshot
-	ecfsSnapshot, err := emsClient.GetSnapshotByName(snapSource.GetId())
+	ecfsSnapshot, err := emsClient.GetSnapshotByName(snapSource.GetSnapshotId())
 	if err != nil {
 		err = errors.WrapPrefix(err, "Failed to get ECFS snapshot by name", 0)
 		return
