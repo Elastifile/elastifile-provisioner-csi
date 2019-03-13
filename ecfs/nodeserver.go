@@ -234,3 +234,9 @@ func (ns *nodeServer) NodeGetCapabilities(ctx context.Context, req *csi.NodeGetC
 	glog.V(6).Infof("ecfs: Returning node capabilities: %+v", capabilities)
 	return
 }
+
+// This function was only added to implement the nodeServer interface - remove once csi-common includes it
+func (ns *nodeServer) NodeExpandVolume(ctx context.Context, req *csi.NodeExpandVolumeRequest) (*csi.NodeExpandVolumeResponse, error) {
+	glog.Warning("NodeExpandVolume was called, but it's not needed to support ECFS")
+	return &csi.NodeExpandVolumeResponse{}, status.Error(codes.Unimplemented, "QQQQQ - not yet supported")
+}

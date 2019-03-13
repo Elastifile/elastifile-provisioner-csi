@@ -20,9 +20,9 @@ import (
 	"flag"
 	"github.com/golang/glog"
 	"os"
-	"src/github.com/go-errors/errors"
 
 	_ "github.com/elastifile/emanage-go/src/emanage-client"
+	"github.com/go-errors/errors"
 )
 
 func init() {

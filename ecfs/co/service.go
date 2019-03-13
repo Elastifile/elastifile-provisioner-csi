@@ -2,10 +2,11 @@ package co
 
 import (
 	"fmt"
+	"time"
+
+	"github.com/go-errors/errors"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"src/github.com/go-errors/errors"
-	"time"
 )
 
 func GetService(namespace string, serviceName string) (service *corev1.Service, err error) {

@@ -19,11 +19,11 @@ package main
 import (
 	"fmt"
 	"os/exec"
-	"src/github.com/go-errors/errors"
 	"strconv"
 	"strings"
 
 	"github.com/container-storage-interface/spec/lib/go/csi"
+	"github.com/go-errors/errors"
 	"github.com/golang/glog"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
