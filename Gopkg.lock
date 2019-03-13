@@ -586,6 +586,7 @@
     "github.com/fatih/structs",
     "github.com/go-errors/errors",
     "github.com/golang/glog",
+    "github.com/golang/protobuf/ptypes/timestamp",
     "github.com/hashicorp/errwrap",
     "github.com/hashicorp/go-multierror",
     "github.com/hashicorp/go-version",

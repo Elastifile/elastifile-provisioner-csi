@@ -66,3 +66,7 @@ required = [
 #  version = "kubernetes-1.11.0"
 #
 #
+
+[[constraint]]
+  name = "github.com/kubernetes-csi/drivers"
+  version = "1.0.2"
