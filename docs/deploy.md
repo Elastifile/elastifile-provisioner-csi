@@ -16,11 +16,12 @@ Deployment scripts and YAML manifests are located under [deploy](../deploy) dire
 
 ### Deploy plugin
 ```bash
-PLUGIN_TAG=v0.2.0 MGMT_ADDR=10.10.10.10 MGMT_USER=admin MGMT_PASS=Y2hhbmdlbWU= NFS_ADDR=10.255.255.1 K8S_USER=user@example.com ./deploy-plugin.sh
+PLUGIN_TAG=v0.5.0 NAMESPACE=elastifile-csi-ns MGMT_ADDR=10.10.10.10 MGMT_USER=admin MGMT_PASS=Y2hhbmdlbWU= NFS_ADDR=10.255.255.1 K8S_USER=user@example.com ./deploy-plugin.sh
 ```
 
 These values may be set by the user:
 * PLUGIN_TAG - The version of the Elastifile ECFS CSI Provisioner you're interested in
+* NAMESPACE - Plugin's namespace. It's recommended to specify a non-default namespace to prevent collisions between different applications
 * MGMT_ADDR - The IP address or DNS name you use to connect to Elastifile ECFS Management Console with
 * MGMT_USER - The username you log into Elastifile ECFS Management Console with
 * MGMT_PASS - The password for $MGMT_USER (base64 encoded)

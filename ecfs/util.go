@@ -42,6 +42,8 @@ func newVolumeId(volumeDescriptor volumeDescriptorType) volumeIdType {
 	return volumeIdType(fmt.Sprintf(volumeIdTemplate, volumeDescriptor.DcId, volumeDescriptor.SnapshotId))
 }
 
+// parseVolumeId takes internal volumeIdType that's defined by newVolumeId() and
+// returns volumeDescriptorType{} with DataContainer and Snapshot ids
 func parseVolumeId(volumeId volumeIdType) (volDesc *volumeDescriptorType, err error) {
 	glog.V(10).Infof("ecfs: Parsing Volume Id %v", volumeId)
 	parts := strings.Split(string(volumeId), "-")
@@ -233,4 +235,14 @@ func truncateStr(str string, maxLen int) string {
 		return str[:maxLen]
 	}
 	return str
+}
+
+func copyDir(src, dst string) (err error) {
+	// TODO: Add timeout
+
+	glog.V(5).Infof("ecfs: Copying %v to %v", src, dst)
+	cmd := exec.Command("cp", "-a", src, dst)
+	glog.V(6).Infof("ecfs: Copying %v to %v", src, dst)
+	err = cmd.Run()
+	return
 }

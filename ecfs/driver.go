@@ -74,13 +74,12 @@ func (fs *ecfsDriver) Run(driverName, nodeId, endpoint, volumeMounter string) {
 
 	fs.driver.AddControllerServiceCapabilities([]csi.ControllerServiceCapability_RPC_Type{
 		csi.ControllerServiceCapability_RPC_CREATE_DELETE_VOLUME,
-		// PUBLISH_UNPUBLISH_VOLUME is not needed at the controller level to support NFS
-		// Enabling PUBLISH_UNPUBLISH_VOLUME results on "node XXX has no NodeID annotation"
-		//csi.ControllerServiceCapability_RPC_PUBLISH_UNPUBLISH_VOLUME,
 		csi.ControllerServiceCapability_RPC_CREATE_DELETE_SNAPSHOT,
+		csi.ControllerServiceCapability_RPC_CLONE_VOLUME,
 		csi.ControllerServiceCapability_RPC_LIST_SNAPSHOTS,
-		//csi.ControllerServiceCapability_RPC_GET_CAPACITY, // TODO: Add support for GetCapacity API
-		//csi.ControllerServiceCapability_RPC_CLONE_VOLUME, // Not supported in ECFS yet
+		//csi.ControllerServiceCapability_RPC_GET_CAPACITY, // TODO: Add support for GetCapacity API (what's the use case?)
+		//csi.ControllerServiceCapability_RPC_LIST_VOLUMES, // TODO: Add support for ListVolumes API (what's the use case?)
+		//csi.ControllerServiceCapability_RPC_PUBLISH_UNPUBLISH_VOLUME, // Not needed at the controller level
 	})
 
 	fs.driver.AddVolumeCapabilityAccessModes([]csi.VolumeCapability_AccessMode_Mode{
