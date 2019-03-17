@@ -24,8 +24,7 @@ spec:
       serviceAccount: csi-provisioner
       containers:
         - name: csi-provisioner
-          image: quay.io/k8scsi/csi-provisioner:v0.4.1
-#          image: gcr.io/gke-release/csi-provisioner:v1.0.0-gke.0
+          image: gcr.io/gke-release/csi-provisioner:v1.0.1-gke.0
           args:
             - "--provisioner=csi-ecfsplugin"
             - "--csi-address=$(ADDRESS)"
