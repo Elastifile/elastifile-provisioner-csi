@@ -132,3 +132,18 @@ func createMountPoint(mountPoint string) error {
 func unmountVolume(mountPoint string) error {
 	return execCommandAndValidate("umount", mountPoint)
 }
+
+func unmountAndCleanup(mountPoint string) (err error) {
+	err = unmountVolume(mountPoint)
+	if err != nil {
+		return errors.WrapPrefix(err, fmt.Sprintf("Failed to unmount %v", mountPoint), 0)
+	}
+
+	err = os.Remove(mountPoint)
+	if err != nil {
+		err = errors.WrapPrefix(err, fmt.Sprintf("Failed to delete mount dir %v", mountPoint), 0)
+		return
+	}
+
+	return
+}

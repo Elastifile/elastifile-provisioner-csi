@@ -67,7 +67,7 @@ popd
 for OBJ in ${OBJECTS[@]}; do
     if [[ "${OBJ}" == *"templates"* ]]; then
         log_info "Creating ${OBJ} from template"
-        PLUGIN_TAG=${PLUGIN_TAG} MGMT_ADDR=${MGMT_ADDR} MGMT_USER=${MGMT_USER} MGMT_PASS=${MGMT_PASS} NFS_ADDR=${NFS_ADDR} EKFS=${EKFS} envsubst < "${DEPLOYMENT_BASE}/${OBJ}.yaml" | kubectl create -f - --namespace ${NAMESPACE} ${DRY_RUN_FLAG}
+        PLUGIN_TAG=${PLUGIN_TAG} NAMESPACE=${NAMESPACE} MGMT_ADDR=${MGMT_ADDR} MGMT_USER=${MGMT_USER} MGMT_PASS=${MGMT_PASS} NFS_ADDR=${NFS_ADDR} EKFS=${EKFS} envsubst < "${DEPLOYMENT_BASE}/${OBJ}.yaml" | kubectl create -f - --namespace ${NAMESPACE} ${DRY_RUN_FLAG}
         assert $? "Failed to create ${OBJ} from template"
     else
         log_info "Creating ${OBJ}"

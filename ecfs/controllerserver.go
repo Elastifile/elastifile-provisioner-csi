@@ -91,24 +91,44 @@ func (cs *controllerServer) CreateVolume(ctx context.Context, req *csi.CreateVol
 	// This has to wait until the new unified emanage client is available, since that one has generic relogin handler support
 	var ems emanageClient
 
-	if req.VolumeContentSource == nil { // Create a regular volume, i.e. new Data Container
+	if req.VolumeContentSource == nil { // Create a regular volume, i.e. new empty Data Container
 		glog.V(6).Infof("ecfs: Creating regular volume %v", req.GetName())
-		volumeId, err = createVolume(ems.GetClient(), volOptions)
+		volumeId, err = createEmptyVolume(ems.GetClient(), volOptions)
 		if err != nil {
 			err = errors.WrapPrefix(err, fmt.Sprintf("Failed to create volume %v", req.GetName()), 0)
 			glog.Errorf(err.Error())
 			return nil, status.Error(codes.Internal, err.Error())
 		}
-	} else { // Volume from snapshot
+	} else { // Volume clone / Restore snapshot
 		source := req.GetVolumeContentSource()
-		glog.V(6).Infof("ecfs: Creating volume %v from snapshot %v",
-			req.GetName(), source.GetSnapshot().GetId())
-		volumeId, err = createVolumeFromSnapshot(ems.GetClient(), volOptions, source)
-		if err != nil {
-			err = errors.WrapPrefix(err, fmt.Sprintf("Failed to create volume %v from snapshot %v",
-				req.GetName(), req.VolumeContentSource.GetSnapshot().GetId()), 0)
+		sourceType := source.GetType()
+		switch sourceType.(type) {
+		case *csi.VolumeContentSource_Volume: // Clone volume
+			srcVolume := source.GetVolume()
+			glog.V(3).Infof("ecfs: Cloning volume %v to %v",
+				srcVolume.GetVolumeId(), req.GetName())
+			volumeId, err = cloneVolume(ems.GetClient(), srcVolume, volOptions)
+			if err != nil {
+				err = errors.WrapPrefix(err, fmt.Sprintf("Failed to clone volume %v to %v",
+					srcVolume.GetVolumeId(), req.GetName()), 0)
+				glog.Errorf(err.Error())
+				return nil, status.Error(codes.Internal, err.Error())
+			}
+		case *csi.VolumeContentSource_Snapshot: // Restore snapshot
+			snapshot := source.GetSnapshot()
+			glog.V(3).Infof("ecfs: Creating volume %v from snapshot %v",
+				req.GetName(), snapshot.GetSnapshotId())
+			volumeId, err = restoreSnapshot(ems.GetClient(), snapshot, volOptions)
+			if err != nil {
+				err = errors.WrapPrefix(err, fmt.Sprintf("Failed to create volume %v from snapshot %v",
+					req.GetName(), snapshot.GetSnapshotId()), 0)
+				glog.Errorf(err.Error())
+				return nil, status.Error(codes.Internal, err.Error())
+			}
+		default:
+			err = errors.Errorf("Unsupported volume source type: %v (%v)", sourceType, source)
 			glog.Errorf(err.Error())
-			return nil, status.Error(codes.Internal, err.Error())
+			return
 		}
 	}
 	volOptions.VolumeId = volumeId

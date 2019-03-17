@@ -7,6 +7,9 @@ metadata:
 spec:
   selector:
     app: csi-ecfsplugin-attacher
+  ports:
+    - name: dummy
+      port: 12345
 
 ---
 kind: StatefulSet
