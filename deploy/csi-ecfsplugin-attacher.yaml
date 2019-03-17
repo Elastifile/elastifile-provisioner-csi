@@ -31,13 +31,13 @@ spec:
             - "--csi-address=$(ADDRESS)"
           env:
             - name: ADDRESS
-              value: /var/lib/kubelet/plugins/csi-ecfsplugin/csi.sock
+              value: /var/lib/kubelet/plugins_registry/csi-ecfsplugin/csi.sock
           imagePullPolicy: "IfNotPresent"
           volumeMounts:
             - name: socket-dir
-              mountPath: /var/lib/kubelet/plugins/csi-ecfsplugin
+              mountPath: /var/lib/kubelet/plugins_registry/csi-ecfsplugin
       volumes:
         - name: socket-dir
           hostPath:
-            path: /var/lib/kubelet/plugins/csi-ecfsplugin
+            path: /var/lib/kubelet/plugins_registry/csi-ecfsplugin
             type: DirectoryOrCreate

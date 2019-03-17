@@ -26,16 +26,16 @@ spec:
             - "--kubelet-registration-path=$(DRIVER_REG_SOCK_PATH)"
           env:
             - name: ADDRESS
-              value: /var/lib/kubelet/plugins/csi-ecfsplugin/csi.sock
+              value: /var/lib/kubelet/plugins_registry/csi-ecfsplugin/csi.sock
             - name: DRIVER_REG_SOCK_PATH
-              value: /var/lib/kubelet/plugins/csi-ecfsplugin/csi.sock
+              value: /var/lib/kubelet/plugins_registry/csi-ecfsplugin/csi.sock
             - name: KUBE_NODE_NAME
               valueFrom:
                 fieldRef:
                   fieldPath: spec.nodeName
           volumeMounts:
             - name: socket-dir
-              mountPath: /var/lib/kubelet/plugins/csi-ecfsplugin
+              mountPath: /var/lib/kubelet/plugins_registry/csi-ecfsplugin
             - name: registration-dir
               mountPath: /registration
         - name: csi-ecfsplugin
@@ -58,7 +58,7 @@ spec:
                 fieldRef:
                   fieldPath: spec.nodeName
             - name: CSI_ENDPOINT
-              value: unix:///var/lib/kubelet/plugins/csi-ecfsplugin/csi.sock
+              value: unix:///var/lib/kubelet/plugins_registry/csi-ecfsplugin/csi.sock
             - name: CSI_NAMESPACE
               valueFrom:
                 fieldRef:
@@ -67,7 +67,7 @@ spec:
               value: "${EKFS}"
           volumeMounts:
             - name: plugin-dir
-              mountPath: /var/lib/kubelet/plugins/csi-ecfsplugin
+              mountPath: /var/lib/kubelet/plugins_registry/csi-ecfsplugin
             - name: pods-mount-dir
               mountPath: /var/lib/kubelet/pods
               mountPropagation: "Bidirectional"
@@ -81,11 +81,11 @@ spec:
       volumes:
         - name: plugin-dir
           hostPath:
-            path: /var/lib/kubelet/plugins/csi-ecfsplugin
+            path: /var/lib/kubelet/plugins_registry/csi-ecfsplugin
             type: DirectoryOrCreate
         - name: registration-dir
           hostPath:
-            path: /var/lib/kubelet/plugins/
+            path: /var/lib/kubelet/plugins_registry/
             type: Directory
         - name: pods-mount-dir
           hostPath:
@@ -93,7 +93,7 @@ spec:
             type: Directory
         - name: socket-dir
           hostPath:
-            path: /var/lib/kubelet/plugins/csi-ecfsplugin
+            path: /var/lib/kubelet/plugins_registry/csi-ecfsplugin
             type: DirectoryOrCreate
         - name: host-sys
           hostPath:
