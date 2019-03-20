@@ -2,28 +2,72 @@ package main
 
 import "github.com/golang/glog"
 
+type CachedVolume struct {
+	ID      volumeIdType
+	IsReady bool
+}
+
 // Note that this is a naive cache implementation and is broken if ControllerServer crashes in-between requests
 // Use something like groupcache (probably an overkill) to work around this limitation
-var volumeCache map[string]volumeIdType
+var volumeCache map[string]*CachedVolume
 
-func cacheVolumeGet(volumeName string) (volumeId volumeIdType, cacheHit bool) {
-	volumeId, cacheHit = volumeCache[volumeName]
+func cacheVolumeGet(volumeName string) (cachedVolume *CachedVolume, cacheHit bool) {
+	cachedVolume, cacheHit = volumeCache[volumeName]
 	return
 }
 
-func cacheVolumeAdd(volumeName string, volumeId volumeIdType) {
+func cacheVolumeSet(volumeName string, volumeId volumeIdType, isReady bool) {
 	if volumeCache == nil {
-		volumeCache = make(map[string]volumeIdType)
+		volumeCache = make(map[string]*CachedVolume)
 	}
-	volumeCache[volumeName] = volumeId
+	volumeCache[volumeName] = &CachedVolume{
+		ID:      volumeId,
+		IsReady: isReady,
+	}
 }
 
 func cacheVolumeRemove(volumeId volumeIdType) {
-	for volName, volId := range volumeCache {
-		if volId == volumeId {
+	for volName, volume := range volumeCache {
+		if volume.ID == volumeId {
 			delete(volumeCache, volName)
 			return
 		}
 	}
 	glog.V(6).Infof("Tried to remove from cache Volume Id that wasn't there - %v", volumeId)
+}
+
+type CachedSnapshot struct {
+	ID     int // ECFS snapshot ID
+	Exists bool
+}
+
+var snapshotCache map[string]*CachedSnapshot
+
+func cacheSnapshotGet(snapshotName string) (cachedSnapshot *CachedSnapshot, cacheHit bool) {
+	cachedSnapshot, cacheHit = snapshotCache[snapshotName]
+	return
+}
+
+func cacheSnapshotSet(snapshotName string, snapshotId int, exists bool) {
+	if snapshotCache == nil {
+		snapshotCache = make(map[string]*CachedSnapshot)
+	}
+	snapshotCache[snapshotName] = &CachedSnapshot{
+		ID:     snapshotId,
+		Exists: exists,
+	}
+}
+
+func cacheSnapshotRemoveById(snapshotId int) {
+	for volName, snapshot := range snapshotCache {
+		if snapshot.ID == snapshotId {
+			delete(snapshotCache, volName)
+			return
+		}
+	}
+	glog.V(6).Infof("Tried to remove from cache Snapshot Id that wasn't there - %v", snapshotId)
+}
+
+func cacheSnapshotRemoveByName(snapshotName string) {
+	delete(snapshotCache, snapshotName)
 }

@@ -38,7 +38,7 @@ func createSnapshot(emsClient *emanageClient, name string, volumeId volumeIdType
 			}
 		}
 		return nil, errors.WrapPrefix(err,
-			fmt.Sprintf("Failed to create snapshot for Data Container %v with name %v", volumeId, name), 0)
+			fmt.Sprintf("Failed to create snapshot for Data Container %v with name %v", volumeDescriptor.DcId, name), 0)
 	}
 
 	return
@@ -94,12 +94,15 @@ func deleteSnapshot(emsClient *emanageClient, name string) error {
 			snapshot.Name, snapshot.DataContainerID, snapshot.Status)
 		err = waitForSnapshotToBeDeleted(emsClient, snapshot.ID, 3*time.Minute)
 		if err != nil {
+			return errors.Wrap(err, 0)
 
 		}
 	}
 
 	glog.V(5).Infof("ecfs: Calling emanage snapshot.Delete - snapshot %v, dcId: %v, status: %v",
 		snapshot.Name, snapshot.DataContainerID, snapshot.Status)
+
+	// TODO: Handle existing export?
 	tasks := snapshot.Delete()
 	if tasks.Error() != nil {
 		return tasks.Error()

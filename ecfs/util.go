@@ -38,6 +38,8 @@ type volumeDescriptorType struct {
 
 type volumeIdType string
 
+// TODO: Remove snapshot id from the volume name as it's N/A after snapshot-export-as-read-only-volume has been removed
+// TODO: cont'd - consider reverting volumeId to the original K8s volume name
 func newVolumeId(volumeDescriptor volumeDescriptorType) volumeIdType {
 	const volumeIdTemplate = "csi-dc-%v-snap-%v"
 	return volumeIdType(fmt.Sprintf(volumeIdTemplate, volumeDescriptor.DcId, volumeDescriptor.SnapshotId))
@@ -241,9 +243,12 @@ func truncateStr(str string, maxLen int) string {
 func copyDir(src, dst string) (err error) {
 	// TODO: Add timeout
 
-	glog.V(5).Infof("ecfs: Copying %v to %v", src, dst)
-	cmd := exec.Command("cp", "-a", src, dst)
-	glog.V(6).Infof("ecfs: Copying %v to %v", src, dst)
-	err = cmd.Run()
+	glog.V(5).Infof("ecfs: Going to copy %v to %v", src, dst)
+	cmd := exec.Command("cp", "-a", fmt.Sprintf("%v/.", src), dst)
+	out, err := cmd.CombinedOutput()
+	glog.V(5).Infof("ecfs: Done copying %v to %v", src, dst)
+	if err != nil {
+		glog.V(3).Infof("ecfs: Copy failure output: %v", string(out))
+	}
 	return
 }

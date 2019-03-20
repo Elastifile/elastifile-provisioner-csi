@@ -155,7 +155,7 @@ func (ns *nodeServer) nodeUnpublishVolume(ctx context.Context, req *csi.NodeUnpu
 	targetPath := req.GetTargetPath()
 
 	// Unmount the bind-mount
-	if err := unmountVolume(targetPath); err != nil {
+	if err := unmount(targetPath); err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
@@ -182,7 +182,7 @@ func (ns *nodeServer) NodeUnstageVolume(ctx context.Context, req *csi.NodeUnstag
 	stagingTargetPath := req.GetStagingTargetPath()
 
 	// Unmount the volume
-	if err := unmountVolume(stagingTargetPath); err != nil {
+	if err := unmount(stagingTargetPath); err != nil {
 		const errorNotMounted = "mountpoint not found"
 		if strings.Contains(err.Error(), errorNotMounted) {
 			glog.Warningf("ecfs: Unstaging failed as '%v' does not exist - for idempotency's sake assuming "+
