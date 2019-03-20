@@ -82,8 +82,8 @@ for OBJ in ${OBJECTS[@]}; do
                 kubectl get crd ${CRD} > /dev/null 2>&1
                 if [[ $? == 0 ]]; then
                     echo
-                    exec_cmd kubectl create -f "${DEPLOYMENT_BASE}/${OBJ}.yaml" --namespace ${NAMESPACE} ${DRY_RUN_FLAG}
                     log_info "Resolved the above failure - found CRD ${CRD} on attempt #${attempt}"
+                    exec_cmd kubectl create -f "${DEPLOYMENT_BASE}/${OBJ}.yaml" --namespace ${NAMESPACE} ${DRY_RUN_FLAG}
                     break
                 fi
                 sleep 1

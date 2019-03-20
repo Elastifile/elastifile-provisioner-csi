@@ -129,12 +129,12 @@ func createMountPoint(mountPoint string) error {
 	return os.MkdirAll(mountPoint, 0750)
 }
 
-func unmountVolume(mountPoint string) error {
+func unmount(mountPoint string) error {
 	return execCommandAndValidate("umount", mountPoint)
 }
 
 func unmountAndCleanup(mountPoint string) (err error) {
-	err = unmountVolume(mountPoint)
+	err = unmount(mountPoint)
 	if err != nil {
 		return errors.WrapPrefix(err, fmt.Sprintf("Failed to unmount %v", mountPoint), 0)
 	}

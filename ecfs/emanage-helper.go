@@ -22,7 +22,7 @@ type emanageClient struct {
 
 const (
 	volumeExportName   = "root"
-	snapshotExportName = "se" // SE stands for Snapshot Export
+	snapshotExportName = "se"
 )
 
 var emsConfig *config
@@ -207,6 +207,7 @@ func isSnapshotUsable(snapshot *emanage.Snapshot) bool {
 
 func createExportOnSnapshot(emsClient *emanageClient, snapshot *emanage.Snapshot, volOptions *volumeOptions) (volumeDescriptor volumeDescriptorType, exportRef *emanage.Export, err error) {
 	var (
+		exportName = snapshotExportName
 		exportOpts = emanage.ExportCreateForSnapshotOpts{
 			Path:        "/",
 			SnapShotId:  snapshot.ID,
@@ -220,10 +221,11 @@ func createExportOnSnapshot(emsClient *emanageClient, snapshot *emanage.Snapshot
 	volumeDescriptor.DcId = snapshot.DataContainerID
 	volumeDescriptor.SnapshotId = snapshot.ID
 
-	glog.V(5).Infof("Creating export %v on snapshot %v", snapshotExportName, snapshot.Name)
-	export, err := emsClient.GetClient().Exports.CreateForSnapshot(snapshotExportName, &exportOpts)
+	glog.V(5).Infof("Creating export %v on snapshot %v", exportName, snapshot.Name)
+	export, err := emsClient.GetClient().Exports.CreateForSnapshot(exportName, &exportOpts)
 	if err != nil {
-		err = errors.WrapPrefix(err, "Failed to create export on snapshot", 0)
+		err = errors.WrapPrefix(err,
+			fmt.Sprintf("Failed to create export %v on snapshot %v", exportName, snapshot.Name), 0)
 		return
 	}
 	exportRef = &export
@@ -259,7 +261,8 @@ func getSnapshotExport(emsClient *emanageClient, snapshotId int) (snapshotRef *e
 		return
 	}
 
-	glog.V(10).Infof("Found by Snapshot Id %v - snapshot: %+v export: %+v", snapshotRef.ID, *snapshotRef, *exportRef)
+	glog.V(10).Infof("Found snapshot export by snapshot ID %v - snapshot: %+v export: %+v",
+		snapshotRef.ID, *snapshotRef, *exportRef)
 	return
 }
 

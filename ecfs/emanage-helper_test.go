@@ -40,6 +40,7 @@ func fakeEmsConfig() (err error) {
 }
 
 func TestGetSnapshotByName(t *testing.T) {
+	t.Skip()
 	var snapshotName = "vs-111-222"
 	var ems emanageClient
 

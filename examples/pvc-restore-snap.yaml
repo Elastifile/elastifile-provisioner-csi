@@ -1,11 +1,12 @@
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  name: demo-clone-pvc
+  name: demo-restore-pvc
 spec:
   dataSource:
-    name: demo-pvc
-    kind: PersistentVolumeClaim
+    name: demo-snap
+    kind: VolumeSnapshot
+    apiGroup: snapshot.storage.k8s.io
   accessModes:
   - ReadWriteMany
   resources:

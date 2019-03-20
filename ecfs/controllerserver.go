@@ -18,6 +18,7 @@ package main
 
 import (
 	"fmt"
+	"github.com/elastifile/emanage-go/src/emanage-client"
 	"strings"
 
 	"github.com/container-storage-interface/spec/lib/go/csi"
@@ -67,17 +68,23 @@ func (cs *controllerServer) CreateVolume(ctx context.Context, req *csi.CreateVol
 	}
 	volOptions.NfsAddress = pluginConf.NFSServer
 
-	// Check if volume with this name has already been requested - this operation MUST be idempotent
-	volumeId, cacheHit := cacheVolumeGet(req.GetName())
-	if cacheHit {
-		response = getCreateVolumeResponse(volumeId, volOptions, req)
-		return
-	}
-
 	if err = cs.validateCreateVolumeRequest(req); err != nil {
 		err = errors.WrapPrefix(err, "CreateVolumeRequest validation failed", 0)
 		glog.Errorf(err.Error())
 		return nil, status.Error(codes.InvalidArgument, err.Error())
+	}
+
+	// Check if volume with this name has already been requested - this operation MUST be idempotent
+	var volumeId volumeIdType
+	volume, cacheHit := cacheVolumeGet(req.GetName())
+	if cacheHit {
+		if volume.IsReady {
+			response = getCreateVolumeResponse(volume.ID, volOptions, req)
+			return
+		}
+		glog.V(6).Infof("ecfs: Received repeat request to create volume %v, but the volume is not ready yet", req.GetName())
+	} else {
+		cacheVolumeSet(req.GetName(), volumeId, false)
 	}
 
 	// TODO: Don't create eManage client for each action (will need relogin support)
@@ -107,11 +114,11 @@ func (cs *controllerServer) CreateVolume(ctx context.Context, req *csi.CreateVol
 				glog.Errorf(err.Error())
 				return nil, status.Error(codes.Internal, err.Error())
 			}
-		case *csi.VolumeContentSource_Snapshot: // Restore snapshot
+		case *csi.VolumeContentSource_Snapshot: // Restore from snapshot
 			snapshot := source.GetSnapshot()
 			glog.V(3).Infof("ecfs: Creating volume %v from snapshot %v",
 				req.GetName(), snapshot.GetSnapshotId())
-			volumeId, err = restoreSnapshot(ems.GetClient(), snapshot, volOptions)
+			volumeId, err = restoreSnapshotToVolume(ems.GetClient(), snapshot, volOptions)
 			if err != nil {
 				err = errors.WrapPrefix(err, fmt.Sprintf("Failed to create volume %v from snapshot %v",
 					req.GetName(), snapshot.GetSnapshotId()), 0)
@@ -126,7 +133,7 @@ func (cs *controllerServer) CreateVolume(ctx context.Context, req *csi.CreateVol
 	}
 	volOptions.VolumeId = volumeId
 
-	cacheVolumeAdd(req.GetName(), volumeId)
+	cacheVolumeSet(req.GetName(), volumeId, true)
 	glog.V(3).Infof("ecfs: Created volume %v", volOptions.VolumeId)
 
 	response = getCreateVolumeResponse(volumeId, volOptions, req)
@@ -213,8 +220,31 @@ func (cs *controllerServer) ControllerUnpublishVolume(ctx context.Context, req *
 	return nil, status.Error(codes.Unimplemented, "QQQQQ - not yet supported")
 }
 
+func getCreateSnapshotResponse(ecfsSnapshot *emanage.Snapshot, req *csi.CreateSnapshotRequest) (response *csi.CreateSnapshotResponse, err error) {
+	creationTimestamp, err := parseTimestamp(ecfsSnapshot.CreatedAt)
+	if err != nil {
+		err = errors.Wrap(err, 0)
+		return
+	}
+
+	isReady := isSnapshotUsable(ecfsSnapshot)
+
+	response = &csi.CreateSnapshotResponse{
+		Snapshot: &csi.Snapshot{
+			SnapshotId:     ecfsSnapshot.Name,
+			SourceVolumeId: req.GetSourceVolumeId(),
+			CreationTime:   creationTimestamp,
+			ReadyToUse:     isReady,
+		},
+	}
+
+	return
+}
+
 func (cs *controllerServer) CreateSnapshot(ctx context.Context, req *csi.CreateSnapshotRequest) (response *csi.CreateSnapshotResponse, err error) {
 	var ems emanageClient
+
+	// TODO: Replace glog.V(XXX) values with consts to improve readability
 
 	if isWorkaround("80 chars limit") {
 		glog.V(6).Infof("ecfs: Received snapshot create request - %+v", req.GetName())
@@ -231,33 +261,60 @@ func (cs *controllerServer) CreateSnapshot(ctx context.Context, req *csi.CreateS
 		req.Name = snapshotName
 	}
 
+	var ecfsSnapshot *emanage.Snapshot
+	snapshot, cacheHit := cacheSnapshotGet(req.GetName())
+	if cacheHit {
+		glog.V(6).Infof("ecfs: Received repeat request to create snapshot %v", req.GetName())
+
+		ecfsSnapshot, err = ems.GetClient().Snapshots.GetById(snapshot.ID)
+		if err != nil {
+			if isErrorDoesNotExist(err) {
+				// TODO: If empty response breaks CSI, fake the response with IsReady==false
+				return
+			}
+			err = status.Error(codes.Internal, errors.WrapPrefix(err,
+				fmt.Sprintf("Failed to get snapshot by id %v", snapshot.ID), 0).Error())
+			return
+		}
+
+		response, err = getCreateSnapshotResponse(ecfsSnapshot, req)
+		if err != nil {
+			err = errors.Wrap(err, 0)
+			return
+		}
+
+		return
+	}
+
 	volumeId := volumeIdType(req.GetSourceVolumeId())
 	glog.V(2).Infof("ecfs: Creating snapshot %v on volume %v", req.GetName(), volumeId)
-	glog.V(6).Infof("ecfs: CreateSnapshot - enter. req: %+v", *req)
-	ecfsSnapshot, err := createSnapshot(ems.GetClient(), req.GetName(), volumeId, req.GetParameters())
+	glog.V(6).Infof("ecfs: CreateSnapshot details. req: %+v", *req)
+	ecfsSnapshot, err = createSnapshot(ems.GetClient(), req.GetName(), volumeId, req.GetParameters())
 	if err != nil {
+		if isErrorAlreadyExists(err) {
+			// Fetching snapshot by name to prevent a race between snapshot creation and snapshot id update in cache
+			// Assumption - snapshot name is unique in K8s cluster
+			ecfsSnapshot, err = ems.GetClient().GetSnapshotByName(req.GetName())
+			if err != nil {
+				err = errors.WrapPrefix(err,
+					fmt.Sprintf("Failed to create snapshot for volume %v with name %v", volumeId, req.GetName()), 0)
+			}
+			return
+		}
 		err = errors.WrapPrefix(err,
 			fmt.Sprintf("Failed to create snapshot for volume %v with name %v", volumeId, req.GetName()), 0)
 		return
 	}
 
-	glog.V(6).Infof("ecfs: Parsing snapshot's CreatedAt timestamp: %v", ecfsSnapshot.CreatedAt)
-	creationTimestamp, err := parseTimestamp(ecfsSnapshot.CreatedAt)
 	if err != nil {
-		err = errors.Wrap(err, 0)
-		return
+		err = errors.WrapPrefix(err, fmt.Sprintf("Failed to convert snapshot id %v to int",
+			response.Snapshot.GetSnapshotId()), 0)
 	}
+	cacheSnapshotSet(req.GetName(), ecfsSnapshot.ID, true)
 
-	response = &csi.CreateSnapshotResponse{
-		Snapshot: &csi.Snapshot{
-			SnapshotId:     ecfsSnapshot.Name,
-			SourceVolumeId: string(volumeId),
-			CreationTime:   creationTimestamp,
-			ReadyToUse:     isSnapshotUsable(ecfsSnapshot),
-		},
-	}
+	response, err = getCreateSnapshotResponse(ecfsSnapshot, req)
 
-	glog.V(3).Infof("ecfs: Created snapshot %v", req.Name)
+	glog.V(3).Infof("ecfs: Created snapshot %v. Ready: %v", req.Name, response.Snapshot.ReadyToUse)
 	return
 }
 
@@ -270,8 +327,12 @@ func (cs *controllerServer) DeleteSnapshot(ctx context.Context, req *csi.DeleteS
 		err = errors.WrapPrefix(err, fmt.Sprintf("Failed to delete snapshot by id %v", req.GetSnapshotId()), 0)
 		return
 	}
-	response = &csi.DeleteSnapshotResponse{}
+
+	cacheSnapshotRemoveByName(req.GetSnapshotId())
+
 	glog.V(3).Infof("ecfs: Deleted snapshot %v", req.SnapshotId)
+
+	response = &csi.DeleteSnapshotResponse{}
 	return
 }
 

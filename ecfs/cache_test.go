@@ -7,65 +7,59 @@ import (
 )
 
 func AssertEqual(t *testing.T, a interface{}, b interface{}) {
+	t.Logf("Comparing %v and %v", a, b)
+
+	if a == nil && b == nil { // Can't compare nils directly - this will fail in case they're pointers to different types
+		return
+	}
+
 	if a == b {
 		return
 	}
+
 	t.Errorf("Values mismatch - %v (type %v) != %v (type %v)", a, reflect.TypeOf(a), b, reflect.TypeOf(b))
 	debug.PrintStack()
 }
-
-func AssertNotEqual(t *testing.T, a interface{}, b interface{}) {
-	if a != b {
-		return
-	}
-	t.Errorf("Values are equal - %v (type %v) == %v (type %v)", a, reflect.TypeOf(a), b, reflect.TypeOf(b))
-	debug.Stack()
-}
-
-//func TestGetSnapshotByName(t *testing.T) {
-//	var snapshotName = "vs-111-222"
-//	var ems emanageClient
-//
-//	err := fakeEmsConfig()
-//	if err != nil {
-//		t.Fatal("GetSnapshotByName failed: ", err)
-//	}
-//
-//	snapshot, err := ems.GetSnapshotByName(snapshotName)
-//	if err != nil {
-//		t.Fatal("GetSnapshotByName failed: ", err)
-//	}
-//
-//	t.Log("TestGetSnapshotByName", "snapshot.Name", snapshot.Name, "snapshot.ID", snapshot.ID, "snapshot", *snapshot)
-//}
 
 const (
 	testVolName string       = "testvolname"
 	testVolId   volumeIdType = "testvolid"
 	testVolId2  volumeIdType = "testvolid2"
-	emptyVolume volumeIdType = ""
+	volReady                 = true
+	volNotReady              = false
 )
+
+var emptyVolume *CachedVolume
 
 func TestCacheVolumeGet(t *testing.T) {
 	val, hit := cacheVolumeGet(testVolName)
 	AssertEqual(t, val, emptyVolume)
 	AssertEqual(t, hit, false)
 
-	cacheVolumeAdd(testVolName, testVolId)
+	cacheVolumeSet(testVolName, testVolId, volReady)
 	val, hit = cacheVolumeGet(testVolName)
-	AssertEqual(t, val, testVolId)
+	AssertEqual(t, val.ID, testVolId)
+	AssertEqual(t, val.IsReady, volReady)
 	AssertEqual(t, hit, true)
 }
 
-func TestCacheVolumeAdd(t *testing.T) {
-	cacheVolumeAdd(testVolName, testVolId)
+func TestCacheVolumeSet(t *testing.T) {
+	cacheVolumeSet(testVolName, testVolId, volReady)
 	val, hit := cacheVolumeGet(testVolName)
-	AssertEqual(t, val, testVolId)
+	AssertEqual(t, val.ID, testVolId)
+	AssertEqual(t, val.IsReady, volReady)
 	AssertEqual(t, hit, true)
 
-	cacheVolumeAdd(testVolName, testVolId2)
+	cacheVolumeSet(testVolName, testVolId2, volReady)
 	val, hit = cacheVolumeGet(testVolName)
-	AssertEqual(t, val, testVolId2)
+	AssertEqual(t, val.ID, testVolId2)
+	AssertEqual(t, val.IsReady, volReady)
+	AssertEqual(t, hit, true)
+
+	cacheVolumeSet(testVolName, testVolId, volNotReady) // Reset Exists to false
+	val, hit = cacheVolumeGet(testVolName)
+	AssertEqual(t, val.ID, testVolId)
+	AssertEqual(t, val.IsReady, volNotReady)
 	AssertEqual(t, hit, true)
 }
 
@@ -78,7 +72,7 @@ func TestCacheVolumeRemove(t *testing.T) {
 	AssertEqual(t, hit, false)
 
 	// Remove existing volume
-	cacheVolumeAdd(testVolName, testVolId)
+	cacheVolumeSet(testVolName, testVolId, volReady)
 	cacheVolumeRemove(testVolId)
 	val, hit = cacheVolumeGet(testVolName)
 	AssertEqual(t, val, emptyVolume)
