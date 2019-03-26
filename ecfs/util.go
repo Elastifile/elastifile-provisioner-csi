@@ -248,9 +248,10 @@ func copyDir(src, dst string) (err error) {
 	glog.V(log.DETAILED_INFO).Infof("ecfs: Going to copy %v to %v", src, dst)
 	cmd := exec.Command("cp", "-a", fmt.Sprintf("%v/.", src), dst)
 	out, err := cmd.CombinedOutput()
-	glog.V(log.DETAILED_INFO).Infof("ecfs: Done copying %v to %v", src, dst)
 	if err != nil {
-		glog.Warningf("ecfs: Copy failure output: %v", string(out))
+		glog.Warningf("ecfs: Failed to copy %v to %v. Output: %v", src, dst, string(out))
+	} else {
+		glog.V(log.DETAILED_INFO).Infof("ecfs: Done copying %v to %v", src, dst)
 	}
 	return
 }

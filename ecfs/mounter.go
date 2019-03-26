@@ -23,6 +23,7 @@ import (
 	"github.com/golang/glog"
 
 	"csi-provisioner-elastifile/ecfs/log"
+	"github.com/elastifile/emanage-go/src/emanage-client"
 	"github.com/elastifile/errors"
 )
 
@@ -39,7 +40,7 @@ func mountEcfs(mountPoint string, volOptions *volumeOptions, volId volumeIdType)
 		return err
 	}
 
-	glog.V(log.INFO).Infof("ECFS: Mounting volume %v on %v", volId, mountPoint)
+	glog.V(log.INFO).Infof("ecfs: Mounting volume %v on %v", volId, mountPoint)
 	// TODO: Don't create eManage client for each action (will need relogin support)
 	var emsClient emanageClient
 	dc, export, err := emsClient.GetDcDefaultExportByVolumeId(volId)
@@ -67,10 +68,10 @@ func mountEcfs(mountPoint string, volOptions *volumeOptions, volId volumeIdType)
 
 func mountEcfsSnapshotExport(mountPoint string, volOptions *volumeOptions, volId volumeIdType) error {
 	if err := createMountPoint(mountPoint); err != nil {
-		return err
+		return errors.Wrap(err, 0)
 	}
 
-	glog.V(log.INFO).Infof("ECFS: Mounting volume from snapshot %v on %v", volId, mountPoint)
+	glog.V(log.DETAILED_INFO).Infof("ecfs: Mounting snapshot %v on %v", volId, mountPoint)
 
 	volDesc, err := parseVolumeId(volId)
 	if err != nil {
@@ -84,23 +85,58 @@ func mountEcfsSnapshotExport(mountPoint string, volOptions *volumeOptions, volId
 			fmt.Sprintf("Failed to get snapshot export path by snapshot id: %v", volDesc.SnapshotId), 0)
 	}
 
-	//snapshot, err := emsClient.GetClient().Snapshots.GetById(volDesc.SnapshotId)
-	//if err != nil {
-	//	return errors.Wrap(err, 0)
-	//}
-
-	//dc, export, err := emsClient.GetDcSnapshotExportByVolumeId(volId)
-	//if err != nil {
-	//	return errors.WrapPrefix(err, fmt.Sprintf("Failed to get DC/export for Volume Id %s", volId), 0)
-	//}
-
-	// TODO: Add support for mount options once mountOptions and SupportsMountOption() are supported in K8s
-	// https://kubernetes.io/docs/concepts/storage/persistent-volumes/#mount-options
 	args := []string{
 		"-vvv",
 		"-t", "nfs",
-		"-o", "ro,nolock,vers=3", // TODO: Remove these defaults once mount works
+		"-o", "ro,nolock,vers=3",
 		fmt.Sprintf("%v:%v", volOptions.NfsAddress, snapshotExportPath),
+		mountPoint,
+	}
+
+	err = mountNfs(args...)
+	if err != nil {
+		return errors.WrapPrefix(err, "Failed to mount ECFS snapshot export", 0)
+	}
+
+	return nil
+}
+
+func mountEcfsSnapshot(mountPoint string, nfsAddress string, snapshot *emanage.Snapshot) error {
+	if err := createMountPoint(mountPoint); err != nil {
+		return errors.Wrap(err, 0)
+	}
+
+	glog.V(log.DETAILED_INFO).Infof("ecfs: Mounting snapshot %v on %v", snapshot.Name, mountPoint)
+
+	snapExportOptions := &volumeOptions{
+		UserMapping: emanage.UserMappingNone,
+	}
+
+	var emsClient emanageClient
+	snapshotExportPath, err := getSnapshotExportPath(emsClient.GetClient(), snapshot.ID)
+	if err != nil {
+		if isErrorDoesNotExist(err) { // Create export
+			_, _, err = createExportOnSnapshot(emsClient.GetClient(), snapshot, snapExportOptions)
+			if err != nil {
+				return errors.WrapPrefix(err, fmt.Sprintf("Failed to create export for snapshot %v (%v)",
+					snapshot.ID, snapshot.Name), 0)
+			}
+			snapshotExportPath, err = getSnapshotExportPath(emsClient.GetClient(), snapshot.ID)
+			if err != nil {
+				return errors.WrapPrefix(err, fmt.Sprintf("Failed to get newly created snapshot export path "+
+					"by snapshot id %v (%v)", snapshot.ID, snapshot.Name), 0)
+			}
+		} else {
+			return errors.WrapPrefix(err, fmt.Sprintf("Failed to get snapshot export path by snapshot id %v (%v)",
+				snapshot.ID, snapshot.Name), 0)
+		}
+	}
+
+	args := []string{
+		"-vvv",
+		"-t", "nfs",
+		"-o", "ro,nolock,vers=3",
+		fmt.Sprintf("%v:%v", nfsAddress, snapshotExportPath),
 		mountPoint,
 	}
 

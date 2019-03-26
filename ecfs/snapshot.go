@@ -72,7 +72,7 @@ func waitForSnapshotToBeDeleted(emsClient *emanageClient, snapshotId int, timeou
 }
 
 func deleteSnapshot(emsClient *emanageClient, name string) error {
-	glog.V(log.HIGH_LEVEL_INFO).Infof("ecfs: Deleting snapshot %v", name)
+	glog.V(log.INFO).Infof("ecfs: Deleting snapshot %v", name)
 	snapshot, err := emsClient.GetSnapshotByName(name)
 	if err != nil {
 		if isErrorDoesNotExist(err) { // This operation has to be idempotent

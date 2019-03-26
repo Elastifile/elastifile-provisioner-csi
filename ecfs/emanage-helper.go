@@ -105,7 +105,8 @@ func (ems *emanageClient) GetDcDefaultExportByVolumeId(volId volumeIdType) (*ema
 	}
 	for _, export := range exports {
 		if dc.Id == export.DataContainerId && export.Name == volumeExportName {
-			glog.V(log.DETAILED_DEBUG).Infof("ecfs: Found Dc and Export by Volume Id - DC: %+v EXPORT: %+v", dc, export)
+			glog.V(log.DETAILED_DEBUG).Infof("ecfs: Found Dc and Export by Volume Id %v - DC: %+v EXPORT: %+v",
+				volId, dc, export)
 			return &dc, &export, nil
 		}
 	}
@@ -295,6 +296,6 @@ func getSnapshotExportPath(emsClient *emanageClient, snapshotId int) (snapshotEx
 	}
 
 	snapshotExportPath = fmt.Sprintf("%v/%v_%v", dc.Name, snapshot.Name, export.Name)
-	glog.V(log.DEBUG).Infof("ecfs: using Snapshot Export Path: %v", snapshotExportPath)
+	glog.V(log.DEBUG).Infof("ecfs: Using Snapshot Export Path: %v", snapshotExportPath)
 	return
 }

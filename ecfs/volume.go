@@ -169,7 +169,7 @@ func cloneVolume(emsClient *emanageClient, source *csi.VolumeContentSource_Volum
 	srcSnapshot, err := createSnapshot(emsClient, srcSnapName, srcVolumeId, reqParams)
 	if err != nil {
 		err = errors.WrapPrefix(err,
-			fmt.Sprintf("Failed to create snapshot for volume %v with name %v", source.VolumeId, srcSnapName), 0)
+			fmt.Sprintf("Failed to create snapshot for volume %v with name %v", srcVolumeId, srcSnapName), 0)
 		return
 	}
 
@@ -178,36 +178,6 @@ func cloneVolume(emsClient *emanageClient, source *csi.VolumeContentSource_Volum
 		glog.Warning(errors.WrapPrefix(err,
 			fmt.Sprintf("Failed to delete source snapshot %v - could be a cascading error", srcSnapName), 0))
 	}()
-
-	// Create export on the source volume's snapshot
-	//srcDc, srcExport, err := emsClient.GetDcDefaultExportByVolumeId(srcVolumeId)
-	//if err != nil {
-	//	err = errors.WrapPrefix(err, "Failed to get the clone source export ", 0)
-	//	return
-	//}
-
-	// TODO: Extract to a separate function, e.g. idempotentCreateExportOnSnapshot()
-	srcSnapExportOptions := &volumeOptions{
-		NfsAddress:  dstVolOptions.NfsAddress,
-		UserMapping: emanage.UserMappingNone,
-	}
-
-	volumeDescriptor, _, err := createExportOnSnapshot(emsClient, srcSnapshot, srcSnapExportOptions)
-	if err != nil {
-		if isErrorAlreadyExists(err) { // Snapshot volume creation MUST be idempotent
-			volumeDescriptor = volumeDescriptorType{
-				DcId:       srcSnapshot.DataContainerID,
-				SnapshotId: srcSnapshot.ID,
-			}
-			glog.V(log.DEBUG).Infof("Snapshot export already exists on volume %v", srcVolumeId)
-		} else {
-			err = status.Error(codes.Internal, errors.Wrap(err, 0).Error())
-			return
-		}
-	}
-
-	// TODO: Switch mount from srcSnapVolumeId to export as it's more readable
-	srcSnapVolumeId := newVolumeId(volumeDescriptor)
 
 	// Create destination volume
 	dstVolumeId, err = createEmptyVolume(emsClient, dstVolOptions)
@@ -220,7 +190,7 @@ func cloneVolume(emsClient *emanageClient, source *csi.VolumeContentSource_Volum
 	}
 
 	// Mount the source snapshot
-	err = mountEcfsSnapshotExport(srcSnapMountPath, srcSnapExportOptions, srcSnapVolumeId)
+	err = mountEcfsSnapshot(srcSnapMountPath, dstVolOptions.NfsAddress, srcSnapshot)
 	if err != nil {
 		err = errors.WrapPrefix(err, "Failed to mount source snapshot's export", 0)
 		return
@@ -231,8 +201,8 @@ func cloneVolume(emsClient *emanageClient, source *csi.VolumeContentSource_Volum
 		glog.Warning(errors.WrapPrefix(err, "Failed to unmount source snapshot - could be a cascading error", 0))
 	}()
 
-	dstVolMountPath := fmt.Sprintf("/mnt/%v", dstVolumeId)
 	// Mount the destination volume
+	dstVolMountPath := fmt.Sprintf("/mnt/%v", dstVolumeId)
 	err = mountEcfs(dstVolMountPath, dstVolOptions, dstVolumeId)
 	if err != nil {
 		err = errors.WrapPrefix(err, "Failed to mount destination volume", 0)
@@ -263,28 +233,12 @@ func restoreSnapshotToVolume(emsClient *emanageClient, source *csi.VolumeContent
 
 	glog.V(log.DETAILED_INFO).Infof("ecfs: Restoring snapshot %v - dstVolOptions: %+v", srcSnapName, dstVolOptions)
 
-	// TODO: Extract to a separate function, e.g. idempotentCreateExportOnSnapshot()
-
-	srcSnapExportOptions := &volumeOptions{
-		NfsAddress:  dstVolOptions.NfsAddress,
-		UserMapping: emanage.UserMappingNone,
-	}
-
 	srcSnapshot, err := emsClient.GetSnapshotByName(srcSnapName)
 	if err != nil {
 		err = status.Error(codes.Internal, errors.WrapPrefix(err,
 			fmt.Sprintf("Failed to to get source snapshot by name %v", srcSnapName), 0).Error())
 		return
 	}
-
-	volumeDescriptor, _, err := createExportOnSnapshot(emsClient, srcSnapshot, srcSnapExportOptions)
-	if err != nil {
-		err = status.Error(codes.Internal, errors.WrapPrefix(err,
-			fmt.Sprintf("Failed to create export on snapshot %+v", srcSnapshot), 0).Error())
-		return
-	}
-	// TODO: Switch mount from srcSnapVolumeId to export as it's more readable (and combine with cloneVolume)
-	srcSnapVolumeId := newVolumeId(volumeDescriptor)
 
 	// Create destination volume
 	dstVolumeId, err = createEmptyVolume(emsClient, dstVolOptions)
@@ -297,7 +251,7 @@ func restoreSnapshotToVolume(emsClient *emanageClient, source *csi.VolumeContent
 	}
 
 	// Mount the source snapshot
-	err = mountEcfsSnapshotExport(srcSnapMountPath, srcSnapExportOptions, srcSnapVolumeId)
+	err = mountEcfsSnapshot(srcSnapMountPath, dstVolOptions.NfsAddress, srcSnapshot)
 	if err != nil {
 		err = errors.WrapPrefix(err, "Failed to mount source snapshot's export", 0)
 		return
@@ -311,8 +265,8 @@ func restoreSnapshotToVolume(emsClient *emanageClient, source *csi.VolumeContent
 		}
 	}()
 
-	dstVolMountPath := fmt.Sprintf("/mnt/%v", dstVolumeId)
 	// Mount the destination volume
+	dstVolMountPath := fmt.Sprintf("/mnt/%v", dstVolumeId)
 	err = mountEcfs(dstVolMountPath, dstVolOptions, dstVolumeId)
 	if err != nil {
 		err = errors.WrapPrefix(err, "Failed to mount destination volume", 0)
@@ -363,7 +317,7 @@ func deleteExport(emsClient *emanageClient, dc *emanage.DataContainer) error {
 	return nil
 }
 
-func deleteExportFromSnapshot(emsClient *emanageClient, dc *emanage.DataContainer, snapshotId int) error {
+func deleteExportFromSnapshot(emsClient *emanageClient, snapshotId int) error {
 	exports, err := emsClient.Exports.GetAll(&emanage.GetAllOpts{})
 	if err != nil {
 		return errors.WrapPrefix(err, "Failed to get exports", 0)
@@ -371,7 +325,7 @@ func deleteExportFromSnapshot(emsClient *emanageClient, dc *emanage.DataContaine
 
 	var found bool
 	for _, export := range exports {
-		if export.DataContainerId == dc.Id && export.SnapshotId == snapshotId {
+		if export.SnapshotId == snapshotId {
 			found = true
 			_, err := emsClient.Exports.Delete(&export)
 			if err != nil {
@@ -381,8 +335,7 @@ func deleteExportFromSnapshot(emsClient *emanageClient, dc *emanage.DataContaine
 	}
 
 	if !found {
-		glog.V(log.DEBUG).Infof("ecfs: Export from DC %v Snapshot Id %v not found. Assuming already deleted",
-			dc.Name, snapshotId)
+		glog.V(log.DEBUG).Infof("ecfs: Export from Snapshot Id %v not found. Assuming already deleted", snapshotId)
 	}
 
 	return nil
@@ -432,23 +385,11 @@ func deleteVolume(emsClient *emanageClient, volDesc *volumeDescriptorType) (err 
 
 // deleteVolumeFromSnapshot deletes volume that was created from a snapshot
 func deleteVolumeFromSnapshot(emsClient *emanageClient, volDesc *volumeDescriptorType) (err error) {
-	var dc emanage.DataContainer
-
-	dc, err = emsClient.DataContainers.GetFull(volDesc.DcId)
-	if err != nil {
-		if isErrorDoesNotExist(err) {
-			glog.V(log.DEBUG).Infof("ecfs: Data Container not found - assuming already deleted")
-			return nil
-		}
-		return errors.WrapPrefix(err, fmt.Sprintf(
-			"Failed to get Data Container by Id %v", volDesc.DcId), 0)
-	}
-
-	err = deleteExportFromSnapshot(emsClient, &dc, volDesc.SnapshotId)
+	err = deleteExportFromSnapshot(emsClient, volDesc.SnapshotId)
 	if err != nil {
 		return err
 	}
 
-	glog.V(log.DETAILED_INFO).Infof("ecfs: Deleted Export from Snapshot %v (%v)", volDesc.DcId, dc.Name)
+	glog.V(log.DETAILED_INFO).Infof("ecfs: Deleted Export from Snapshot id %v", volDesc.SnapshotId)
 	return nil
 }
