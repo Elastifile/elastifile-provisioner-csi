@@ -100,10 +100,17 @@ func deleteSnapshot(emsClient *emanageClient, name string) error {
 		}
 	}
 
+	glog.V(log.DETAILED_DEBUG).Infof("Deleting export from snapshot %v (%v)", snapshot.ID, snapshot.Name)
+	err = deleteExportFromSnapshot(emsClient.GetClient(), snapshot.ID)
+	if err != nil {
+		if !isErrorDoesNotExist(err) {
+			glog.Warningf("Failed to delete export from snapshot %v (%v)", snapshot.ID, snapshot.Name)
+		}
+	}
+
 	glog.V(log.DEBUG).Infof("ecfs: Calling emanage snapshot.Delete - snapshot %v, dcId: %v, status: %v",
 		snapshot.Name, snapshot.DataContainerID, snapshot.Status)
 
-	// TODO: Handle existing export?
 	tasks := snapshot.Delete()
 	if tasks.Error() != nil {
 		return tasks.Error()
