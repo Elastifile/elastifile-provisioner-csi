@@ -21,6 +21,8 @@ import (
 	//"github.com/container-storage-interface/spec/lib/go/csi" // TODO: Uncomment when switching to CSI 1.0
 	"github.com/golang/glog"
 	"github.com/kubernetes-csi/drivers/pkg/csi-common"
+
+	"csi-provisioner-elastifile/ecfs/log"
 )
 
 const (
@@ -67,7 +69,7 @@ func (fs *ecfsDriver) Run(driverName, nodeId, endpoint, volumeMounter string) {
 	// Maybe add a warning instead of failing here
 
 	// Initialize default library driver
-	glog.Infof("ecfs: Starting driver: %v version: %v", driverName, Version)
+	glog.V(log.HIGH_LEVEL_INFO).Infof("ecfs: Starting driver: %v version: %v", driverName, Version)
 	fs.driver = csicommon.NewCSIDriver(driverName, Version, nodeId)
 	if fs.driver == nil {
 		glog.Fatalln("Failed to initialize CSI driver")

@@ -29,6 +29,8 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"k8s.io/kubernetes/pkg/util/mount"
+
+	"csi-provisioner-elastifile/ecfs/log"
 )
 
 type volumeDescriptorType struct {
@@ -48,7 +50,7 @@ func newVolumeId(volumeDescriptor volumeDescriptorType) volumeIdType {
 // parseVolumeId takes internal volumeIdType that's defined by newVolumeId() and
 // returns volumeDescriptorType{} with DataContainer and Snapshot ids
 func parseVolumeId(volumeId volumeIdType) (volDesc *volumeDescriptorType, err error) {
-	glog.V(10).Infof("ecfs: Parsing Volume Id %v", volumeId)
+	glog.V(log.DETAILED_DEBUG).Infof("ecfs: Parsing Volume Id %v", volumeId)
 	parts := strings.Split(string(volumeId), "-")
 	if len(parts) != 5 {
 		err = errors.Errorf("Invalid volume id: %v", volumeId)
@@ -72,12 +74,12 @@ func parseVolumeId(volumeId volumeIdType) (volDesc *volumeDescriptorType, err er
 		SnapshotId: snapshotId,
 	}
 
-	glog.V(10).Infof("ecfs: Parsed Volume Id %v into %+v", volumeId, volDesc)
+	glog.V(log.DETAILED_DEBUG).Infof("ecfs: Parsed Volume Id %v into %+v", volumeId, volDesc)
 	return
 }
 
 func execCommand(command string, args ...string) ([]byte, error) {
-	glog.V(3).Infof("ecfs: Running command: %s %s", command, args)
+	glog.V(log.DEBUG).Infof("ecfs: Running command: %s %s", command, args)
 
 	cmd := exec.Command(command, args...)
 	return cmd.CombinedOutput()
@@ -205,7 +207,7 @@ func isErrorAlreadyExists(err error) bool {
 
 	for _, text := range errorAlreadyExists {
 		if strings.Contains(err.Error(), text) {
-			glog.V(10).Infof("ecfs: Entity already exists. Error: %v", err)
+			glog.V(log.DETAILED_DEBUG).Infof("ecfs: Entity already exists. Error: %v", err)
 			return true
 		}
 	}
@@ -221,7 +223,7 @@ func isErrorDoesNotExist(err error) bool {
 
 	for _, text := range errorDoesNotExist {
 		if strings.Contains(err.Error(), text) {
-			glog.V(10).Infof("ecfs: Entity does not exist. Error: %v", err)
+			glog.V(log.DETAILED_DEBUG).Infof("ecfs: Entity does not exist. Error: %v", err)
 			return true
 		}
 	}
@@ -243,12 +245,12 @@ func truncateStr(str string, maxLen int) string {
 func copyDir(src, dst string) (err error) {
 	// TODO: Add timeout
 
-	glog.V(5).Infof("ecfs: Going to copy %v to %v", src, dst)
+	glog.V(log.DETAILED_INFO).Infof("ecfs: Going to copy %v to %v", src, dst)
 	cmd := exec.Command("cp", "-a", fmt.Sprintf("%v/.", src), dst)
 	out, err := cmd.CombinedOutput()
-	glog.V(5).Infof("ecfs: Done copying %v to %v", src, dst)
+	glog.V(log.DETAILED_INFO).Infof("ecfs: Done copying %v to %v", src, dst)
 	if err != nil {
-		glog.V(3).Infof("ecfs: Copy failure output: %v", string(out))
+		glog.Warningf("ecfs: Copy failure output: %v", string(out))
 	}
 	return
 }

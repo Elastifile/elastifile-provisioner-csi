@@ -7,13 +7,14 @@ import (
 
 	"github.com/golang/glog"
 
+	"csi-provisioner-elastifile/ecfs/log"
 	"github.com/elastifile/emanage-go/src/emanage-client"
 	"github.com/elastifile/errors"
 )
 
 func createSnapshot(emsClient *emanageClient, name string, volumeId volumeIdType, params map[string]string) (snapshot *emanage.Snapshot, err error) {
-	glog.V(2).Infof("ecfs: Creating snapshot %v for volume %v", name, volumeId)
-	glog.V(6).Infof("ecfs: Creating snapshot %v - parameters: %v", name, params)
+	glog.V(log.HIGH_LEVEL_INFO).Infof("ecfs: Creating snapshot %v for volume %v", name, volumeId)
+	glog.V(log.DEBUG).Infof("ecfs: Creating snapshot %v - parameters: %v", name, params)
 
 	volumeDescriptor, err := parseVolumeId(volumeId)
 	if err != nil {
@@ -30,7 +31,7 @@ func createSnapshot(emsClient *emanageClient, name string, volumeId volumeIdType
 	snapshot, err = emsClient.Snapshots.Create(snap)
 	if err != nil {
 		if isErrorAlreadyExists(err) {
-			glog.V(6).Infof("ecfs: Snapshot %v for volume %v already exists - assuming duplicate request", name, volumeId)
+			glog.V(log.DEBUG).Infof("ecfs: Snapshot %v for volume %v already exists - assuming duplicate request", name, volumeId)
 			snapshot, err = emsClient.GetSnapshotByName(name)
 			if err != nil {
 				err = errors.WrapPrefix(err, fmt.Sprintf("Failed to get snapshot by name %v", name), 0)
@@ -54,14 +55,14 @@ func waitForSnapshotToBeDeleted(emsClient *emanageClient, snapshotId int, timeou
 			snapshot, err = emsClient.GetClient().Snapshots.GetById(snapshotId)
 			if err != nil {
 				if isErrorDoesNotExist(err) {
-					glog.V(6).Infof("ecfs: Snapshot id %v not found - assuming already deleted", snapshotId)
+					glog.V(log.DEBUG).Infof("ecfs: Snapshot id %v not found - assuming already deleted", snapshotId)
 					return nil
 				}
 				return errors.WrapPrefix(err, fmt.Sprintf("Failed to get snapshot by id %v", snapshot.ID), 0)
 			}
 			if snapshot.Status == ecfsSnapshotStatus_REMOVED {
-				glog.V(5).Infof("ecfs: Snapshot delete operation reported completed by EMS - snapshot %v, dcId: %v, status: %v",
-					snapshot.Name, snapshot.DataContainerID, snapshot.Status)
+				glog.V(log.DETAILED_INFO).Infof("ecfs: Snapshot delete operation reported completed by EMS - "+
+					"snapshot %v, dcId: %v, status: %v", snapshot.Name, snapshot.DataContainerID, snapshot.Status)
 				return err
 			}
 		case <-timeoutExpired:
@@ -71,11 +72,11 @@ func waitForSnapshotToBeDeleted(emsClient *emanageClient, snapshotId int, timeou
 }
 
 func deleteSnapshot(emsClient *emanageClient, name string) error {
-	glog.V(2).Infof("ecfs: Deleting snapshot %v", name)
+	glog.V(log.HIGH_LEVEL_INFO).Infof("ecfs: Deleting snapshot %v", name)
 	snapshot, err := emsClient.GetSnapshotByName(name)
 	if err != nil {
 		if isErrorDoesNotExist(err) { // This operation has to be idempotent
-			glog.V(6).Infof("ecfs: Snapshot %v not found - assuming already deleted", name)
+			glog.V(log.DEBUG).Infof("ecfs: Snapshot %v not found - assuming already deleted", name)
 			return nil
 		}
 		if isWorkaround("EL-13618 - Failed read-dir") {
@@ -90,7 +91,7 @@ func deleteSnapshot(emsClient *emanageClient, name string) error {
 
 	// Handle subsequent requests to remove snapshot
 	if snapshot.Status == ecfsSnapshotStatus_REMOVING { // Operation MUST be idempotent
-		glog.V(5).Infof("ecfs: Requested to delete snapshot that's already being removed - snapshot %v, dcId: %v, status: %v",
+		glog.V(log.DEBUG).Infof("ecfs: Requested to delete snapshot that's already being removed - snapshot %v, dcId: %v, status: %v",
 			snapshot.Name, snapshot.DataContainerID, snapshot.Status)
 		err = waitForSnapshotToBeDeleted(emsClient, snapshot.ID, 3*time.Minute)
 		if err != nil {
@@ -99,7 +100,7 @@ func deleteSnapshot(emsClient *emanageClient, name string) error {
 		}
 	}
 
-	glog.V(5).Infof("ecfs: Calling emanage snapshot.Delete - snapshot %v, dcId: %v, status: %v",
+	glog.V(log.DEBUG).Infof("ecfs: Calling emanage snapshot.Delete - snapshot %v, dcId: %v, status: %v",
 		snapshot.Name, snapshot.DataContainerID, snapshot.Status)
 
 	// TODO: Handle existing export?
@@ -107,17 +108,17 @@ func deleteSnapshot(emsClient *emanageClient, name string) error {
 	if tasks.Error() != nil {
 		return tasks.Error()
 	}
-	glog.V(4).Infof("ecfs: Waiting for snapshot %v to be deleted by the backend", name)
+	glog.V(log.DEBUG).Infof("ecfs: Waiting for snapshot %v to be deleted by the backend", name)
 	return tasks.Wait()
 }
 
 func listSnapshots(emsClient *emanageClient, snapshotId, volumeId string, maxEntries int32, startToken string) (snapshots emanage.SnapshotList, nextToken string, err error) {
 	// TODO: List pagination is not supported in eManage client (page, per_page) - see TESLA-3310
 
-	glog.V(5).Info("Listing snapshots",
+	glog.V(log.DETAILED_INFO).Info("Listing snapshots",
 		"snapshotId", snapshotId, "volumeId", volumeId, "maxEntries", maxEntries, "startToken", startToken)
 	if snapshotId != "" {
-		glog.V(6).Infof("ecfs: Listing snapshots by snapshotId %v", snapshotId)
+		glog.V(log.DEBUG).Infof("ecfs: Listing snapshots by snapshotId %v", snapshotId)
 		var snapshot *emanage.Snapshot
 		snapshot, err = emsClient.GetSnapshotByName(snapshotId)
 		if err != nil {
@@ -126,7 +127,7 @@ func listSnapshots(emsClient *emanageClient, snapshotId, volumeId string, maxEnt
 		}
 		snapshots = append(snapshots, snapshot)
 	} else if volumeId != "" {
-		glog.V(6).Infof("ecfs: Listing snapshots by volumeId %v", volumeId)
+		glog.V(log.DEBUG).Infof("ecfs: Listing snapshots by volumeId %v", volumeId)
 		var dc *emanage.DataContainer
 		dc, err = emsClient.GetDcByName(volumeId)
 		if err != nil {
@@ -139,7 +140,7 @@ func listSnapshots(emsClient *emanageClient, snapshotId, volumeId string, maxEnt
 			return
 		}
 	} else {
-		glog.V(6).Infof("ecfs: Listing all snapshots")
+		glog.V(log.DEBUG).Infof("ecfs: Listing all snapshots")
 		snapshots, err = emsClient.Snapshots.Get()
 		if err != nil {
 			err = errors.Wrap(err, 0)
