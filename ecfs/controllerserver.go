@@ -161,8 +161,9 @@ func (cs *controllerServer) DeleteVolume(ctx context.Context, req *csi.DeleteVol
 		return nil, errors.Wrap(err, 0)
 	}
 
-	deleteVolumeFunc := deleteVolume
-	if volDesc.SnapshotId != 0 { // Regular volume
+	// TODO: Cleanup remains of snapshot-export-as-volume legacy
+	deleteVolumeFunc := deleteVolume // Regular volume
+	if volDesc.SnapshotId != 0 {     // Snapshot-export-as-volume
 		deleteVolumeFunc = deleteVolumeFromSnapshot
 	}
 	err = deleteVolumeFunc(ems.GetClient(), volDesc)
