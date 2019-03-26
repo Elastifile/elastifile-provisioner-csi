@@ -9,8 +9,8 @@ spec:
      volumeMounts:
        - name: volume1
          mountPath: /mnt
-     command: ["dd", "if=/mnt/demofile", "of=/dev/null", "bs=1M", "count=10",
-               "&&", "dd", "if=/dev/null", "of=/mnt/demofile2", "bs=1M", "count=10"]
+     command: ["sh", "-c"]
+     args: ["dd if=/mnt/demofile of=/mnt/demofile2 bs=1M count=10 && ls -l /mnt"]
   volumes:
    - name: volume1
      persistentVolumeClaim:
