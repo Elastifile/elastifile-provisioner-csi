@@ -9,6 +9,7 @@ import (
 	"github.com/golang/glog"
 
 	"csi-provisioner-elastifile/ecfs/co"
+	"csi-provisioner-elastifile/ecfs/log"
 )
 
 const (
@@ -42,20 +43,20 @@ func (conf *config) String() string {
 }
 
 func GetProvisionerSettings() (configMap map[string]string, secrets map[string][]byte, err error) {
-	glog.V(5).Infof("ecfs: Loading configuration from config map '%v'", configMapName)
+	glog.V(log.DETAILED_INFO).Infof("ecfs: Loading configuration from config map '%v'", configMapName)
 	configMap, err = co.GetConfigMap(Namespace(), configMapName)
 	if err != nil {
 		err = errors.WrapPrefix(err, "Failed to get config map", 0)
 	}
 
-	glog.V(5).Infof("ecfs: Loading configuration from secrets '%v'", secretsName)
+	glog.V(log.DETAILED_INFO).Infof("ecfs: Loading configuration from secrets '%v'", secretsName)
 	secrets, err = co.GetSecret(Namespace(), secretsName)
 	if err != nil {
 		err = errors.WrapPrefix(err, "Failed to get secrets", 0)
 	}
 
-	glog.V(10).Infof("Provisioner settings - config map: %+v", configMap)
-	glog.V(10).Infof("Provisioner settings - secrets: %+v", secrets)
+	glog.V(log.DETAILED_DEBUG).Infof("Provisioner settings - config map: %+v", configMap)
+	glog.V(log.DETAILED_DEBUG).Infof("Provisioner settings - secrets: %+v", secrets)
 
 	return
 }
@@ -97,7 +98,7 @@ func updateNfsAddress() (err error) {
 		return errors.Wrap(err, 0)
 	}
 
-	glog.V(6).Infof("ecfs: Updated NFS address in config map %v to %v", configMapName, addr)
+	glog.V(log.DEBUG).Infof("ecfs: Updated NFS address in config map %v to %v", configMapName, addr)
 	return
 }
 
@@ -114,13 +115,13 @@ func updateEmanageAddress() (err error) {
 		return errors.Wrap(err, 0)
 	}
 
-	glog.V(6).Infof("ecfs: Updated Management address in config map %v to %v", configMapName, addr)
+	glog.V(log.DEBUG).Infof("ecfs: Updated Management address in config map %v to %v", configMapName, addr)
 	return
 }
 
 func updateConfigEkfs() (err error) {
 	if !IsEKFS() {
-		glog.V(6).Infof("ecfs: Running outside EKFS - skipping service-based config map updates")
+		glog.V(log.DEBUG).Infof("ecfs: Running outside EKFS - skipping service-based config map updates")
 		return
 	}
 

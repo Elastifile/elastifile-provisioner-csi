@@ -22,6 +22,7 @@ import (
 
 	"github.com/golang/glog"
 
+	"csi-provisioner-elastifile/ecfs/log"
 	"github.com/elastifile/errors"
 )
 
@@ -38,7 +39,7 @@ func mountEcfs(mountPoint string, volOptions *volumeOptions, volId volumeIdType)
 		return err
 	}
 
-	glog.Infof("ECFS: Mounting volume %v on %v", volId, mountPoint)
+	glog.V(log.INFO).Infof("ECFS: Mounting volume %v on %v", volId, mountPoint)
 	// TODO: Don't create eManage client for each action (will need relogin support)
 	var emsClient emanageClient
 	dc, export, err := emsClient.GetDcDefaultExportByVolumeId(volId)
@@ -69,7 +70,7 @@ func mountEcfsSnapshotExport(mountPoint string, volOptions *volumeOptions, volId
 		return err
 	}
 
-	glog.Infof("ECFS: Mounting volume from snapshot %v on %v", volId, mountPoint)
+	glog.V(log.INFO).Infof("ECFS: Mounting volume from snapshot %v on %v", volId, mountPoint)
 
 	volDesc, err := parseVolumeId(volId)
 	if err != nil {

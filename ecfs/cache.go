@@ -1,6 +1,10 @@
 package main
 
-import "github.com/golang/glog"
+import (
+	"github.com/golang/glog"
+
+	"csi-provisioner-elastifile/ecfs/log"
+)
 
 type CachedVolume struct {
 	ID      volumeIdType
@@ -33,7 +37,7 @@ func cacheVolumeRemove(volumeId volumeIdType) {
 			return
 		}
 	}
-	glog.V(6).Infof("Tried to remove from cache Volume Id that wasn't there - %v", volumeId)
+	glog.V(log.DEBUG).Infof("Tried to remove from cache Volume Id that wasn't there - %v", volumeId)
 }
 
 type CachedSnapshot struct {
@@ -65,7 +69,7 @@ func cacheSnapshotRemoveById(snapshotId int) {
 			return
 		}
 	}
-	glog.V(6).Infof("Tried to remove from cache Snapshot Id that wasn't there - %v", snapshotId)
+	glog.V(log.DEBUG).Infof("Tried to remove from cache Snapshot Id that wasn't there - %v", snapshotId)
 }
 
 func cacheSnapshotRemoveByName(snapshotName string) {

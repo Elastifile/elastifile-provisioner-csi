@@ -18,9 +18,11 @@ package main
 
 import (
 	"flag"
-	"github.com/golang/glog"
 	"os"
 
+	"github.com/golang/glog"
+
+	"csi-provisioner-elastifile/ecfs/log"
 	_ "github.com/elastifile/emanage-go/src/emanage-client"
 	"github.com/go-errors/errors"
 )
@@ -37,7 +39,7 @@ var (
 )
 
 func main() {
-	glog.Info("Entering ECFS plugin")
+	glog.V(log.HIGH_LEVEL_INFO).Info("Entering ECFS plugin")
 	flag.Parse()
 
 	err := updateConfigEkfs()
@@ -49,6 +51,6 @@ func main() {
 	driver := NewECFSDriver()
 	driver.Run(*driverName, *nodeId, *endpoint, *mounter)
 
-	glog.Info("Exiting ECFS plugin")
+	glog.V(log.HIGH_LEVEL_INFO).Info("Exiting ECFS plugin")
 	os.Exit(0)
 }

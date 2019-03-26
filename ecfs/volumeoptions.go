@@ -21,9 +21,9 @@ import (
 
 	"github.com/golang/glog"
 
+	"csi-provisioner-elastifile/ecfs/log"
 	"github.com/elastifile/emanage-go/src/emanage-client"
 	"github.com/elastifile/errors"
-
 	"optional"
 	"size"
 )
@@ -157,6 +157,6 @@ func newVolumeOptions(volOptions map[string]string) (opts *volumeOptions, err er
 	}
 	opts.Access = paramStr
 
-	glog.V(6).Infof("ecfs: Current volume options: %+v", opts)
+	glog.V(log.DEBUG).Infof("ecfs: Current volume options: %+v", opts)
 	return
 }
