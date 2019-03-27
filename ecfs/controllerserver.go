@@ -85,7 +85,7 @@ func (cs *controllerServer) CreateVolume(ctx context.Context, req *csi.CreateVol
 
 	// Check if volume with this name has already been requested - this operation MUST be idempotent
 	var volumeId volumeIdType
-	volume, cacheHit := cacheVolumeGet(req.GetName())
+	volume, cacheHit := volumeCache.Get(req.GetName())
 	if cacheHit {
 		if volume.IsReady {
 			response = getCreateVolumeResponse(volume.ID, volOptions, req)
@@ -94,7 +94,7 @@ func (cs *controllerServer) CreateVolume(ctx context.Context, req *csi.CreateVol
 		glog.V(log.DEBUG).Infof("ecfs: Received repeat request to create volume %v, but "+
 			"the volume is not ready yet", req.GetName())
 	} else {
-		cacheVolumeSet(req.GetName(), volumeId, false)
+		volumeCache.Set(req.GetName(), volumeIdType(""), false)
 	}
 
 	// TODO: Don't create eManage client for each action (will need relogin support)
@@ -141,10 +141,9 @@ func (cs *controllerServer) CreateVolume(ctx context.Context, req *csi.CreateVol
 			return
 		}
 	}
-	volOptions.VolumeId = volumeId
 
-	cacheVolumeSet(req.GetName(), volumeId, true)
-	glog.V(log.INFO).Infof("ecfs: Created volume %v", volOptions.VolumeId)
+	volumeCache.Set(req.GetName(), volumeId, true)
+	glog.V(log.INFO).Infof("ecfs: Created volume %v", volumeId)
 
 	response = getCreateVolumeResponse(volumeId, volOptions, req)
 	return
@@ -192,7 +191,7 @@ func (cs *controllerServer) DeleteVolume(ctx context.Context, req *csi.DeleteVol
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	cacheVolumeRemove(volumeIdType(req.GetVolumeId()))
+	volumeCache.Remove(volumeIdType(req.GetVolumeId()))
 	glog.V(log.INFO).Infof("ecfs: Deleted volume %s", volId)
 	return &csi.DeleteVolumeResponse{}, nil
 }
@@ -275,7 +274,7 @@ func (cs *controllerServer) CreateSnapshot(ctx context.Context, req *csi.CreateS
 	}
 
 	var ecfsSnapshot *emanage.Snapshot
-	snapshot, cacheHit := cacheSnapshotGet(req.GetName())
+	snapshot, cacheHit := snapshotCache.Get(req.GetName())
 	if cacheHit {
 		glog.V(log.DEBUG).Infof("ecfs: Received repeat request to create snapshot %v", req.GetName())
 
@@ -323,7 +322,7 @@ func (cs *controllerServer) CreateSnapshot(ctx context.Context, req *csi.CreateS
 		err = errors.WrapPrefix(err, fmt.Sprintf("Failed to convert snapshot id %v to int",
 			response.Snapshot.GetSnapshotId()), 0)
 	}
-	cacheSnapshotSet(req.GetName(), ecfsSnapshot.ID, true)
+	snapshotCache.Set(req.GetName(), ecfsSnapshot.ID, true)
 
 	response, err = getCreateSnapshotResponse(ecfsSnapshot, req)
 
@@ -341,7 +340,7 @@ func (cs *controllerServer) DeleteSnapshot(ctx context.Context, req *csi.DeleteS
 		return
 	}
 
-	cacheSnapshotRemoveByName(req.GetSnapshotId())
+	snapshotCache.RemoveByName(req.GetSnapshotId())
 
 	glog.V(log.INFO).Infof("ecfs: Deleted snapshot %v", req.SnapshotId)
 
