@@ -21,6 +21,8 @@ func AssertEqual(t *testing.T, a interface{}, b interface{}) {
 	debug.PrintStack()
 }
 
+// ============================================================================
+
 const (
 	testVolName string       = "testvolname"
 	testVolId   volumeIdType = "testvolid"
@@ -32,32 +34,32 @@ const (
 var emptyVolume *CachedVolume
 
 func TestCacheVolumeGet(t *testing.T) {
-	val, hit := cacheVolumeGet(testVolName)
+	val, hit := volumeCache.Get(testVolName)
 	AssertEqual(t, val, emptyVolume)
 	AssertEqual(t, hit, false)
 
-	cacheVolumeSet(testVolName, testVolId, volReady)
-	val, hit = cacheVolumeGet(testVolName)
+	volumeCache.Set(testVolName, testVolId, volReady)
+	val, hit = volumeCache.Get(testVolName)
 	AssertEqual(t, val.ID, testVolId)
 	AssertEqual(t, val.IsReady, volReady)
 	AssertEqual(t, hit, true)
 }
 
 func TestCacheVolumeSet(t *testing.T) {
-	cacheVolumeSet(testVolName, testVolId, volReady)
-	val, hit := cacheVolumeGet(testVolName)
+	volumeCache.Set(testVolName, testVolId, volReady)
+	val, hit := volumeCache.Get(testVolName)
 	AssertEqual(t, val.ID, testVolId)
 	AssertEqual(t, val.IsReady, volReady)
 	AssertEqual(t, hit, true)
 
-	cacheVolumeSet(testVolName, testVolId2, volReady)
-	val, hit = cacheVolumeGet(testVolName)
+	volumeCache.Set(testVolName, testVolId2, volReady)
+	val, hit = volumeCache.Get(testVolName)
 	AssertEqual(t, val.ID, testVolId2)
 	AssertEqual(t, val.IsReady, volReady)
 	AssertEqual(t, hit, true)
 
-	cacheVolumeSet(testVolName, testVolId, volNotReady) // Reset Exists to false
-	val, hit = cacheVolumeGet(testVolName)
+	volumeCache.Set(testVolName, testVolId, volNotReady) // Reset Exists to false
+	val, hit = volumeCache.Get(testVolName)
 	AssertEqual(t, val.ID, testVolId)
 	AssertEqual(t, val.IsReady, volNotReady)
 	AssertEqual(t, hit, true)
@@ -65,22 +67,109 @@ func TestCacheVolumeSet(t *testing.T) {
 
 func TestCacheVolumeRemove(t *testing.T) {
 	// Remove non-existent volume
-	cacheVolumeRemove(volumeIdType(testVolId))
-	cacheVolumeRemove(volumeIdType(testVolId2))
-	val, hit := cacheVolumeGet(testVolName)
+	volumeCache.Remove(volumeIdType(testVolId))
+	volumeCache.Remove(volumeIdType(testVolId2))
+	val, hit := volumeCache.Get(testVolName)
 	AssertEqual(t, val, emptyVolume)
 	AssertEqual(t, hit, false)
 
 	// Remove existing volume
-	cacheVolumeSet(testVolName, testVolId, volReady)
-	cacheVolumeRemove(testVolId)
-	val, hit = cacheVolumeGet(testVolName)
+	volumeCache.Set(testVolName, testVolId, volReady)
+	volumeCache.Remove(testVolId)
+	val, hit = volumeCache.Get(testVolName)
 	AssertEqual(t, val, emptyVolume)
 	AssertEqual(t, hit, false)
 
 	// Remove previously existing and removed volume
-	cacheVolumeRemove(testVolId)
-	val, hit = cacheVolumeGet(testVolName)
+	volumeCache.Remove(testVolId)
+	val, hit = volumeCache.Get(testVolName)
 	AssertEqual(t, val, emptyVolume)
+	AssertEqual(t, hit, false)
+}
+
+// ============================================================================
+
+const (
+	testSnapName string = "testsnapname"
+	testSnapId   int    = 1
+	testSnapId2  int    = 2
+	snapReady           = true
+	snapNotReady        = false
+)
+
+var emptySnapshot *CachedSnapshot
+
+func TestCacheSnapshotGet(t *testing.T) {
+	val, hit := snapshotCache.Get(testSnapName)
+	AssertEqual(t, val, emptySnapshot)
+	AssertEqual(t, hit, false)
+
+	snapshotCache.Set(testSnapName, testSnapId, snapReady)
+	val, hit = snapshotCache.Get(testSnapName)
+	AssertEqual(t, val.ID, testSnapId)
+	AssertEqual(t, val.IsReady, snapReady)
+	AssertEqual(t, hit, true)
+}
+
+func TestCacheSnapshotSet(t *testing.T) {
+	snapshotCache.Set(testSnapName, testSnapId, snapReady)
+	val, hit := snapshotCache.Get(testSnapName)
+	AssertEqual(t, val.ID, testSnapId)
+	AssertEqual(t, val.IsReady, snapReady)
+	AssertEqual(t, hit, true)
+
+	snapshotCache.Set(testSnapName, testSnapId2, snapReady)
+	val, hit = snapshotCache.Get(testSnapName)
+	AssertEqual(t, val.ID, testSnapId2)
+	AssertEqual(t, val.IsReady, snapReady)
+	AssertEqual(t, hit, true)
+
+	snapshotCache.Set(testSnapName, testSnapId, snapNotReady) // Reset IsReady to false
+	val, hit = snapshotCache.Get(testSnapName)
+	AssertEqual(t, val.ID, testSnapId)
+	AssertEqual(t, val.IsReady, snapNotReady)
+	AssertEqual(t, hit, true)
+}
+
+func TestCacheSnapshotRemoveById(t *testing.T) {
+	// Remove non-existent snapshot
+	snapshotCache.RemoveById(testSnapId)
+	snapshotCache.RemoveById(testSnapId2)
+	val, hit := snapshotCache.Get(testSnapName)
+	AssertEqual(t, val, emptySnapshot)
+	AssertEqual(t, hit, false)
+
+	// Remove existing snapshot
+	snapshotCache.Set(testSnapName, testSnapId, snapReady)
+	snapshotCache.RemoveById(testSnapId)
+	val, hit = snapshotCache.Get(testSnapName)
+	AssertEqual(t, val, emptySnapshot)
+	AssertEqual(t, hit, false)
+
+	// Remove previously existing and removed snapshot
+	snapshotCache.RemoveById(testSnapId)
+	val, hit = snapshotCache.Get(testSnapName)
+	AssertEqual(t, val, emptySnapshot)
+	AssertEqual(t, hit, false)
+}
+
+func TestCacheSnapshotRemoveByName(t *testing.T) {
+	// Remove non-existent snapshot
+	snapshotCache.RemoveByName(testSnapName)
+	val, hit := snapshotCache.Get(testSnapName)
+	AssertEqual(t, val, emptySnapshot)
+	AssertEqual(t, hit, false)
+
+	// Remove existing snapshot
+	snapshotCache.Set(testSnapName, testSnapId, snapReady)
+	snapshotCache.RemoveByName(testSnapName)
+	val, hit = snapshotCache.Get(testSnapName)
+	AssertEqual(t, val, emptySnapshot)
+	AssertEqual(t, hit, false)
+
+	// Remove previously existing and removed snapshot
+	snapshotCache.RemoveByName(testSnapName)
+	val, hit = snapshotCache.Get(testSnapName)
+	AssertEqual(t, val, emptySnapshot)
 	AssertEqual(t, hit, false)
 }

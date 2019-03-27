@@ -11,29 +11,32 @@ type CachedVolume struct {
 	IsReady bool
 }
 
+type VolumeCache map[string]*CachedVolume
+
 // Note that this is a naive cache implementation and is broken if ControllerServer crashes in-between requests
 // Use something like groupcache (probably an overkill) to work around this limitation
-var volumeCache map[string]*CachedVolume
+var volumeCache VolumeCache
 
-func cacheVolumeGet(volumeName string) (cachedVolume *CachedVolume, cacheHit bool) {
-	cachedVolume, cacheHit = volumeCache[volumeName]
+func (c *VolumeCache) Get(volumeName string) (cachedVolume *CachedVolume, cacheHit bool) {
+	cachedVolume, cacheHit = (*c)[volumeName]
 	return
 }
 
-func cacheVolumeSet(volumeName string, volumeId volumeIdType, isReady bool) {
-	if volumeCache == nil {
-		volumeCache = make(map[string]*CachedVolume)
+// TODO: Wrap Set with CreateStarted/CreateEnded, add timestamps
+func (c *VolumeCache) Set(volumeName string, volumeId volumeIdType, isReady bool) {
+	if *c == nil {
+		*c = make(VolumeCache)
 	}
-	volumeCache[volumeName] = &CachedVolume{
+	(*c)[volumeName] = &CachedVolume{
 		ID:      volumeId,
 		IsReady: isReady,
 	}
 }
 
-func cacheVolumeRemove(volumeId volumeIdType) {
-	for volName, volume := range volumeCache {
+func (c *VolumeCache) Remove(volumeId volumeIdType) {
+	for volName, volume := range *c {
 		if volume.ID == volumeId {
-			delete(volumeCache, volName)
+			delete(*c, volName)
 			return
 		}
 	}
@@ -41,37 +44,39 @@ func cacheVolumeRemove(volumeId volumeIdType) {
 }
 
 type CachedSnapshot struct {
-	ID     int // ECFS snapshot ID
-	Exists bool
+	ID      int // ECFS snapshot ID
+	IsReady bool
 }
 
-var snapshotCache map[string]*CachedSnapshot
+type SnapshotCache map[string]*CachedSnapshot
 
-func cacheSnapshotGet(snapshotName string) (cachedSnapshot *CachedSnapshot, cacheHit bool) {
-	cachedSnapshot, cacheHit = snapshotCache[snapshotName]
+var snapshotCache SnapshotCache
+
+func (c *SnapshotCache) Get(snapshotName string) (cachedSnapshot *CachedSnapshot, cacheHit bool) {
+	cachedSnapshot, cacheHit = (*c)[snapshotName]
 	return
 }
 
-func cacheSnapshotSet(snapshotName string, snapshotId int, exists bool) {
-	if snapshotCache == nil {
-		snapshotCache = make(map[string]*CachedSnapshot)
+func (c *SnapshotCache) Set(snapshotName string, snapshotId int, exists bool) {
+	if *c == nil {
+		*c = make(map[string]*CachedSnapshot)
 	}
-	snapshotCache[snapshotName] = &CachedSnapshot{
-		ID:     snapshotId,
-		Exists: exists,
+	(*c)[snapshotName] = &CachedSnapshot{
+		ID:      snapshotId,
+		IsReady: exists,
 	}
 }
 
-func cacheSnapshotRemoveById(snapshotId int) {
-	for volName, snapshot := range snapshotCache {
+func (c *SnapshotCache) RemoveById(snapshotId int) {
+	for volName, snapshot := range *c {
 		if snapshot.ID == snapshotId {
-			delete(snapshotCache, volName)
+			delete(*c, volName)
 			return
 		}
 	}
 	glog.V(log.DEBUG).Infof("Tried to remove from cache Snapshot Id that wasn't there - %v", snapshotId)
 }
 
-func cacheSnapshotRemoveByName(snapshotName string) {
-	delete(snapshotCache, snapshotName)
+func (c *SnapshotCache) RemoveByName(snapshotName string) {
+	delete(*c, snapshotName)
 }
