@@ -8,9 +8,11 @@ import (
 )
 
 const (
-	envNamespace = "CSI_NAMESPACE"
-	envEKFS      = "EKFS"
-	envAppName   = "APP_NAME"
+	// Environment variables are set at deployment time via plugin container's manifest
+	envNamespace    = "CSI_NAMESPACE"
+	envVarK8sNodeID = "NODE_ID"
+	envAppName      = "APP_NAME"
+	envEKFS         = "EKFS"
 
 	// Defaults
 	defaultNamespace = "default"

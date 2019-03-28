@@ -7,8 +7,10 @@ import (
 )
 
 type CachedVolume struct {
-	ID      volumeIdType
-	IsReady bool
+	Owner     ResourceOwner
+	ID        volumeIdType
+	IsReady   bool
+	IsCopying bool
 }
 
 type VolumeCache map[string]*CachedVolume
