@@ -18,6 +18,7 @@ package main
 
 import (
 	"fmt"
+	"os"
 	"os/exec"
 	"strconv"
 	"strings"
@@ -253,4 +254,8 @@ func copyDir(src, dst string) (err error) {
 		glog.V(log.DETAILED_INFO).Infof("ecfs: Done copying %v to %v", src, dst)
 	}
 	return
+}
+
+func GetPluginNodeName() string {
+	return os.Getenv(envVarK8sNodeID)
 }
