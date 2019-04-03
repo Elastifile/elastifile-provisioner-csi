@@ -55,8 +55,10 @@ func GetProvisionerSettings() (configMap map[string]string, secrets map[string][
 		err = errors.WrapPrefix(err, "Failed to get secrets", 0)
 	}
 
-	glog.V(log.DETAILED_DEBUG).Infof("Provisioner settings - config map: %+v", configMap)
-	glog.V(log.DETAILED_DEBUG).Infof("Provisioner settings - secrets: %+v", secrets)
+	glog.V(log.DETAILED_DEBUG).Infof("ecfs: Provisioner settings - config map: %+v", configMap)
+
+	//TODO: convert secrets map[string][]byte to type Secrets, and add String() with masked password
+	glog.V(log.DETAILED_DEBUG).Infof("ecfs: Provisioner settings - secrets: %+v", secrets)
 
 	return
 }
