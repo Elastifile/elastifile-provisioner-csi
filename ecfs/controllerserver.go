@@ -69,7 +69,7 @@ func (cs *controllerServer) CreateVolume(ctx context.Context, req *csi.CreateVol
 		glog.Errorf(err.Error())
 		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
-	glog.V(log.DETAILED_DEBUG).Infof("CreateVolume options: %+v", volOptions)
+	glog.V(log.DETAILED_DEBUG).Infof("ecfs: CreateVolume options: %+v", volOptions)
 
 	capacity := req.GetCapacityRange().GetRequiredBytes()
 	if capacity > 0 {
@@ -94,7 +94,12 @@ func (cs *controllerServer) CreateVolume(ctx context.Context, req *csi.CreateVol
 		glog.V(log.DEBUG).Infof("ecfs: Received repeat request to create volume %v, but "+
 			"the volume is not ready yet", req.GetName())
 	} else {
-		volumeCache.Set(req.GetName(), volumeIdType(""), false)
+		err = volumeCache.Create(req.GetName())
+		if err != nil {
+			err = errors.WrapPrefix(err, "Failed to create volume cache entry", 0)
+			glog.Errorf(err.Error())
+			return nil, status.Error(codes.FailedPrecondition, err.Error())
+		}
 	}
 
 	// TODO: Don't create eManage client for each action (will need relogin support)
@@ -142,7 +147,12 @@ func (cs *controllerServer) CreateVolume(ctx context.Context, req *csi.CreateVol
 		}
 	}
 
-	volumeCache.Set(req.GetName(), volumeId, true)
+	err = volumeCache.Set(req.GetName(), volumeId, true)
+	if err != nil {
+		err = errors.Errorf("ecfs: Failed to update cache entry for volume %v (%v), "+
+			"but the volume was successfully created", req.GetName(), volumeId)
+		glog.Warningf(err.Error())
+	}
 	glog.V(log.INFO).Infof("ecfs: Created volume %v", volumeId)
 
 	response = getCreateVolumeResponse(volumeId, volOptions, req)
@@ -168,7 +178,7 @@ func (cs *controllerServer) DeleteVolume(ctx context.Context, req *csi.DeleteVol
 		return nil, errors.Wrap(err, 0)
 	}
 
-	// TODO: Cleanup remains of snapshot-export-as-volume legacy
+	// TODO: Cleanup the remains of the snapshot-export-as-volume legacy
 	deleteVolumeFunc := deleteVolume // Regular volume
 	if volDesc.SnapshotId != 0 {     // Snapshot-export-as-volume
 		deleteVolumeFunc = deleteVolumeFromSnapshot
@@ -191,7 +201,13 @@ func (cs *controllerServer) DeleteVolume(ctx context.Context, req *csi.DeleteVol
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	volumeCache.Remove(volumeIdType(req.GetVolumeId()))
+	err = volumeCache.Remove(volumeIdType(req.GetVolumeId()))
+	if err != nil {
+		err = errors.Errorf("ecfs: Failed to remove cache entry for volume %v, "+
+			"but the volume was successfully deleted", req.GetVolumeId())
+		glog.Warningf(err.Error())
+	}
+
 	glog.V(log.INFO).Infof("ecfs: Deleted volume %s", volId)
 	return &csi.DeleteVolumeResponse{}, nil
 }
