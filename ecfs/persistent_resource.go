@@ -107,7 +107,7 @@ func (pr *PersistentResource) loadFromPersistentStore() {
 			err = errors.WrapPrefix(err, fmt.Sprintf("Failed to get config map %v", confMapName), 0)
 			panic(err.Error())
 		} else {
-			glog.V(log.DETAILED_DEBUG).Infof("Config map %v not found - assuming new resource", confMapName)
+			glog.V(log.DETAILED_DEBUG).Infof("ecfs: Config map %v not found - assuming new resource", confMapName)
 		}
 	}
 
@@ -258,18 +258,43 @@ func (pr *PersistentResource) KeepAlive() (err error) {
 	return
 }
 
+func (pr *PersistentResource) KeepAliveRoutine(errChan chan error, stopChan chan struct{}, timeout time.Duration) {
+	ticker := time.NewTicker(30 * time.Second)
+	defer ticker.Stop()
+	timer := time.NewTimer(timeout)
+	defer timer.Stop()
+
+	for {
+		select {
+		case <-ticker.C:
+			err := pr.KeepAlive()
+			if err != nil {
+				err = errors.WrapPrefix(err, fmt.Sprintf("Failed to send KeepAlive for %v", pr.resourceKey()), 0)
+			}
+		case <-timer.C:
+			errChan <- errors.Errorf("Timed out sending KeepAlive - aborting routine")
+		case <-stopChan:
+			errChan <- nil
+		}
+	}
+}
+
 // Delete removes persistent data used by the resource
 func (pr *PersistentResource) Delete() (err error) {
 	err = co.DeleteConfigMap(Namespace(), pr.resourceKey())
 	if err != nil {
-		err = errors.WrapPrefix(err, fmt.Sprintf("Failed to delete persistent resource: %v %v",
-			resourceTypeName[pr.ResourceType], pr.ResourceName), 0)
+		if !isErrorDoesNotExist(err) {
+			err = errors.WrapPrefix(err, fmt.Sprintf("Failed to delete persistent resource: %v %v",
+				resourceTypeName[pr.ResourceType], pr.ResourceName), 0)
+		} else {
+			glog.V(log.DETAILED_DEBUG).Infof("ecfs: Config map %v not found - assuming success", pr.resourceKey())
+			err = nil
+		}
 	}
 	return
 }
 
 // TODO: Add background keepalive thread per resource being actively worked on
-// TODO: Cleanup resources dead for over N hours
 
 // TODO: Decide what to do with existing DCs whose volumes were deleted (e.g. due to existing data/snapshots)
 // Deleting all snapshots and their exports makes sense, but existing data is something that needs PM's decision

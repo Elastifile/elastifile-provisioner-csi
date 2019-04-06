@@ -18,7 +18,7 @@ type CachedVolume struct {
 
 type VolumeCache map[string]*CachedVolume
 
-var volumeCache VolumeCache
+var volumeCache VolumeCache // Global volume cache
 
 func (c *VolumeCache) Create(volumeName string) (err error) {
 	if *c == nil {

@@ -78,19 +78,23 @@ func (cs *controllerServer) CreateVolume(ctx context.Context, req *csi.CreateVol
 	// Check if volume with this name has already been requested - this operation MUST be idempotent
 	var volumeId volumeIdType
 	volume, cacheHit := volumeCache.Get(req.GetName())
-	if cacheHit {
-		if volume.IsReady {
-			response = getCreateVolumeResponse(volume.ID, volOptions, req)
-			return
-		}
-		glog.V(log.DEBUG).Infof("ecfs: Received repeat request to create volume %v, but "+
-			"the volume is not ready yet", req.GetName())
-	} else {
+	if !cacheHit {
 		err = volumeCache.Create(req.GetName())
 		if err != nil {
 			err = errors.WrapPrefix(err, "Failed to create volume cache entry", 0)
 			glog.Errorf(err.Error())
 			return nil, status.Error(codes.FailedPrecondition, err.Error())
+		}
+	} else {
+		if !volume.IsReady {
+			glog.V(log.DETAILED_INFO).Infof("ecfs: Received repeat request to create volume %v, "+
+				"but the volume is not ready yet", req.GetName())
+			return nil, status.Error(codes.Aborted, "Volume creation in progress")
+		} else {
+			glog.V(log.DETAILED_INFO).Infof("ecfs: Received repeat request to create volume %v, "+
+				"returning success", req.GetName())
+			response = getCreateVolumeResponse(volume.ID, volOptions, req)
+			return
 		}
 	}
 
