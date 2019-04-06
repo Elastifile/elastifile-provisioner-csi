@@ -25,8 +25,16 @@ assert_cmd kubectl delete -f ${POD_CLEANUP_MANIFEST} --namespace ${NAMESPACE}
 
 echo "Deleting pvc"
 assert_cmd kubectl delete -f ${PVC_MANIFEST} --namespace ${NAMESPACE}
+
 echo "Waiting for the pv/pvc to be deleted"
-sleep 120
+wait=1
+while [[ ${wait} != 0 ]]; do
+    kubectl get -f ${PVC_MANIFEST}
+    if [[ $? == 0 ]]; then
+        wait=0
+    fi
+    sleep 1
+done
 
 echo "Pod delete completed"
 exec_cmd kubectl get pv,pvc,volumesnapshot,volumesnapshotcontent,pod --namespace ${NAMESPACE}
