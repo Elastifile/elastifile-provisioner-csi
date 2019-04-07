@@ -52,7 +52,7 @@ func (cs *controllerServer) CreateVolume(ctx context.Context, req *csi.CreateVol
 
 	pluginConf, err := pluginConfig()
 	if err != nil {
-		return nil, status.Error(codes.InvalidArgument, err.Error())
+		return nil, status.Error(codes.Internal, err.Error())
 	}
 
 	volOptions, err := newVolumeOptions(req.GetParameters())
@@ -83,18 +83,18 @@ func (cs *controllerServer) CreateVolume(ctx context.Context, req *csi.CreateVol
 		if err != nil {
 			err = errors.WrapPrefix(err, "Failed to create volume cache entry", 0)
 			glog.Errorf(err.Error())
-			return nil, status.Error(codes.FailedPrecondition, err.Error())
+			return nil, status.Error(codes.Internal, err.Error())
 		}
 	} else {
 		if !volume.IsReady {
 			glog.V(log.DETAILED_INFO).Infof("ecfs: Received repeat request to create volume %v, "+
 				"but the volume is not ready yet", req.GetName())
-			return nil, status.Error(codes.Aborted, "Volume creation in progress")
+			return nil, status.Error(codes.Aborted, "Volume creation is already in progress")
 		} else {
 			glog.V(log.DETAILED_INFO).Infof("ecfs: Received repeat request to create volume %v, "+
 				"returning success", req.GetName())
 			response = getCreateVolumeResponse(volume.ID, volOptions, req)
-			return
+			return // Success
 		}
 	}
 
@@ -102,7 +102,7 @@ func (cs *controllerServer) CreateVolume(ctx context.Context, req *csi.CreateVol
 	// This has to wait until the new unified emanage client is available, since that one has generic relogin handler support
 	var ems emanageClient
 
-	if req.VolumeContentSource == nil { // Create a regular volume, i.e. new empty Data Container
+	if req.GetVolumeContentSource() == nil { // Create a regular volume, i.e. new empty Data Container
 		glog.V(log.DEBUG).Infof("ecfs: Creating regular volume %v", req.GetName())
 		volumeId, err = createEmptyVolume(ems.GetClient(), volOptions)
 		if err != nil {
@@ -110,7 +110,7 @@ func (cs *controllerServer) CreateVolume(ctx context.Context, req *csi.CreateVol
 			glog.Errorf(err.Error())
 			return nil, status.Error(codes.Internal, err.Error())
 		}
-	} else { // Volume clone / Restore snapshot
+	} else { // Create a pre-populated volume
 		source := req.GetVolumeContentSource()
 		sourceType := source.GetType()
 		switch sourceType.(type) {
@@ -139,7 +139,7 @@ func (cs *controllerServer) CreateVolume(ctx context.Context, req *csi.CreateVol
 		default:
 			err = errors.Errorf("Unsupported volume source type: %v (%v)", sourceType, source)
 			glog.Errorf(err.Error())
-			return
+			return nil, status.Error(codes.InvalidArgument, err.Error())
 		}
 	}
 
@@ -152,7 +152,7 @@ func (cs *controllerServer) CreateVolume(ctx context.Context, req *csi.CreateVol
 	glog.V(log.INFO).Infof("ecfs: Created volume %v", volumeId)
 
 	response = getCreateVolumeResponse(volumeId, volOptions, req)
-	return
+	return // Success
 }
 
 func (cs *controllerServer) DeleteVolume(ctx context.Context, req *csi.DeleteVolumeRequest) (*csi.DeleteVolumeResponse, error) {
