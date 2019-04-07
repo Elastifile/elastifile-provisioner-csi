@@ -18,6 +18,7 @@ package main
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/container-storage-interface/spec/lib/go/csi"
 	"github.com/golang/glog"
@@ -288,6 +289,12 @@ func restoreSnapshotToVolume(emsClient *emanageClient, source *csi.VolumeContent
 		err = errors.WrapPrefix(err, fmt.Sprintf("Failed to copy snapshot %v (%v) contents to volume %v (%v)",
 			srcSnapName, srcSnapMountPath, dstVolumeId, dstVolMountPath), 0)
 		return
+	}
+
+	delaySec := getDebugValueInt(debugValueCloneDelaySec, nil)
+	if delaySec > 0 {
+		glog.V(log.DETAILED_DEBUG).Infof("ecfs: Debug - delaying snapshot restore by %v seconds", delaySec)
+		time.Sleep(time.Duration(delaySec) * time.Second)
 	}
 
 	return
