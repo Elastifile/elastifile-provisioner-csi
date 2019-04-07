@@ -353,7 +353,7 @@ func (cs *controllerServer) DeleteSnapshot(ctx context.Context, req *csi.DeleteS
 	err = deleteSnapshot(ems.GetClient(), req.GetSnapshotId())
 	if err != nil {
 		err = errors.WrapPrefix(err, fmt.Sprintf("Failed to delete snapshot by id %v", req.GetSnapshotId()), 0)
-		return
+		return nil, status.Error(codes.Internal, err.Error())
 	}
 
 	snapshotCache.RemoveByName(req.GetSnapshotId())
