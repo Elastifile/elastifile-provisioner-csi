@@ -156,22 +156,23 @@ func (cs *controllerServer) CreateVolume(ctx context.Context, req *csi.CreateVol
 }
 
 func (cs *controllerServer) DeleteVolume(ctx context.Context, req *csi.DeleteVolumeRequest) (*csi.DeleteVolumeResponse, error) {
-	glog.V(log.HIGH_LEVEL_INFO).Infof("ecfs: Deleting volume %v", req.GetVolumeId())
-	if err := cs.validateDeleteVolumeRequest(req); err != nil {
-		err = errors.WrapPrefix(err, "DeleteVolumeRequest validation failed", 0)
-		glog.Errorf(err.Error())
-		return nil, err
-	}
-
 	var (
 		volId = volumeIdType(req.GetVolumeId())
 		err   error
 		ems   emanageClient
 	)
 
+	glog.V(log.HIGH_LEVEL_INFO).Infof("ecfs: Deleting volume %v", req.GetVolumeId())
+	if err = cs.validateDeleteVolumeRequest(req); err != nil {
+		err = errors.WrapPrefix(err, "DeleteVolumeRequest validation failed", 0)
+		glog.Errorf(err.Error())
+		return nil, status.Error(codes.InvalidArgument, err.Error())
+	}
+
 	volDesc, err := parseVolumeId(volId)
 	if err != nil {
-		return nil, errors.Wrap(err, 0)
+		err = errors.WrapPrefix(err, fmt.Sprintf("Failed to parse volume ID %v", volId), 0)
+		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
 
 	// TODO: Cleanup the remains of the snapshot-export-as-volume legacy
@@ -183,13 +184,14 @@ func (cs *controllerServer) DeleteVolume(ctx context.Context, req *csi.DeleteVol
 	if err != nil {
 		if isErrorDoesNotExist(err) { // Operation MUST be idempotent
 			glog.V(log.DEBUG).Infof("ecfs: Volume id %v not found - assuming already deleted", volId)
-			return &csi.DeleteVolumeResponse{}, nil
+			return &csi.DeleteVolumeResponse{}, nil // Success
 		}
 		if isWorkaround("EL-13618 - Failed read-dir for volume deletion") {
 			const EL13618 = "Failed read-dir"
 			if strings.Contains(err.Error(), EL13618) {
-				glog.Warningf("ecfs: Data Container delete failed due to EL-13618 - returning success to cleanup the pv. Actual error: %v", err)
-				return &csi.DeleteVolumeResponse{}, nil
+				glog.Warningf("ecfs: Data Container delete failed due to EL-13618 - returning success "+
+					"to cleanup the pv. Actual error: %v", err)
+				return &csi.DeleteVolumeResponse{}, nil // Success
 			}
 		}
 
@@ -205,7 +207,7 @@ func (cs *controllerServer) DeleteVolume(ctx context.Context, req *csi.DeleteVol
 	}
 
 	glog.V(log.INFO).Infof("ecfs: Deleted volume %s", volId)
-	return &csi.DeleteVolumeResponse{}, nil
+	return &csi.DeleteVolumeResponse{}, nil // Success
 }
 
 func (cs *controllerServer) ValidateVolumeCapabilities(ctx context.Context, req *csi.ValidateVolumeCapabilitiesRequest) (*csi.ValidateVolumeCapabilitiesResponse, error) {
