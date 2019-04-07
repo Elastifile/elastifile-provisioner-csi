@@ -290,7 +290,7 @@ func (cs *controllerServer) CreateSnapshot(ctx context.Context, req *csi.CreateS
 			//snapshotName = truncateStr(req.Name, maxSnapshotNameLen)
 			err = errors.Errorf("Snapshot name exceeds max allowed length of %v characters - %v "+
 				"(truncated version: %v)", maxSnapshotNameLen, req.GetName(), snapshotName)
-			return
+			return nil, status.Error(codes.InvalidArgument, err.Error())
 		}
 		req.Name = snapshotName
 	}
@@ -303,21 +303,19 @@ func (cs *controllerServer) CreateSnapshot(ctx context.Context, req *csi.CreateS
 		ecfsSnapshot, err = ems.GetClient().Snapshots.GetById(snapshot.ID)
 		if err != nil {
 			if isErrorDoesNotExist(err) {
-				// TODO: If empty response breaks CSI, fake the response with IsReady==false
-				return
+				return nil, status.Error(codes.Aborted, "Snapshot creation is already in progress")
 			}
-			err = status.Error(codes.Internal, errors.WrapPrefix(err,
-				fmt.Sprintf("Failed to get snapshot by id %v", snapshot.ID), 0).Error())
-			return
+			err = errors.WrapPrefix(err, fmt.Sprintf("Failed to get snapshot by id %v", snapshot.ID), 0)
+			return nil, status.Error(codes.Internal, err.Error())
 		}
 
 		response, err = getCreateSnapshotResponse(ecfsSnapshot, req)
 		if err != nil {
 			err = errors.Wrap(err, 0)
-			return
+			return nil, status.Error(codes.Internal, err.Error())
 		}
 
-		return
+		return // Success
 	}
 
 	volumeId := volumeIdType(req.GetSourceVolumeId())
@@ -328,28 +326,36 @@ func (cs *controllerServer) CreateSnapshot(ctx context.Context, req *csi.CreateS
 		if isErrorAlreadyExists(err) {
 			// Fetching snapshot by name to prevent a race between snapshot creation and snapshot id update in cache
 			// Assumption - snapshot name is unique in K8s cluster
-			ecfsSnapshot, err = ems.GetClient().GetSnapshotByName(req.GetName())
-			if err != nil {
-				err = errors.WrapPrefix(err,
+			var e error
+			ecfsSnapshot, e = ems.GetClient().GetSnapshotByName(req.GetName())
+			if e != nil {
+				e = errors.WrapPrefix(e,
 					fmt.Sprintf("Failed to create snapshot for volume %v with name %v", volumeId, req.GetName()), 0)
 			}
-			return
+			response, err = getCreateSnapshotResponse(ecfsSnapshot, req)
+			if err != nil {
+				err = errors.WrapPrefix(err, "Snapshot has been created, "+
+					"but there was a problem generating proper response", 0)
+				return nil, status.Error(codes.Internal, err.Error())
+			}
+			return // Success
 		}
 		err = errors.WrapPrefix(err,
 			fmt.Sprintf("Failed to create snapshot for volume %v with name %v", volumeId, req.GetName()), 0)
-		return
+		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	if err != nil {
-		err = errors.WrapPrefix(err, fmt.Sprintf("Failed to convert snapshot id %v to int",
-			response.Snapshot.GetSnapshotId()), 0)
-	}
 	snapshotCache.Set(req.GetName(), ecfsSnapshot.ID, true)
 
 	response, err = getCreateSnapshotResponse(ecfsSnapshot, req)
+	if err != nil {
+		err = errors.WrapPrefix(err, fmt.Sprintf("Snapshot %v created successfully, but generating response "+
+			"has failed", req.Name), 0)
+		return nil, status.Error(codes.Unknown, err.Error())
+	}
 
 	glog.V(log.INFO).Infof("ecfs: Created snapshot %v. Ready: %v", req.Name, response.Snapshot.ReadyToUse)
-	return
+	return // Success
 }
 
 func (cs *controllerServer) DeleteSnapshot(ctx context.Context, req *csi.DeleteSnapshotRequest) (response *csi.DeleteSnapshotResponse, err error) {
