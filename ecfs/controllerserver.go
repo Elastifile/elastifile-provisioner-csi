@@ -390,13 +390,14 @@ func (cs *controllerServer) ListSnapshots(ctx context.Context, req *csi.ListSnap
 	glog.V(log.DETAILED_DEBUG).Infof("ecfs: ListSnapshots - enter. req: %+v", *req)
 
 	var ems emanageClient
-	ecfsSnapshots, nextToken, err := listSnapshots(ems.GetClient(), req.GetSnapshotId(), req.GetSourceVolumeId(), req.GetMaxEntries(), req.GetStartingToken())
+	ecfsSnapshots, nextToken, err := listSnapshots(ems.GetClient(), req.GetSnapshotId(), req.GetSourceVolumeId(),
+		req.GetMaxEntries(), req.GetStartingToken())
 	if err != nil {
 		err = errors.WrapPrefix(err, fmt.Sprintf("Failed to list snapshots. Request: %+v", *req), 0)
-		return
+		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	glog.V(log.DETAILED_DEBUG).Infof("Listing snapshots: %+v", ecfsSnapshots)
+	glog.V(log.DETAILED_DEBUG).Infof("ecfs: Listing snapshots: %+v", ecfsSnapshots)
 
 	var listEntries []*csi.ListSnapshotsResponse_Entry
 	for _, ecfsSnapshot := range ecfsSnapshots {
@@ -405,7 +406,7 @@ func (cs *controllerServer) ListSnapshots(ctx context.Context, req *csi.ListSnap
 		csiSnapshot, err = snapshotEcfsToCsi(ems.GetClient(), ecfsSnapshot)
 		if err != nil {
 			err = errors.Wrap(err, 0)
-			return
+			return nil, status.Error(codes.Internal, err.Error())
 		}
 		listEntry := &csi.ListSnapshotsResponse_Entry{
 			Snapshot: csiSnapshot,
@@ -419,7 +420,7 @@ func (cs *controllerServer) ListSnapshots(ctx context.Context, req *csi.ListSnap
 	}
 
 	glog.V(log.DETAILED_INFO).Infof("ecfs: Listed %v snapshots", len(listEntries))
-	return
+	return // Success
 }
 
 // TODO: Implement (CSI 1.1)
