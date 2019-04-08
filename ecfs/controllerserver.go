@@ -18,7 +18,6 @@ package main
 
 import (
 	"fmt"
-	csicommon "src/github.com/kubernetes-csi/drivers/pkg/csi-common"
 	"strings"
 
 	"github.com/container-storage-interface/spec/lib/go/csi/v0"
@@ -38,7 +37,7 @@ type controllerServer struct {
 	*csicommon.DefaultControllerServer
 }
 
-func getCreateVolumeResponse(volumeId volumeIdType, volOptions *volumeOptions, req *csi.CreateVolumeRequest) (response *csi.CreateVolumeResponse) {
+func getCreateVolumeResponse(volumeId volumeHandleType, volOptions *volumeOptions, req *csi.CreateVolumeRequest) (response *csi.CreateVolumeResponse) {
 	return &csi.CreateVolumeResponse{
 		Volume: &csi.Volume{
 			Id:            string(volumeId),
@@ -58,12 +57,13 @@ func (cs *controllerServer) CreateVolume(ctx context.Context, req *csi.CreateVol
 	glog.V(log.HIGH_LEVEL_INFO).Infof("ecfs: Creating volume: %v", req.GetName())
 	glog.V(log.DEBUG).Infof("ecfs: Received CreateVolumeRequest: %+v", *req)
 
-	pluginConf, err := pluginConfig()
-	if err != nil {
-		return nil, status.Error(codes.Internal, err.Error())
+	if err = cs.validateCreateVolumeRequest(req); err != nil {
+		err = errors.WrapPrefix(err, "CreateVolumeRequest validation failed", 0)
+		glog.Errorf(err.Error())
+		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
 
-	volOptions, err := newVolumeOptions(req.GetParameters())
+	volOptions, err := newVolumeOptions(req)
 	if err != nil {
 		err = errors.WrapPrefix(err, "Validation of volume options failed", 0)
 		glog.Errorf(err.Error())
@@ -71,20 +71,8 @@ func (cs *controllerServer) CreateVolume(ctx context.Context, req *csi.CreateVol
 	}
 	glog.V(log.DETAILED_DEBUG).Infof("ecfs: CreateVolume options: %+v", volOptions)
 
-	capacity := req.GetCapacityRange().GetRequiredBytes()
-	if capacity > 0 {
-		volOptions.Capacity = capacity
-	}
-	volOptions.NfsAddress = pluginConf.NFSServer
-
-	if err = cs.validateCreateVolumeRequest(req); err != nil {
-		err = errors.WrapPrefix(err, "CreateVolumeRequest validation failed", 0)
-		glog.Errorf(err.Error())
-		return nil, status.Error(codes.InvalidArgument, err.Error())
-	}
-
 	// Check if volume with this name has already been requested - this operation MUST be idempotent
-	var volumeId volumeIdType
+	var volumeId volumeHandleType
 	volume, cacheHit := volumeCache.Get(req.GetName())
 	if !cacheHit {
 		err = volumeCache.Create(req.GetName())
@@ -101,7 +89,7 @@ func (cs *controllerServer) CreateVolume(ctx context.Context, req *csi.CreateVol
 		} else {
 			glog.V(log.DETAILED_INFO).Infof("ecfs: Received repeat request to create volume %v, "+
 				"returning success", req.GetName())
-			response = getCreateVolumeResponse(volume.ID, volOptions, req)
+			response = getCreateVolumeResponse(volumeHandleType(volume.ID), volOptions, req)
 			return // Success
 		}
 	}
@@ -151,7 +139,7 @@ func (cs *controllerServer) CreateVolume(ctx context.Context, req *csi.CreateVol
 		}
 	}
 
-	err = volumeCache.Set(req.GetName(), volumeId, true)
+	err = volumeCache.Set(req.GetName(), true)
 	if err != nil {
 		err = errors.Errorf("ecfs: Failed to update cache entry for volume %v (%v), "+
 			"but the volume was successfully created", req.GetName(), volumeId)
@@ -165,9 +153,9 @@ func (cs *controllerServer) CreateVolume(ctx context.Context, req *csi.CreateVol
 
 func (cs *controllerServer) DeleteVolume(ctx context.Context, req *csi.DeleteVolumeRequest) (*csi.DeleteVolumeResponse, error) {
 	var (
-		volId = volumeIdType(req.GetVolumeId())
-		err   error
-		ems   emanageClient
+		volName = volumeHandleType(req.GetVolumeId())
+		err     error
+		ems     emanageClient
 	)
 
 	glog.V(log.HIGH_LEVEL_INFO).Infof("ecfs: Deleting volume %v", req.GetVolumeId())
@@ -177,21 +165,10 @@ func (cs *controllerServer) DeleteVolume(ctx context.Context, req *csi.DeleteVol
 		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
 
-	volDesc, err := parseVolumeId(volId)
-	if err != nil {
-		err = errors.WrapPrefix(err, fmt.Sprintf("Failed to parse volume ID %v", volId), 0)
-		return nil, status.Error(codes.InvalidArgument, err.Error())
-	}
-
-	// TODO: Cleanup the remains of the snapshot-export-as-volume legacy
-	deleteVolumeFunc := deleteVolume // Regular volume
-	if volDesc.SnapshotId != 0 {     // Snapshot-export-as-volume
-		deleteVolumeFunc = deleteVolumeFromSnapshot
-	}
-	err = deleteVolumeFunc(ems.GetClient(), volDesc)
+	err = deleteVolume(ems.GetClient(), volName)
 	if err != nil {
 		if isErrorDoesNotExist(err) { // Operation MUST be idempotent
-			glog.V(log.DEBUG).Infof("ecfs: Volume id %v not found - assuming already deleted", volId)
+			glog.V(log.DEBUG).Infof("ecfs: Volume id %v not found - assuming already deleted", volName)
 			return &csi.DeleteVolumeResponse{}, nil // Success
 		}
 		if isWorkaround("EL-13618 - Failed read-dir for volume deletion") {
@@ -203,18 +180,18 @@ func (cs *controllerServer) DeleteVolume(ctx context.Context, req *csi.DeleteVol
 			}
 		}
 
-		glog.Warningf("Failed to delete volume %v: %v", volId, err)
+		glog.Warningf("Failed to delete volume %v: %v", volName, err)
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	err = volumeCache.Remove(volumeIdType(req.GetVolumeId()))
+	err = volumeCache.Remove(req.GetVolumeId())
 	if err != nil {
 		err = errors.Errorf("ecfs: Failed to remove cache entry for volume %v, "+
 			"but the volume was successfully deleted", req.GetVolumeId())
 		glog.Warningf(err.Error())
 	}
 
-	glog.V(log.INFO).Infof("ecfs: Deleted volume %s", volId)
+	glog.V(log.INFO).Infof("ecfs: Deleted volume %s", volName)
 	return &csi.DeleteVolumeResponse{}, nil // Success
 }
 
@@ -244,18 +221,6 @@ func (cs *controllerServer) ValidateVolumeCapabilities(ctx context.Context, req 
 		Message: ""}, nil
 }
 
-func (cs *controllerServer) ControllerPublishVolume(ctx context.Context, req *csi.ControllerPublishVolumeRequest) (*csi.ControllerPublishVolumeResponse, error) {
-	glog.V(log.INFO).Infof("ecfs: Publishing volume %v on node %v", req.GetVolumeId(), req.GetNodeId())
-	glog.V(log.DEBUG).Infof("ecfs: ControllerPublishVolume - enter. req: %+v", *req)
-	return nil, status.Error(codes.Unimplemented, "QQQQQ - not yet supported")
-}
-
-func (cs *controllerServer) ControllerUnpublishVolume(ctx context.Context, req *csi.ControllerUnpublishVolumeRequest) (*csi.ControllerUnpublishVolumeResponse, error) {
-	glog.V(log.INFO).Infof("ecfs: Unpublishing volume %v on node %v", req.GetVolumeId(), req.GetNodeId())
-	glog.V(log.DEBUG).Infof("ecfs: ControllerUnpublishVolume - enter. req: %+v", *req)
-	return nil, status.Error(codes.Unimplemented, "QQQQQ - not yet supported")
-}
-
 func getCreateSnapshotResponse(ecfsSnapshot *emanage.Snapshot, req *csi.CreateSnapshotRequest) (response *csi.CreateSnapshotResponse, err error) {
 	creationTimestamp, err := parseTimestamp(ecfsSnapshot.CreatedAt)
 	if err != nil {
@@ -282,7 +247,6 @@ func (cs *controllerServer) CreateSnapshot(ctx context.Context, req *csi.CreateS
 
 	if isWorkaround("80 chars limit") {
 		glog.V(log.DEBUG).Infof("ecfs: Received snapshot create request - %+v", req.GetName())
-		const maxSnapshotNameLen = 36
 		var snapshotName = req.GetName()
 		k8sSnapshotPrefix := "snapshot-"
 		snapshotName = strings.TrimPrefix(snapshotName, k8sSnapshotPrefix)
@@ -315,10 +279,12 @@ func (cs *controllerServer) CreateSnapshot(ctx context.Context, req *csi.CreateS
 			return nil, status.Error(codes.Internal, err.Error())
 		}
 
+		glog.V(log.INFO).Infof("ecfs: Created snapshot %v (repeat response). Ready: %v",
+			req.GetName(), response.Snapshot.ReadyToUse)
 		return // Success
 	}
 
-	volumeId := volumeIdType(req.GetSourceVolumeId())
+	volumeId := volumeHandleType(req.GetSourceVolumeId())
 	glog.V(log.DETAILED_INFO).Infof("ecfs: Creating snapshot %v on volume %v", req.GetName(), volumeId)
 	glog.V(log.DEBUG).Infof("ecfs: CreateSnapshot details. req: %+v", *req)
 	ecfsSnapshot, err = createSnapshot(ems.GetClient(), req.GetName(), volumeId, req.GetParameters())
@@ -354,7 +320,7 @@ func (cs *controllerServer) CreateSnapshot(ctx context.Context, req *csi.CreateS
 		return nil, status.Error(codes.Unknown, err.Error())
 	}
 
-	glog.V(log.INFO).Infof("ecfs: Created snapshot %v. Ready: %v", req.Name, response.Snapshot.ReadyToUse)
+	glog.V(log.INFO).Infof("ecfs: Created snapshot %v. Ready: %v", req.GetName(), response.Snapshot.ReadyToUse)
 	return // Success
 }
 

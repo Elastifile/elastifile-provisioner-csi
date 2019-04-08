@@ -46,13 +46,12 @@ func (st *serializableTime) String() string {
 // and when was the last time the CSI plugin on that node reported that it was working on the resource
 type PersistentResource struct {
 	// Static values
-	ResourceName string
-	//ResourceType resourceTypeEnum `structs:",string"`
-	ResourceType resourceTypeEnum `structs:"-"`
+	ResourceName string           `json:",omitempty"`
+	ResourceType resourceTypeEnum `json:",omitempty"`
 
 	// Dynamic values
 	OwnedBy   string
-	LastAlive serializableTime `structs:",string"`
+	LastAlive serializableTime
 }
 
 func NewPersistentResource(resourceType resourceTypeEnum, resourceName string) (pr PersistentResource, err error) {
@@ -66,12 +65,14 @@ func NewPersistentResource(resourceType resourceTypeEnum, resourceName string) (
 	if err != nil {
 		if isErrorAlreadyExists(err) {
 			glog.V(log.DEBUG).Infof("ecfs: Config map %v already exists, loading contents", pr.resourceKey())
-			pr.loadFromPersistentStore()
+			e := pr.loadFromPersistentStore()
+			if e != nil {
+				err = errors.WrapPrefix(err, fmt.Sprintf("Failed to load existing config map: %v", e), 0)
+			}
 		} else {
 			err = errors.WrapPrefix(err, fmt.Sprintf("Failed to create config map %v", pr.resourceKey()), 0)
 			return
 		}
-
 	}
 
 	err = pr.KeepAlive()
@@ -90,12 +91,12 @@ func (pr *PersistentResource) resourceKey() string {
 }
 
 // loadFromPersistentStore updates the PersistentResource from config map
-func (pr *PersistentResource) loadFromPersistentStore() {
+func (pr *PersistentResource) loadFromPersistentStore() error {
 	LastAliveWithPartialTTL := pr.LastAlive.Add(TTL / 3)
 	if LastAliveWithPartialTTL.After(time.Now()) {
 		glog.V(log.DETAILED_DEBUG).Infof("ecfs: Using cached persistent resource for %v %v",
 			resourceTypeName[pr.ResourceType], pr.ResourceName)
-		return
+		return nil
 	}
 
 	confMapName := pr.resourceKey()
@@ -103,31 +104,36 @@ func (pr *PersistentResource) loadFromPersistentStore() {
 
 	data, err := co.GetConfigMap(Namespace(), confMapName)
 	if err != nil {
-		if !isErrorDoesNotExist(err) {
-			err = errors.WrapPrefix(err, fmt.Sprintf("Failed to get config map %v", confMapName), 0)
-			panic(err.Error())
-		} else {
+		if isErrorDoesNotExist(err) {
 			glog.V(log.DETAILED_DEBUG).Infof("ecfs: Config map %v not found - assuming new resource", confMapName)
+		} else {
+			return errors.WrapPrefix(err, fmt.Sprintf("Failed to get config map %v", confMapName), 0)
 		}
 	}
 
 	err = pr.fromMap(data)
 	if err != nil {
-		err = errors.WrapPrefix(err, fmt.Sprintf("Failed to load resource from map - %+v", data), 0)
-		panic(err.Error())
+		return errors.WrapPrefix(err, fmt.Sprintf("Failed to load resource from map - %+v", data), 0)
 	}
 
 	glog.V(log.DETAILED_DEBUG).Infof("AAAAA ecfs: Loaded persistent resource from config map %v: %+v", pr.resourceKey(), pr) // TODO: DELME
+	return nil
 }
 
 func (pr *PersistentResource) GetOwner() string {
-	pr.loadFromPersistentStore()
+	err := pr.loadFromPersistentStore()
+	if err != nil {
+		panic(err.Error())
+	}
 	return pr.OwnedBy
 }
 
 // isAlive returns true if the resource's alive timestamp was updated within the TTL window
 func (pr *PersistentResource) isAlive() (isAlive bool) {
-	pr.loadFromPersistentStore()
+	err := pr.loadFromPersistentStore()
+	if err != nil {
+		panic(err.Error())
+	}
 	LastAliveWithTTL := pr.LastAlive.Add(TTL)
 	return LastAliveWithTTL.After(time.Now())
 }
@@ -281,14 +287,19 @@ func (pr *PersistentResource) KeepAliveRoutine(errChan chan error, stopChan chan
 
 // Delete removes persistent data used by the resource
 func (pr *PersistentResource) Delete() (err error) {
+	err = pr.loadFromPersistentStore()
+	if err != nil {
+		glog.V(log.DEBUG).Infof("Failed to load persistent resource %v - assuming already deleted", pr.resourceKey())
+		return nil
+	}
+
 	err = co.DeleteConfigMap(Namespace(), pr.resourceKey())
 	if err != nil {
-		if !isErrorDoesNotExist(err) {
-			err = errors.WrapPrefix(err, fmt.Sprintf("Failed to delete persistent resource: %v %v",
-				resourceTypeName[pr.ResourceType], pr.ResourceName), 0)
-		} else {
+		if isErrorDoesNotExist(err) {
 			glog.V(log.DETAILED_DEBUG).Infof("ecfs: Config map %v not found - assuming success", pr.resourceKey())
 			err = nil
+		} else {
+			err = errors.WrapPrefix(err, fmt.Sprintf("Failed to delete persistent resource: %v", pr.resourceKey()), 0)
 		}
 	}
 	return

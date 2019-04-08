@@ -24,11 +24,9 @@ func AssertEqual(t *testing.T, a interface{}, b interface{}) {
 // ============================================================================
 
 const (
-	testVolName string       = "testvolname"
-	testVolId   volumeIdType = "testvolid"
-	testVolId2  volumeIdType = "testvolid2"
-	volReady                 = true
-	volNotReady              = false
+	testVolName string = "testvolname"
+	volReady           = true
+	volNotReady        = false
 )
 
 var emptyVolume *CachedVolume
@@ -38,46 +36,46 @@ func TestCacheVolumeGet(t *testing.T) {
 	AssertEqual(t, val, emptyVolume)
 	AssertEqual(t, hit, false)
 
-	err := volumeCache.Set(testVolName, testVolId, volReady)
+	err := volumeCache.Set(testVolName, volReady)
 	AssertEqual(t, err, nil)
 
 	val, hit = volumeCache.Get(testVolName)
-	AssertEqual(t, val.ID, testVolId)
+	AssertEqual(t, val.ID, testVolName)
 	AssertEqual(t, val.IsReady, volReady)
 	AssertEqual(t, hit, true)
 }
 
 func TestCacheVolumeSet(t *testing.T) {
-	err := volumeCache.Set(testVolName, testVolId, volReady)
+	err := volumeCache.Set(testVolName, volReady)
 	AssertEqual(t, err, nil)
 
 	val, hit := volumeCache.Get(testVolName)
-	AssertEqual(t, val.ID, testVolId)
+	AssertEqual(t, val.ID, testVolName)
 	AssertEqual(t, val.IsReady, volReady)
 	AssertEqual(t, hit, true)
 
-	err = volumeCache.Set(testVolName, testVolId2, volReady)
+	err = volumeCache.Set(testVolName, volReady)
 	AssertEqual(t, err, nil)
 
 	val, hit = volumeCache.Get(testVolName)
-	AssertEqual(t, val.ID, testVolId2)
+	AssertEqual(t, val.ID, testVolName)
 	AssertEqual(t, val.IsReady, volReady)
 	AssertEqual(t, hit, true)
 
-	err = volumeCache.Set(testVolName, testVolId, volNotReady) // Reset Exists to false
+	err = volumeCache.Set(testVolName, volNotReady) // Reset Exists to false
 	AssertEqual(t, err, nil)
 
 	val, hit = volumeCache.Get(testVolName)
-	AssertEqual(t, val.ID, testVolId)
+	AssertEqual(t, val.ID, testVolName)
 	AssertEqual(t, val.IsReady, volNotReady)
 	AssertEqual(t, hit, true)
 }
 
 func TestCacheVolumeRemove(t *testing.T) {
 	// Remove non-existent volume
-	err := volumeCache.Remove(volumeIdType(testVolId))
+	err := volumeCache.Remove(testVolName)
 	AssertEqual(t, err, nil)
-	err = volumeCache.Remove(volumeIdType(testVolId2))
+	err = volumeCache.Remove(testVolName)
 	AssertEqual(t, err, nil)
 
 	val, hit := volumeCache.Get(testVolName)
@@ -85,16 +83,16 @@ func TestCacheVolumeRemove(t *testing.T) {
 	AssertEqual(t, hit, false)
 
 	// Remove existing volume
-	err = volumeCache.Set(testVolName, testVolId, volReady)
+	err = volumeCache.Set(testVolName, volReady)
 	AssertEqual(t, err, nil)
-	err = volumeCache.Remove(testVolId)
+	err = volumeCache.Remove(testVolName)
 	AssertEqual(t, err, nil)
 	val, hit = volumeCache.Get(testVolName)
 	AssertEqual(t, val, emptyVolume)
 	AssertEqual(t, hit, false)
 
 	// Remove previously existing and removed volume
-	err = volumeCache.Remove(testVolId)
+	err = volumeCache.Remove(testVolName)
 	AssertEqual(t, err, nil)
 
 	val, hit = volumeCache.Get(testVolName)

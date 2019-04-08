@@ -35,8 +35,21 @@ func mountNfs(args ...string) error {
 	return nil
 }
 
-func mountEcfs(mountPoint string, volOptions *volumeOptions, volId volumeIdType) error {
-	if err := createMountPoint(mountPoint); err != nil {
+func getNfsAddress() (string, error) {
+	settings, _, err := GetPluginSettings()
+	if err != nil {
+		return "", errors.WrapPrefix(err, "Failed to get plugin settings", 0)
+	}
+	return settings[nfsAddress], nil
+}
+
+func mountEcfs(mountPoint string, volId volumeHandleType) error {
+	nfsAddr, err := getNfsAddress()
+	if err != nil {
+		return errors.WrapPrefix(err, "Failed to mount ECFS export", 0)
+	}
+
+	if err = createMountPoint(mountPoint); err != nil {
 		return err
 	}
 
@@ -54,7 +67,7 @@ func mountEcfs(mountPoint string, volOptions *volumeOptions, volId volumeIdType)
 		"-vvv",
 		"-t", "nfs",
 		"-o", "nolock,vers=3", // TODO: Remove these defaults once mount works
-		fmt.Sprintf("%v:%v/%v", volOptions.NfsAddress, dc.Name, export.Name),
+		fmt.Sprintf("%v:%v/%v", nfsAddr, dc.Name, export.Name),
 		mountPoint,
 	}
 
@@ -66,42 +79,7 @@ func mountEcfs(mountPoint string, volOptions *volumeOptions, volId volumeIdType)
 	return nil
 }
 
-func mountEcfsSnapshotExport(mountPoint string, volOptions *volumeOptions, volId volumeIdType) error {
-	if err := createMountPoint(mountPoint); err != nil {
-		return errors.Wrap(err, 0)
-	}
-
-	glog.V(log.DETAILED_INFO).Infof("ecfs: Mounting snapshot %v on %v", volId, mountPoint)
-
-	volDesc, err := parseVolumeId(volId)
-	if err != nil {
-		return errors.Wrap(err, 0)
-	}
-
-	var emsClient emanageClient
-	snapshotExportPath, err := getSnapshotExportPath(emsClient.GetClient(), volDesc.SnapshotId)
-	if err != nil {
-		return errors.WrapPrefix(err,
-			fmt.Sprintf("Failed to get snapshot export path by snapshot id: %v", volDesc.SnapshotId), 0)
-	}
-
-	args := []string{
-		"-vvv",
-		"-t", "nfs",
-		"-o", "ro,nolock,vers=3",
-		fmt.Sprintf("%v:%v", volOptions.NfsAddress, snapshotExportPath),
-		mountPoint,
-	}
-
-	err = mountNfs(args...)
-	if err != nil {
-		return errors.WrapPrefix(err, "Failed to mount ECFS snapshot export", 0)
-	}
-
-	return nil
-}
-
-func mountEcfsSnapshot(mountPoint string, nfsAddress string, snapshot *emanage.Snapshot) error {
+func mountEcfsSnapshot(mountPoint string, snapshot *emanage.Snapshot) error {
 	if err := createMountPoint(mountPoint); err != nil {
 		return errors.Wrap(err, 0)
 	}
@@ -116,7 +94,7 @@ func mountEcfsSnapshot(mountPoint string, nfsAddress string, snapshot *emanage.S
 	snapshotExportPath, err := getSnapshotExportPath(emsClient.GetClient(), snapshot.ID)
 	if err != nil {
 		if isErrorDoesNotExist(err) { // Create export
-			_, _, err = createExportOnSnapshot(emsClient.GetClient(), snapshot, snapExportOptions)
+			_, err = createExportOnSnapshot(emsClient.GetClient(), snapshot, snapExportOptions)
 			if err != nil {
 				return errors.WrapPrefix(err, fmt.Sprintf("Failed to create export for snapshot %v (%v)",
 					snapshot.ID, snapshot.Name), 0)
@@ -132,11 +110,16 @@ func mountEcfsSnapshot(mountPoint string, nfsAddress string, snapshot *emanage.S
 		}
 	}
 
+	nfsAddr, err := getNfsAddress()
+	if err != nil {
+		return errors.WrapPrefix(err, "Failed to mount ECFS export", 0)
+	}
+
 	args := []string{
 		"-vvv",
 		"-t", "nfs",
 		"-o", "ro,nolock,vers=3",
-		fmt.Sprintf("%v:%v", nfsAddress, snapshotExportPath),
+		fmt.Sprintf("%v:%v", nfsAddr, snapshotExportPath),
 		mountPoint,
 	}
 

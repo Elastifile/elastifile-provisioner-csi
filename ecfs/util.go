@@ -20,12 +20,11 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
-	"src/github.com/go-errors/errors"
-	"strconv"
 	"strings"
 
 	"github.com/container-storage-interface/spec/lib/go/csi/v0"
 	//"github.com/container-storage-interface/spec/lib/go/csi" // TODO: Uncomment when switching to CSI 1.0
+	"github.com/go-errors/errors"
 	"github.com/golang/glog"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -33,51 +32,6 @@ import (
 
 	"csi-provisioner-elastifile/ecfs/log"
 )
-
-type volumeDescriptorType struct {
-	DcId       int
-	SnapshotId int
-}
-
-type volumeIdType string
-
-// TODO: Remove snapshot id from the volume name as it's N/A after snapshot-export-as-read-only-volume has been removed
-// TODO: cont'd - consider reverting volumeId to the original K8s volume name
-func newVolumeId(volumeDescriptor volumeDescriptorType) volumeIdType {
-	const volumeIdTemplate = "csi-dc-%v-snap-%v"
-	return volumeIdType(fmt.Sprintf(volumeIdTemplate, volumeDescriptor.DcId, volumeDescriptor.SnapshotId))
-}
-
-// parseVolumeId takes internal volumeIdType that's defined by newVolumeId() and
-// returns volumeDescriptorType{} with DataContainer and Snapshot ids
-func parseVolumeId(volumeId volumeIdType) (volDesc *volumeDescriptorType, err error) {
-	glog.V(log.DETAILED_DEBUG).Infof("ecfs: Parsing Volume Id %v", volumeId)
-	parts := strings.Split(string(volumeId), "-")
-	if len(parts) != 5 {
-		err = errors.Errorf("Invalid volume id: %v", volumeId)
-		return
-	}
-
-	dcId, err := strconv.Atoi(parts[2])
-	if err != nil {
-		err = errors.WrapPrefix(err, fmt.Sprintf("Illegal Data Container Id %v in Volume Id %v", parts[2], volumeId), 0)
-		return
-	}
-
-	snapshotId, err := strconv.Atoi(parts[4])
-	if err != nil {
-		err = errors.WrapPrefix(err, fmt.Sprintf("Illegal Snapshot Id %v in Volume Id %v", parts[2], volumeId), 0)
-		return
-	}
-
-	volDesc = &volumeDescriptorType{
-		DcId:       dcId,
-		SnapshotId: snapshotId,
-	}
-
-	glog.V(log.DETAILED_DEBUG).Infof("ecfs: Parsed Volume Id %v into %+v", volumeId, volDesc)
-	return
-}
 
 func execCommand(command string, args ...string) ([]byte, error) {
 	glog.V(log.DEBUG).Infof("ecfs: Running command: %s %s", command, args)

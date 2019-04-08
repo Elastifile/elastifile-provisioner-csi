@@ -12,22 +12,19 @@ import (
 	"github.com/elastifile/errors"
 )
 
-func createSnapshot(emsClient *emanageClient, name string, volumeId volumeIdType, params map[string]string) (snapshot *emanage.Snapshot, err error) {
+const maxSnapshotNameLen = 36
+
+func createSnapshot(emsClient *emanageClient, name string, volumeId volumeHandleType, params map[string]string) (snapshot *emanage.Snapshot, err error) {
 	glog.V(log.HIGH_LEVEL_INFO).Infof("ecfs: Creating snapshot %v for volume %v", name, volumeId)
 	glog.V(log.DEBUG).Infof("ecfs: Creating snapshot %v - parameters: %v", name, params)
 
-	volumeDescriptor, err := parseVolumeId(volumeId)
+	dc, err := emsClient.GetClient().GetDcByName(string(volumeId))
 	if err != nil {
-		err = errors.Wrap(err, 0)
-	}
-
-	_, err = emsClient.GetClient().DataContainers.GetFull(volumeDescriptor.DcId)
-	if err != nil {
-		err = errors.WrapPrefix(err, fmt.Sprintf("Failed to get Data Container by Volume Id: %v", volumeDescriptor.DcId), 0)
+		err = errors.WrapPrefix(err, fmt.Sprintf("Failed to get Data Container by name: %v", volumeId), 0)
 		return
 	}
 
-	snap := &emanage.Snapshot{Name: name, DataContainerID: volumeDescriptor.DcId}
+	snap := &emanage.Snapshot{Name: name, DataContainerID: dc.Id}
 	snapshot, err = emsClient.Snapshots.Create(snap)
 	if err != nil {
 		if isErrorAlreadyExists(err) {
@@ -39,7 +36,7 @@ func createSnapshot(emsClient *emanageClient, name string, volumeId volumeIdType
 			}
 		}
 		return nil, errors.WrapPrefix(err,
-			fmt.Sprintf("Failed to create snapshot for Data Container %v with name %v", volumeDescriptor.DcId, name), 0)
+			fmt.Sprintf("Failed to create snapshot %v on Data Container %v", name, volumeId), 0)
 	}
 
 	return

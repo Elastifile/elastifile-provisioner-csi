@@ -42,7 +42,7 @@ func (conf *config) String() string {
 		conf.NFSServer, conf.EmanageURL, conf.Username, strings.Repeat("*", len(conf.Password)))
 }
 
-func GetProvisionerSettings() (configMap map[string]string, secrets map[string][]byte, err error) {
+func GetPluginSettings() (configMap map[string]string, secrets map[string][]byte, err error) {
 	glog.V(log.DETAILED_INFO).Infof("ecfs: Loading configuration from config map '%v'", configMapName)
 	configMap, err = co.GetConfigMap(Namespace(), configMapName)
 	if err != nil {
@@ -64,16 +64,16 @@ func GetProvisionerSettings() (configMap map[string]string, secrets map[string][
 }
 
 func pluginConfig() (conf *config, err error) {
-	configMap, secret, err := GetProvisionerSettings()
+	pluginSettings, secret, err := GetPluginSettings()
 	if err != nil {
 		err = errors.Wrap(err, 0)
 	}
 
 	// TODO: Check key availability
 	conf = &config{
-		NFSServer:  configMap[nfsAddress],
-		EmanageURL: configMap[managementAddress],
-		Username:   configMap[managementUserName],
+		NFSServer:  pluginSettings[nfsAddress],
+		EmanageURL: pluginSettings[managementAddress],
+		Username:   pluginSettings[managementUserName],
 		Password:   string(secret[managementPassword]),
 	}
 
