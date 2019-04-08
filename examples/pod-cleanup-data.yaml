@@ -9,8 +9,8 @@ spec:
      volumeMounts:
        - name: volume1
          mountPath: /mnt
-     command: ["rm"]
-     args: ["/mnt/demofile"]
+     command: ["sh", "-c"]
+     args: ["ls -l /mnt; rm -f /mnt/demofile; ls -l /mnt"]
   volumes:
    - name: volume1
      persistentVolumeClaim:
