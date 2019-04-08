@@ -19,6 +19,7 @@ package main
 import (
 	"strconv"
 
+	"github.com/container-storage-interface/spec/lib/go/csi"
 	"github.com/golang/glog"
 
 	"csi-provisioner-elastifile/ecfs/log"
@@ -29,8 +30,7 @@ import (
 )
 
 type volumeOptions struct {
-	//Name string
-	VolumeId volumeIdType
+	VolumeId volumeHandleType
 
 	Export        *emanage.Export
 	DataContainer *emanage.DataContainer
@@ -70,87 +70,92 @@ const (
 	Access            StorageClassCustomParameter = "access"
 )
 
-func newVolumeOptions(volOptions map[string]string) (opts *volumeOptions, err error) {
-	opts = &volumeOptions{}
-
-	configMap, _, err := GetProvisionerSettings()
-	if err != nil {
-		err = errors.WrapPrefix(err, "Failed to get provisioner settings", 0)
-		return
-	}
-
-	opts.NfsAddress = configMap[nfsAddress]
-
+func newVolumeOptions(req *csi.CreateVolumeRequest) (*volumeOptions, error) {
 	var (
+		volParams = req.GetParameters()
+		opts      = &volumeOptions{}
 		paramStr  string
 		paramInt  int
 		paramSize size.Size
 	)
 
+	pluginSettings, _, err := GetPluginSettings()
+	if err != nil {
+		return nil, errors.WrapPrefix(err, "Failed to get provisioner settings", 0)
+	}
+
+	opts.VolumeId = volumeHandleType(req.GetName())
+	opts.NfsAddress = pluginSettings[nfsAddress]
+
 	// UserMapping
-	if paramStr, err = extractOptionString(UserMapping, volOptions); err != nil {
-		return
+	if paramStr, err = extractOptionString(UserMapping, volParams); err != nil {
+		return nil, errors.Wrap(err, 0)
 	}
 	opts.UserMapping = emanage.UserMappingType(paramStr)
 
 	// UserMappingUid
-	if paramStr, err = extractOptionString(UserMappingUid, volOptions); err != nil {
-		return
+	if paramStr, err = extractOptionString(UserMappingUid, volParams); err != nil {
+		return nil, errors.Wrap(err, 0)
 	}
 	if opts.UserMappingUid, err = strconv.Atoi(paramStr); err != nil {
-		return
+		return nil, errors.Wrap(err, 0)
 	}
 
 	// UserMappingGid
-	if paramStr, err = extractOptionString(UserMappingGid, volOptions); err != nil {
-		return
+	if paramStr, err = extractOptionString(UserMappingGid, volParams); err != nil {
+		return nil, err
 	}
 	if opts.UserMappingGid, err = strconv.Atoi(paramStr); err != nil {
-		return
+		return nil, err
 	}
 
 	// ExportUid
-	if paramStr, err = extractOptionString(ExportUid, volOptions); err != nil {
-		return
+	if paramStr, err = extractOptionString(ExportUid, volParams); err != nil {
+		return nil, errors.Wrap(err, 0)
 	}
 	if paramInt, err = strconv.Atoi(paramStr); err != nil {
-		return
+		return nil, errors.Wrap(err, 0)
 	}
 	opts.ExportUid = optional.NewInt(paramInt)
 
 	// ExportGid
-	if paramStr, err = extractOptionString(ExportGid, volOptions); err != nil {
-		return
+	if paramStr, err = extractOptionString(ExportGid, volParams); err != nil {
+		return nil, errors.Wrap(err, 0)
 	}
 	if paramInt, err = strconv.Atoi(paramStr); err != nil {
-		return
+		return nil, errors.Wrap(err, 0)
 	}
 	opts.ExportGid = optional.NewInt(paramInt)
 
 	// ExportPermissions
-	if paramStr, err = extractOptionString(Permissions, volOptions); err != nil {
-		return
+	if paramStr, err = extractOptionString(Permissions, volParams); err != nil {
+		return nil, errors.Wrap(err, 0)
 	}
 	if opts.ExportPermissions, err = strconv.Atoi(paramStr); err != nil {
-		return
+		return nil, errors.Wrap(err, 0)
 	}
 
 	// DefaultVolumeSize
-	if paramStr, err = extractOptionString(DefaultVolumeSize, volOptions); err != nil {
-		return
-	}
-	if paramSize, err = size.Parse(paramStr); err != nil {
-		return
-	}
-	if paramSize > 0 {
-		opts.Capacity = int64(paramSize)
+	capacity := req.GetCapacityRange().GetRequiredBytes()
+	if capacity > 0 {
+		opts.Capacity = capacity
 	} else {
-		opts.Capacity = int64(1 * size.TiB)
+		if paramStr, err = extractOptionString(DefaultVolumeSize, volParams); err != nil {
+			return nil, errors.Wrap(err, 0)
+		}
+		if paramSize, err = size.Parse(paramStr); err != nil {
+			return nil, errors.Wrap(err, 0)
+		}
+		if paramSize > 0 {
+			opts.Capacity = int64(paramSize)
+		} else {
+			opts.Capacity = int64(1 * size.TiB)
+		}
 	}
 
 	// Access
-	if paramStr, err = extractOptionString(Access, volOptions); err != nil {
-		return
+	if paramStr, err = extractOptionString(Access, volParams); err != nil {
+		return nil, errors.Wrap(err, 0)
 	}
 	if paramStr == "" { // Default value
 		paramStr = string(emanage.ExportAccessRW)
@@ -158,5 +163,5 @@ func newVolumeOptions(volOptions map[string]string) (opts *volumeOptions, err er
 	opts.Access = paramStr
 
 	glog.V(log.DEBUG).Infof("ecfs: Current volume options: %+v", opts)
-	return
+	return opts, nil
 }

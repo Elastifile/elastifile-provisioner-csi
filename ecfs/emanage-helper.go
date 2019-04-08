@@ -86,15 +86,10 @@ func (ems *emanageClient) GetDcByName(dcName string) (*emanage.DataContainer, er
 	return nil, errors.Errorf("Data Container '%v' not found", dcName)
 }
 
-func (ems *emanageClient) GetDcDefaultExportByVolumeId(volId volumeIdType) (*emanage.DataContainer, *emanage.Export, error) {
+func (ems *emanageClient) GetDcDefaultExportByVolumeId(volId volumeHandleType) (*emanage.DataContainer, *emanage.Export, error) {
 	glog.V(log.DEBUG).Infof("ecfs: Looking for DC/export by Volume Id %v", volId)
 
-	volDesc, err := parseVolumeId(volId)
-	if err != nil {
-		return nil, nil, errors.Wrap(err, 0)
-	}
-
-	dc, err := ems.GetClient().DataContainers.GetFull(volDesc.DcId)
+	dc, err := ems.GetClient().GetDcByName(string(volId))
 	if err != nil {
 		return nil, nil, errors.Wrap(err, 0)
 	}
@@ -107,21 +102,16 @@ func (ems *emanageClient) GetDcDefaultExportByVolumeId(volId volumeIdType) (*ema
 		if dc.Id == export.DataContainerId && export.Name == volumeExportName {
 			glog.V(log.DETAILED_DEBUG).Infof("ecfs: Found Dc and Export by Volume Id %v - DC: %+v EXPORT: %+v",
 				volId, dc, export)
-			return &dc, &export, nil
+			return dc, &export, nil
 		}
 	}
 	return nil, nil, errors.Errorf("Export not found by Volume Id %v", volId)
 }
 
-func (ems *emanageClient) GetDcSnapshotExportByVolumeId(volId volumeIdType) (*emanage.DataContainer, *emanage.Export, error) {
+func (ems *emanageClient) GetDcSnapshotExportByVolumeId(volId volumeHandleType) (*emanage.DataContainer, *emanage.Export, error) {
 	glog.V(log.DEBUG).Infof("ecfs: Looking for DC/export by Volume Id %v", volId)
 
-	volDesc, err := parseVolumeId(volId)
-	if err != nil {
-		return nil, nil, errors.Wrap(err, 0)
-	}
-
-	dc, err := ems.GetClient().DataContainers.GetFull(volDesc.DcId)
+	dc, err := ems.GetClient().GetDcByName(string(volId))
 	if err != nil {
 		return nil, nil, errors.Wrap(err, 0)
 	}
@@ -134,7 +124,7 @@ func (ems *emanageClient) GetDcSnapshotExportByVolumeId(volId volumeIdType) (*em
 		if dc.Id == export.DataContainerId && export.Name == volumeExportName {
 			glog.V(log.DETAILED_DEBUG).Infof("ecfs: Found Snapshot Export by Volume Id - success. "+
 				"Returning DC: %+v EXPORT: %+v", dc, export)
-			return &dc, &export, nil
+			return dc, &export, nil
 		}
 	}
 	return nil, nil, errors.Errorf("Export not found by Volume Id %v", volId)
@@ -209,7 +199,7 @@ func isSnapshotUsable(snapshot *emanage.Snapshot) bool {
 	return snapshot.Status == ecfsSnapshotStatus_VALID
 }
 
-func createExportOnSnapshot(emsClient *emanageClient, snapshot *emanage.Snapshot, volOptions *volumeOptions) (volumeDescriptor volumeDescriptorType, exportRef *emanage.Export, err error) {
+func createExportOnSnapshot(emsClient *emanageClient, snapshot *emanage.Snapshot, volOptions *volumeOptions) (exportRef *emanage.Export, err error) {
 	var (
 		exportName = snapshotExportName
 		exportOpts = emanage.ExportCreateForSnapshotOpts{
@@ -221,9 +211,6 @@ func createExportOnSnapshot(emsClient *emanageClient, snapshot *emanage.Snapshot
 			Gid:         volOptions.UserMappingGid,
 		}
 	)
-
-	volumeDescriptor.DcId = snapshot.DataContainerID
-	volumeDescriptor.SnapshotId = snapshot.ID
 
 	glog.V(log.DETAILED_INFO).Infof("Creating export %v on snapshot %v", exportName, snapshot.Name)
 	export, err := emsClient.GetClient().Exports.CreateForSnapshot(exportName, &exportOpts)

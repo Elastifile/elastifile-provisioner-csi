@@ -20,7 +20,6 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"strings"
 
 	"github.com/container-storage-interface/spec/lib/go/csi"
 	"github.com/golang/glog"
@@ -89,21 +88,9 @@ func (ns *nodeServer) nodeStageVolume(ctx context.Context, req *csi.NodeStageVol
 
 	// Configuration
 	stagingTargetPath := req.GetStagingTargetPath()
-	volId := volumeIdType(req.GetVolumeId())
+	volId := volumeHandleType(req.GetVolumeId())
 
-	volDesc, err := parseVolumeId(volId)
-	if err != nil {
-		return nil, errors.Wrap(err, 0)
-	}
-
-	volOptions, err := newVolumeOptions(req.GetVolumeContext())
-	if err != nil {
-		err = errors.WrapPrefix(err, fmt.Sprintf("Error reading volume options for volume %v", volId), 0)
-		glog.Errorf(err.Error())
-		return nil, status.Error(codes.InvalidArgument, err.Error())
-	}
-
-	if err = createMountPoint(stagingTargetPath); err != nil {
+	if err := createMountPoint(stagingTargetPath); err != nil {
 		err = errors.WrapPrefix(err, fmt.Sprintf("Failed to create staging mount point at %v for volume %v",
 			stagingTargetPath, volId), 0)
 		glog.Errorf(err.Error())
@@ -123,18 +110,10 @@ func (ns *nodeServer) nodeStageVolume(ctx context.Context, req *csi.NodeStageVol
 	}
 
 	// Mount the volume
-	if volDesc.SnapshotId == 0 { // Regular volume
-		err = mountEcfs(stagingTargetPath, volOptions, volId)
-		if err != nil {
-			err = errors.WrapPrefix(err, fmt.Sprintf("Failed to mount volume %v", volId), 0)
-			return nil, status.Error(codes.Internal, err.Error())
-		}
-	} else { // Volume from snapshot
-		err = mountEcfsSnapshotExport(stagingTargetPath, volOptions, volId)
-		if err != nil {
-			err = errors.WrapPrefix(err, fmt.Sprintf("Failed to mount volume from snapshot %v", volId), 0)
-			return nil, status.Error(codes.Internal, err.Error())
-		}
+	err = mountEcfs(stagingTargetPath, volId)
+	if err != nil {
+		err = errors.WrapPrefix(err, fmt.Sprintf("Failed to mount volume %v", volId), 0)
+		return nil, status.Error(codes.Internal, err.Error())
 	}
 
 	glog.V(log.DETAILED_INFO).Infof("ecfs: successfully mounted volume %s to %s", volId, stagingTargetPath)
@@ -160,7 +139,7 @@ func (ns *nodeServer) nodeUnpublishVolume(ctx context.Context, req *csi.NodeUnpu
 
 	_ = os.Remove(targetPath)
 
-	glog.V(log.DETAILED_INFO).Infof("ecfs: Unbinded volume %s from %s", req.GetVolumeId(), targetPath)
+	glog.V(log.DETAILED_INFO).Infof("ecfs: Unbound volume %s from %s", req.GetVolumeId(), targetPath)
 
 	return &csi.NodeUnpublishVolumeResponse{}, nil
 }
@@ -182,8 +161,7 @@ func (ns *nodeServer) NodeUnstageVolume(ctx context.Context, req *csi.NodeUnstag
 
 	// Unmount the volume
 	if err := unmount(stagingTargetPath); err != nil {
-		const errorNotMounted = "mountpoint not found"
-		if strings.Contains(err.Error(), errorNotMounted) {
+		if isErrorDoesNotExist(err) {
 			glog.Warningf("ecfs: Unstaging failed as '%v' does not exist - for idempotency's sake assuming "+
 				"it has already been removed. Error: %v", stagingTargetPath, err.Error())
 			return &csi.NodeUnstageVolumeResponse{}, nil

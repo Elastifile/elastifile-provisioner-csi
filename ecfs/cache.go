@@ -10,7 +10,7 @@ import (
 )
 
 type CachedVolume struct {
-	ID                 volumeIdType
+	ID                 string
 	IsReady            bool
 	IsCopying          bool
 	persistentResource PersistentResource
@@ -43,7 +43,7 @@ func (c *VolumeCache) Get(volumeName string) (cachedVolume *CachedVolume, cacheH
 	return
 }
 
-func (c *VolumeCache) Set(volumeName string, volumeId volumeIdType, isReady bool) (err error) {
+func (c *VolumeCache) Set(volumeName string, isReady bool) (err error) {
 	if *c == nil {
 		*c = make(VolumeCache)
 	}
@@ -53,25 +53,30 @@ func (c *VolumeCache) Set(volumeName string, volumeId volumeIdType, isReady bool
 	}
 
 	(*c)[volumeName] = &CachedVolume{
-		ID:      volumeId,
+		ID:      volumeName,
 		IsReady: isReady,
 	}
 
 	return
 }
 
-func (c *VolumeCache) Remove(volumeId volumeIdType) (err error) {
-	for volName, volume := range *c {
-		if volume.ID == volumeId {
-			err = (*c)[volName].persistentResource.Delete()
-			if err != nil {
-				glog.Warningf("ecfs: Failed to free up resource ownership information for volume %v", volName)
-			}
-			delete(*c, volName)
-			return
-		}
+func (c *VolumeCache) Remove(volumeId string) (err error) {
+	cacheEntry := (*c)[volumeId]
+	if cacheEntry == nil {
+		glog.V(log.DETAILED_DEBUG).Infof("ecfs: Cache entry for %v not found - assuming already deleted", volumeId)
+		return nil
 	}
-	glog.V(log.DEBUG).Infof("Tried to remove from cache Volume Id that wasn't there - %v", volumeId)
+
+	resource, err := NewPersistentResource(resourceTypeIdVolume, volumeId)
+	if err != nil {
+		return errors.WrapPrefix(err, fmt.Sprintf("Failed to create descriptor for volume %v", volumeId), 0)
+	}
+
+	err = resource.Delete()
+	if err != nil {
+		glog.Warningf("ecfs: Failed to free up resource ownership information for volume %v", volumeId)
+	}
+	delete(*c, volumeId)
 	return
 }
 
