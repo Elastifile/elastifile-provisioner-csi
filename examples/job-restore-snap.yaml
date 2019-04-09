@@ -1,0 +1,22 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: demo-restore-job
+spec:
+  template:
+    spec:
+      containers:
+        - name: container1
+          image: alpine
+          volumeMounts:
+            - name: volume1
+              mountPath: /mnt
+          command: ["sh", "-c"]
+          args: ["dd if=/mnt/demofile of=/mnt/demofile2 bs=1M count=10 && ls -l /mnt"]
+      volumes:
+        - name: volume1
+          persistentVolumeClaim:
+            claimName: demo-restore-pvc
+            readOnly: false
+      restartPolicy: Never
+      terminationGracePeriodSeconds: 30

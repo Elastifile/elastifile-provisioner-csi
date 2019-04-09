@@ -6,9 +6,13 @@ There are several helper scripts that can be used to deploy/teardown the configu
 
 * `../deploy/deploy-plugin.sh` - deploys the provisioner plugin
 
-* `create-pod.sh` - creates a pod, takes pod manifest as an optional argument 
+* `create-job.sh` - creates a pvc and a job that consumes the pvc and writes some data 
 
-Demonstrates how to create a pod and mount volume provisioned by ECFS plugin
+Demonstrates how to create a job and mount volume provisioned by ECFS plugin
+
+* `create-restore-job.sh` - creates a snapshot on an existing volume, restores it to a new volume, then writes to a new file while reading fom an existing one 
+
+Demonstrates how to create a volume based on an existing snapshot, and 
 
 * `deploy-plugin-create-pod.sh` - calls `deploy-pugin.sh`, followed by `create-pod.sh`
 
@@ -33,7 +37,9 @@ Useful during plugin development to build and push the plugin images, followed b
 
 * `../deploy/teardown-plugin.sh` - removes the provisioner plugin
 
-* `delete-pod.sh` - deletes the pod and the pvc (can't have data or export)
+* `delete-job.sh` - deletes the job and the pvc (removes any data on the volume)
+
+* `delete-restore-job.sh` - deletes the snapshot, the job and the pvc (removes any data on the volume)
 
 * `delete-snapshot.sh` - deletes the snapshot (can't have an export)
 
