@@ -6,4 +6,5 @@ const (
 	DETAILED_INFO   = 5
 	DEBUG           = 7
 	DETAILED_DEBUG  = 9
+	TRACE           = 10
 )

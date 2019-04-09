@@ -214,52 +214,46 @@ func (pr *PersistentResource) updatePersistentConf() (err error) {
 // TakeOwnership changes the owner to the current plugin instance
 func (pr *PersistentResource) takeOwnership() (err error) {
 	originalOwner := pr.GetOwner()
-	if !pr.isAlive() {
-		// TTL expired, take ownership
-		// TODO: Protect by a lock - consider using a lock file on ELFS
-		pr.OwnedBy = GetPluginNodeName()
-		pr.LastAlive = serializableTime{time.Now()}
-		err = pr.updatePersistentConf()
-		if err != nil {
-			err = errors.Wrap(err, 0)
-		}
-
-		// Re-check
-		// It's not bulletproof, but in practical terms it reduces the chances of contention to zero,
-		// Since K8s doesn't flood the plugin with duplicate requests
-		if pr.isAlive() && pr.isOwnedByMe() {
-			glog.V(log.DETAILED_INFO).Infof("ecfs: Transferred resource ownership to %v (from %v)",
-				GetPluginNodeName(), originalOwner)
-		} else {
-			err = errors.Errorf("Failed to transfer resource ownership to %v (owned by %v)",
-				GetPluginNodeName(), pr.GetOwner())
-			glog.V(log.DETAILED_DEBUG).Infof(err.Error())
-			return
-		}
-	} else {
-		err = errors.Errorf("Can't take ownership - resource is owned by another plugin instance (K8s node) - %v",
+	if pr.isAlive() && !pr.isOwnedByMe() {
+		err = errors.Errorf("Can't take ownership - resource is owned by another active plugin instance - %v",
 			originalOwner)
 		glog.V(log.DETAILED_DEBUG).Infof(err.Error())
 		return
 	}
+
+	// TODO: Protect by a lock - consider using a lock file on ELFS
+	// Take ownership
+	pr.OwnedBy = GetPluginNodeName()
+	pr.LastAlive = serializableTime{time.Now()}
+	err = pr.updatePersistentConf()
+	if err != nil {
+		return errors.Wrap(err, 0)
+	}
+
+	// Re-check
+	// It's not bulletproof, but in practical terms it reduces the chances of contention virtually to zero,
+	// since K8s doesn't flood the plugin with duplicate requests
+	if pr.isAlive() && pr.isOwnedByMe() {
+		glog.V(log.DETAILED_INFO).Infof("ecfs: Transferred resource ownership to %v (from %v)",
+			GetPluginNodeName(), originalOwner)
+	} else {
+		err = errors.Errorf("Failed to transfer resource ownership to %v (owned by %v)",
+			GetPluginNodeName(), pr.GetOwner())
+		glog.V(log.DETAILED_DEBUG).Infof(err.Error())
+		return
+	}
+
 	return
 }
 
 // KeepAlive updates the resource's LastAlive timestamp
 func (pr *PersistentResource) KeepAlive() (err error) {
-	if pr.isOwnedByMe() {
-		pr.LastAlive = serializableTime{time.Now()}
-		err = pr.updatePersistentConf()
-		if err != nil {
-			err = errors.Wrap(err, 0)
-		}
-	} else { // Try to take ownership
-		err = pr.takeOwnership()
-		if err != nil {
-			err = errors.WrapPrefix(err, "Can't keep alive", 0)
-			glog.V(log.DETAILED_DEBUG).Infof(err.Error())
-			return
-		}
+	glog.V(log.TRACE).Infof("KeepAlive %v", pr.resourceKey())
+	err = pr.takeOwnership()
+	if err != nil {
+		err = errors.WrapPrefix(err, "Can't keep alive", 0)
+		glog.V(log.DETAILED_DEBUG).Infof(err.Error())
+		return
 	}
 	return
 }
@@ -273,14 +267,18 @@ func (pr *PersistentResource) KeepAliveRoutine(errChan chan error, stopChan chan
 	for {
 		select {
 		case <-ticker.C:
+			glog.V(log.DETAILED_DEBUG).Infof("AAAAA KeepAliveRoutine %v", pr.resourceKey()) // TODO: DELME
 			err := pr.KeepAlive()
 			if err != nil {
-				err = errors.WrapPrefix(err, fmt.Sprintf("Failed to send KeepAlive for %v", pr.resourceKey()), 0)
+				err = errors.WrapPrefix(err, fmt.Sprintf("ecfs: Failed to send KeepAlive for %v", pr.resourceKey()), 0)
+				glog.Warning(err.Error())
 			}
 		case <-timer.C:
-			errChan <- errors.Errorf("Timed out sending KeepAlive - aborting routine")
+			errChan <- errors.Errorf("Timed out sending KeepAlive for %v - aborting routine", pr.resourceKey())
+			return
 		case <-stopChan:
 			errChan <- nil
+			return
 		}
 	}
 }

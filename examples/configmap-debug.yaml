@@ -3,4 +3,5 @@ kind: ConfigMap
 metadata:
   name: csi-debug
 data:
-  cloneDelaySec: "300"
+  cloneDelaySec: "0"
+  copyDelaySec: "0"

@@ -14,6 +14,7 @@ import (
 const (
 	debugConfigMapName      = "csi-debug"
 	debugValueCloneDelaySec = "cloneDelaySec"
+	debugValueCopyDelaySec  = "copyDelaySec"
 )
 
 func getDebugValue(key string, defaultValue *string) string {
