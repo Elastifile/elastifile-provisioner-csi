@@ -163,9 +163,15 @@ func cloneVolume(emsClient *emanageClient, source *csi.VolumeContentSource_Volum
 	}
 
 	defer func() { // Cleanup snapshot
-		err = deleteSnapshot(emsClient, srcSnapName) // TODO: Consider triggering the operation and not checking its result
-		glog.Warning(errors.WrapPrefix(err,
-			fmt.Sprintf("Failed to delete source snapshot %v - could be a cascading error", srcSnapName), 0))
+		e := deleteSnapshot(emsClient, srcSnapName)
+		if e != nil {
+			if err == nil {
+				err = errors.WrapPrefix(e, fmt.Sprintf("Failed to delete source snapshot %v", srcSnapName), 0)
+				glog.Warning(e.Error())
+			} else {
+				glog.Warning(errors.WrapPrefix(e, fmt.Sprintf("Secondary error, happened after %v", err), 0))
+			}
+		}
 	}()
 
 	// Create destination volume
@@ -186,8 +192,15 @@ func cloneVolume(emsClient *emanageClient, source *csi.VolumeContentSource_Volum
 	}
 
 	defer func() { // Umount the source export
-		err = unmountAndCleanup(srcSnapMountPath)
-		glog.Warning(errors.WrapPrefix(err, "Failed to unmount source snapshot - could be a cascading error", 0))
+		e := unmountAndCleanup(srcSnapMountPath)
+		if e != nil {
+			if err == nil {
+				err = errors.WrapPrefix(e, "Failed to unmount source snapshot", 0)
+				glog.Warning(err.Error())
+			} else {
+				glog.Warning(errors.WrapPrefix(e, fmt.Sprintf("Secondary error, happened after %v", err), 0))
+			}
+		}
 	}()
 
 	// Mount the destination volume
@@ -198,9 +211,16 @@ func cloneVolume(emsClient *emanageClient, source *csi.VolumeContentSource_Volum
 		return
 	}
 
-	defer func() { // Umount the destination export
-		err = unmountAndCleanup(dstVolMountPath)
-		glog.Warning(errors.WrapPrefix(err, "Failed to unmount destination volume - could be a cascading error", 0))
+	defer func() { // Umount the destination volume
+		e := unmountAndCleanup(dstVolMountPath)
+		if e != nil {
+			if err == nil {
+				err = errors.WrapPrefix(e, "Failed to unmount destination volume", 0)
+				glog.Warning(err.Error())
+			} else {
+				glog.Warning(errors.WrapPrefix(e, fmt.Sprintf("Secondary error, happened after %v", err), 0))
+			}
+		}
 	}()
 
 	// Copy the source snapshot's contents into the destination volume
@@ -209,6 +229,12 @@ func cloneVolume(emsClient *emanageClient, source *csi.VolumeContentSource_Volum
 		err = errors.WrapPrefix(err, fmt.Sprintf("Failed to copy snapshot %v (%v) contents to volume %v (%v)",
 			srcSnapName, srcSnapMountPath, dstVolumeId, dstVolMountPath), 0)
 		return
+	}
+
+	delaySec := getDebugValueInt(debugValueCloneDelaySec, nil)
+	if delaySec > 0 {
+		glog.V(log.DETAILED_DEBUG).Infof("ecfs: Debug - delaying snapshot restore by %v seconds", delaySec)
+		time.Sleep(time.Duration(delaySec) * time.Second)
 	}
 
 	return
@@ -246,11 +272,15 @@ func restoreSnapshotToVolume(emsClient *emanageClient, source *csi.VolumeContent
 		return
 	}
 
-	defer func() { // Umount the source snapshot
-		err = unmountAndCleanup(srcSnapMountPath)
-		if err != nil {
-			glog.Warning(errors.WrapPrefix(err,
-				"Failed to unmount source snapshot - could be a cascading error", 0))
+	defer func() { // Umount the source export
+		e := unmountAndCleanup(srcSnapMountPath)
+		if e != nil {
+			if err == nil {
+				err = errors.WrapPrefix(e, "Failed to unmount source snapshot", 0)
+				glog.Warning(err.Error())
+			} else {
+				glog.Warning(errors.WrapPrefix(e, fmt.Sprintf("Secondary error, happened after %v", err), 0))
+			}
 		}
 	}()
 
@@ -263,10 +293,14 @@ func restoreSnapshotToVolume(emsClient *emanageClient, source *csi.VolumeContent
 	}
 
 	defer func() { // Umount the destination volume
-		err = unmountAndCleanup(dstVolMountPath)
-		if err != nil {
-			glog.Warning(errors.WrapPrefix(err,
-				"Failed to unmount destination volume - could be a cascading error", 0))
+		e := unmountAndCleanup(dstVolMountPath)
+		if e != nil {
+			if err == nil {
+				err = errors.WrapPrefix(e, "Failed to unmount destination volume", 0)
+				glog.Warning(err.Error())
+			} else {
+				glog.Warning(errors.WrapPrefix(e, fmt.Sprintf("Secondary error, happened after %v", err), 0))
+			}
 		}
 	}()
 
