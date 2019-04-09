@@ -144,108 +144,9 @@ func createEmptyVolume(emsClient *emanageClient, volOptions *volumeOptions) (vol
 	return
 }
 
-func cloneVolume(emsClient *emanageClient, source *csi.VolumeContentSource_VolumeSource, dstVolOptions *volumeOptions) (dstVolumeId volumeHandleType, err error) {
-	var (
-		reqParams        map[string]string
-		srcVolumeId      = volumeHandleType(source.GetVolumeId())
-		srcSnapName      = truncateStr(fmt.Sprintf("4-%v", dstVolOptions.VolumeId), maxSnapshotNameLen)
-		srcSnapMountPath = fmt.Sprintf("/mnt/%v", srcSnapName)
-	)
-
-	glog.V(log.DETAILED_INFO).Infof("ecfs: Cloning volume %v to %v via snapshot %v - dstVolOptions: %+v",
-		srcVolumeId, dstVolOptions.VolumeId, srcSnapName, dstVolOptions)
-
-	// Take source volume's snapshot
-	srcSnapshot, err := createSnapshot(emsClient, srcSnapName, srcVolumeId, reqParams)
-	if err != nil {
-		err = errors.WrapPrefix(err,
-			fmt.Sprintf("Failed to create snapshot for volume %v with name %v", srcVolumeId, srcSnapName), 0)
-		return
-	}
-
-	defer func() { // Cleanup snapshot
-		e := deleteSnapshot(emsClient, srcSnapName)
-		if e != nil {
-			if err == nil {
-				err = errors.WrapPrefix(e, fmt.Sprintf("Failed to delete source snapshot %v", srcSnapName), 0)
-				glog.Warning(e.Error())
-			} else {
-				glog.Warning(errors.WrapPrefix(e, fmt.Sprintf("Secondary error, happened after %v", err), 0))
-			}
-		}
-	}()
-
-	// Create destination volume
-	dstVolumeId, err = createEmptyVolume(emsClient, dstVolOptions)
-	if err != nil {
-		err = errors.WrapPrefix(err, fmt.Sprintf("Failed to create destination volume %v",
-			dstVolOptions.VolumeId), 0)
-		glog.Errorf(err.Error())
-		err = status.Error(codes.Internal, err.Error())
-		return
-	}
-
-	// Mount the source snapshot
-	err = mountEcfsSnapshot(srcSnapMountPath, srcSnapshot)
-	if err != nil {
-		err = errors.WrapPrefix(err, "Failed to mount source snapshot's export", 0)
-		return
-	}
-
-	defer func() { // Umount the source export
-		e := unmountAndCleanup(srcSnapMountPath)
-		if e != nil {
-			if err == nil {
-				err = errors.WrapPrefix(e, "Failed to unmount source snapshot", 0)
-				glog.Warning(err.Error())
-			} else {
-				glog.Warning(errors.WrapPrefix(e, fmt.Sprintf("Secondary error, happened after %v", err), 0))
-			}
-		}
-	}()
-
-	// Mount the destination volume
-	dstVolMountPath := fmt.Sprintf("/mnt/%v", dstVolumeId)
-	err = mountEcfs(dstVolMountPath, dstVolumeId)
-	if err != nil {
-		err = errors.WrapPrefix(err, "Failed to mount destination volume", 0)
-		return
-	}
-
-	defer func() { // Umount the destination volume
-		e := unmountAndCleanup(dstVolMountPath)
-		if e != nil {
-			if err == nil {
-				err = errors.WrapPrefix(e, "Failed to unmount destination volume", 0)
-				glog.Warning(err.Error())
-			} else {
-				glog.Warning(errors.WrapPrefix(e, fmt.Sprintf("Secondary error, happened after %v", err), 0))
-			}
-		}
-	}()
-
-	// Copy the source snapshot's contents into the destination volume
-	err = copyDir(srcSnapMountPath, dstVolMountPath)
-	if err != nil {
-		err = errors.WrapPrefix(err, fmt.Sprintf("Failed to copy snapshot %v (%v) contents to volume %v (%v)",
-			srcSnapName, srcSnapMountPath, dstVolumeId, dstVolMountPath), 0)
-		return
-	}
-
-	delaySec := getDebugValueInt(debugValueCloneDelaySec, nil)
-	if delaySec > 0 {
-		glog.V(log.DETAILED_DEBUG).Infof("ecfs: Debug - delaying snapshot restore by %v seconds", delaySec)
-		time.Sleep(time.Duration(delaySec) * time.Second)
-	}
-
-	return
-}
-
-func restoreSnapshotToVolume(emsClient *emanageClient, source *csi.VolumeContentSource_SnapshotSource, dstVolOptions *volumeOptions) (dstVolumeId volumeHandleType, err error) {
-	var (
-		srcSnapName      = source.GetSnapshotId()
-		srcSnapMountPath = fmt.Sprintf("/mnt/%v", srcSnapName)
-	)
+// createVolumeFromSnapshot is intended to be used by restore/clone functions
+func createVolumeFromSnapshot(emsClient *emanageClient, srcSnapName string, dstVolOptions *volumeOptions) (dstVolumeId volumeHandleType, err error) {
+	var srcSnapMountPath = fmt.Sprintf("/mnt/%v", srcSnapName)
 
 	glog.V(log.DETAILED_INFO).Infof("ecfs: Restoring snapshot %v - dstVolOptions: %+v", srcSnapName, dstVolOptions)
 
@@ -317,6 +218,57 @@ func restoreSnapshotToVolume(emsClient *emanageClient, source *csi.VolumeContent
 	if delaySec > 0 {
 		glog.V(log.DETAILED_DEBUG).Infof("ecfs: Debug - delaying snapshot restore by %v seconds", delaySec)
 		time.Sleep(time.Duration(delaySec) * time.Second)
+	}
+
+	return
+}
+
+func cloneVolume(emsClient *emanageClient, source *csi.VolumeContentSource_VolumeSource, dstVolOptions *volumeOptions) (dstVolumeId volumeHandleType, err error) {
+	var (
+		reqParams   map[string]string
+		srcVolumeId = volumeHandleType(source.GetVolumeId())
+		srcSnapName = truncateStr(fmt.Sprintf("4-%v", dstVolOptions.VolumeId), maxSnapshotNameLen)
+	)
+
+	glog.V(log.DETAILED_INFO).Infof("ecfs: Cloning volume %v to %v via snapshot %v - dstVolOptions: %+v",
+		srcVolumeId, dstVolOptions.VolumeId, srcSnapName, dstVolOptions)
+
+	// Take source volume's snapshot
+	_, err = createSnapshot(emsClient, srcSnapName, srcVolumeId, reqParams)
+	if err != nil {
+		err = errors.WrapPrefix(err,
+			fmt.Sprintf("Failed to create snapshot for volume %v with name %v", srcVolumeId, srcSnapName), 0)
+		return
+	}
+
+	defer func() { // Cleanup source snapshot
+		e := deleteSnapshot(emsClient, srcSnapName)
+		if e != nil {
+			if err == nil {
+				err = errors.WrapPrefix(e, fmt.Sprintf("Failed to delete source snapshot %v", srcSnapName), 0)
+				glog.Warning(e.Error())
+			} else {
+				glog.Warning(errors.WrapPrefix(e, fmt.Sprintf("Secondary error, happened after %v", err), 0))
+			}
+		}
+	}()
+
+	dstVolumeId, err = createVolumeFromSnapshot(emsClient, srcSnapName, dstVolOptions)
+	if err != nil {
+		err = errors.WrapPrefix(err, fmt.Sprintf("Failed to clone volume %v", srcVolumeId), 0)
+		return
+	}
+
+	return
+}
+
+func restoreSnapshotToVolume(emsClient *emanageClient, source *csi.VolumeContentSource_SnapshotSource, dstVolOptions *volumeOptions) (dstVolumeId volumeHandleType, err error) {
+	srcSnapName := source.GetSnapshotId()
+
+	dstVolumeId, err = createVolumeFromSnapshot(emsClient, srcSnapName, dstVolOptions)
+	if err != nil {
+		err = errors.WrapPrefix(err, fmt.Sprintf("Failed to restore snapshot %v", srcSnapName), 0)
+		return
 	}
 
 	return
