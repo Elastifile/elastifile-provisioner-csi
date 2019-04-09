@@ -206,16 +206,58 @@ func createVolumeFromSnapshot(emsClient *emanageClient, srcSnapName string, dstV
 	}()
 
 	// Copy the source snapshot's contents into the destination volume
-	err = copyDir(srcSnapMountPath, dstVolMountPath)
+	err = copyDirWithKeepalive(srcSnapMountPath, dstVolMountPath, string(dstVolumeId))
 	if err != nil {
 		err = errors.WrapPrefix(err, fmt.Sprintf("Failed to copy snapshot %v (%v) contents to volume %v (%v)",
 			srcSnapName, srcSnapMountPath, dstVolumeId, dstVolMountPath), 0)
 		return
 	}
 
+	// Testing instrumentation
 	delaySec := getDebugValueInt(debugValueCloneDelaySec, nil)
 	if delaySec > 0 {
-		glog.V(log.DETAILED_DEBUG).Infof("ecfs: Debug - delaying snapshot restore by %v seconds", delaySec)
+		glog.V(log.DETAILED_DEBUG).Infof("ecfs: DEBUG - delaying volume creation completion by %v sec", delaySec)
+		time.Sleep(time.Duration(delaySec) * time.Second)
+	}
+
+	return
+}
+
+func copyDirWithKeepalive(srcSnapMountPath, dstVolMountPath, volumeName string) (err error) {
+	var (
+		errChan  = make(chan error)
+		stopChan = make(chan struct{})
+	)
+
+	cachedVolume, cacheHit := volumeCache.Get(volumeName)
+	if !cacheHit {
+		return errors.WrapPrefix(err, fmt.Sprintf("Failed to get cached volume by name %v", volumeName), 0)
+	}
+
+	go cachedVolume.persistentResource.KeepAliveRoutine(errChan, stopChan, 30*24*time.Hour)
+	defer close(stopChan)
+
+	err = copyDir(srcSnapMountPath, dstVolMountPath)
+	if err != nil {
+		err = errors.WrapPrefix(err, fmt.Sprintf("Failed to copy %v to %v", srcSnapMountPath, dstVolMountPath), 0)
+		return
+	}
+
+	select { // Non-blocking read from channel
+	case e, ok := <-errChan:
+		if ok { // There was some data to read
+			if e != nil {
+				glog.Warningf("Copying data finished, but there was an error in keep-alive: %v", err)
+			}
+		}
+	default:
+		glog.V(log.DEBUG).Infof("Copying data finished")
+	}
+
+	// Testing instrumentation
+	delaySec := getDebugValueInt(debugValueCopyDelaySec, nil)
+	if delaySec > 0 {
+		glog.V(log.DETAILED_DEBUG).Infof("ecfs: DEBUG - delaying copy completion by %v sec", delaySec)
 		time.Sleep(time.Duration(delaySec) * time.Second)
 	}
 
@@ -283,7 +325,7 @@ func deleteExport(emsClient *emanageClient, dc *emanage.DataContainer) error {
 	for _, export := range exports {
 		if export.DataContainerId == dc.Id && export.Name == volumeExportName {
 			found = true
-			_, err := emsClient.Exports.Delete(&export)
+			_, err = emsClient.Exports.Delete(&export)
 			if err != nil {
 				return err
 			}
