@@ -1,0 +1,22 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: demo-cleanup-job
+spec:
+  template:
+    spec:
+      containers:
+        - name: container1
+          image: alpine
+          volumeMounts:
+            - name: volume1
+              mountPath: /mnt
+          command: ["sh", "-c"]
+          args: ["ls -l /mnt; rm -f /mnt/demofile; ls -l /mnt"]
+      volumes:
+        - name: volume1
+          persistentVolumeClaim:
+            claimName: demo-pvc
+            readOnly: false
+      restartPolicy: Never
+      terminationGracePeriodSeconds: 30
