@@ -24,6 +24,10 @@ spec:
             - "--v=10"
             - "--csi-address=$(ADDRESS)"
             - "--kubelet-registration-path=$(DRIVER_REG_SOCK_PATH)"
+          lifecycle:
+            preStop:
+              exec:
+                command: ["/bin/sh", "-c", "rm -rf /registration/csi-ecfsplugin /var/lib/kubelet/plugins_registry/csi-ecfsplugin/csi.sock"]
           env:
             - name: ADDRESS
               value: /var/lib/kubelet/plugins_registry/csi-ecfsplugin/csi.sock
