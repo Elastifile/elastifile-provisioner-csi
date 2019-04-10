@@ -234,8 +234,12 @@ func (pr *PersistentResource) takeOwnership() (err error) {
 	// It's not bulletproof, but in practical terms it reduces the chances of contention virtually to zero,
 	// since K8s doesn't flood the plugin with duplicate requests
 	if pr.isAlive() && pr.isOwnedByMe() {
-		glog.V(log.DETAILED_INFO).Infof("ecfs: Transferred resource ownership to %v (from %v)",
-			GetPluginNodeName(), originalOwner)
+		if originalOwner == GetPluginNodeName() {
+			glog.V(log.DETAILED_DEBUG).Infof("ecfs: Resource ownership confirmed (%v)", originalOwner)
+		} else {
+			glog.V(log.DETAILED_INFO).Infof("ecfs: Transferred resource ownership to %v (from %v)",
+				GetPluginNodeName(), originalOwner)
+		}
 	} else {
 		err = errors.Errorf("Failed to transfer resource ownership to %v (owned by %v)",
 			GetPluginNodeName(), pr.GetOwner())
