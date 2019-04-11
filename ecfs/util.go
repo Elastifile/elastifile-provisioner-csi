@@ -78,6 +78,15 @@ func (cs *controllerServer) validateCreateVolumeRequest(req *csi.CreateVolumeReq
 		return status.Error(codes.InvalidArgument, "Volume Capabilities cannot be empty")
 	}
 
+	for _, capability := range req.GetVolumeCapabilities() {
+		accessType := capability.GetAccessType()
+		switch accessType.(type) {
+		case *csi.VolumeCapability_Mount:
+		default:
+			return errors.Errorf("Unsupported volume access type: %v", accessType)
+		}
+	}
+
 	return nil
 }
 
