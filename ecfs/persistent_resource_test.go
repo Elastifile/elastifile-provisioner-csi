@@ -1,7 +1,6 @@
 package main
 
 import (
-	"github.com/fatih/structs"
 	"os"
 	"testing"
 	"time"
@@ -39,31 +38,6 @@ func TestPersistentResource_ToMapFromMap(t *testing.T) {
 	data2 := pr2.toMap()
 	t.Logf("pr2: %+v", pr2)
 	t.Logf("data2: %+v", data2)
-}
-
-func TestPersistentResource_ToMapFromMap2(t *testing.T) {
-	data := make(map[string]string)
-	pr := PersistentResource{
-		ResourceType: resourceTypeIdVolume,
-		ResourceName: "blah-name",
-	}
-
-	variMap := structs.Map(pr)
-	for k := range variMap {
-		data[k] = string(variMap[k].(string))
-	}
-
-	t.Logf("variMap: %+v", variMap)
-	t.Logf("data: %+v", data)
-
-	pr2 := PersistentResource{}
-	//data["LastAlive"] = "2019-04-04 21:35:38.7466077 +0000 UTC m=+500.711405097"
-	data["LastAlive"] = "2006-01-02T15:04:05Z" // RFC3339
-	err := pr2.fromMap(data)
-	//err := mapstructure.Decode(data, &pr2)
-	AssertEqual(t, err, nil)
-
-	t.Logf("pr2: %+v", pr2)
 }
 
 func TestSerializableTime_String(t *testing.T) {
@@ -105,22 +79,5 @@ func TestResourceOwner_KeepAlive(t *testing.T) {
 	// Different node fails to send keepalive
 	_ = os.Setenv(envVarK8sNodeID, nodeID2)
 	err = ownedResource.KeepAlive()
-	AssertEqual(t, err != nil, true)
-}
-
-func TestResourceOwner_TakeOwnership(t *testing.T) {
-	// Successful ownership change
-	_ = os.Setenv(envVarK8sNodeID, nodeID1)
-	err := ownedResource.takeOwnership()
-	AssertEqual(t, err, nil)
-
-	// Successful ownership change to the same owner
-	_ = os.Setenv(envVarK8sNodeID, nodeID1)
-	err = ownedResource.takeOwnership()
-	AssertEqual(t, err, nil)
-
-	// Different node fails to take ownership
-	_ = os.Setenv(envVarK8sNodeID, nodeID2)
-	err = ownedResource.takeOwnership()
 	AssertEqual(t, err != nil, true)
 }
