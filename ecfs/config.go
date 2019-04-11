@@ -33,8 +33,6 @@ type config struct {
 	EmanageURL string `parameter:"emanageURL"`
 	Username   string `parameter:"username"`
 	Password   string
-	//SecretName      string `parameter:"secretName"`
-	//SecretNamespace string `parameter:"secretNamespace"`
 }
 
 func (conf *config) String() string {
@@ -69,7 +67,6 @@ func pluginConfig() (conf *config, err error) {
 		err = errors.Wrap(err, 0)
 	}
 
-	// TODO: Check key availability
 	conf = &config{
 		NFSServer:  pluginSettings[nfsAddress],
 		EmanageURL: pluginSettings[managementAddress],

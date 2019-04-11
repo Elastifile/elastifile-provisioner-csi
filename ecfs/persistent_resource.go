@@ -116,7 +116,6 @@ func (pr *PersistentResource) loadFromPersistentStore() error {
 		return errors.WrapPrefix(err, fmt.Sprintf("Failed to load resource from map - %+v", data), 0)
 	}
 
-	glog.V(log.DETAILED_DEBUG).Infof("AAAAA ecfs: Loaded persistent resource from config map %v: %+v", pr.resourceKey(), pr) // TODO: DELME
 	return nil
 }
 
@@ -191,7 +190,6 @@ func (pr *PersistentResource) fromMap(data map[string]string) error {
 func (pr *PersistentResource) updatePersistentConf() (err error) {
 	confMapName := pr.resourceKey()
 	data := pr.toMap()
-	glog.V(log.DETAILED_DEBUG).Infof("AAAAA ecfs: Updating config map. id: %v data: %+v", pr.resourceKey(), data) // TODO: DELME
 
 	err = co.UpdateConfigMap(Namespace(), confMapName, data)
 	if err != nil {
@@ -271,7 +269,6 @@ func (pr *PersistentResource) KeepAliveRoutine(errChan chan error, stopChan chan
 	for {
 		select {
 		case <-ticker.C:
-			glog.V(log.DETAILED_DEBUG).Infof("AAAAA KeepAliveRoutine %v", pr.resourceKey()) // TODO: DELME
 			err := pr.KeepAlive()
 			if err != nil {
 				err = errors.WrapPrefix(err, fmt.Sprintf("ecfs: Failed to send KeepAlive for %v", pr.resourceKey()), 0)

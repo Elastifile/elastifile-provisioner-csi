@@ -54,7 +54,6 @@ func mountEcfs(mountPoint string, volId volumeHandleType) error {
 	}
 
 	glog.V(log.INFO).Infof("ecfs: Mounting volume %v on %v", volId, mountPoint)
-	// TODO: Don't create eManage client for each action (will need relogin support)
 	var emsClient emanageClient
 	dc, export, err := emsClient.GetDcDefaultExportByVolumeId(volId)
 	if err != nil {

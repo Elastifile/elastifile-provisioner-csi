@@ -10,9 +10,9 @@ import (
 )
 
 type CachedVolume struct {
-	ID                 string
-	IsReady            bool
-	IsCopying          bool
+	ID      string
+	IsReady bool
+	//IsCopying          bool
 	persistentResource PersistentResource
 }
 
