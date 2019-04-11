@@ -81,7 +81,7 @@ func NewPersistentResource(resourceType resourceTypeEnum, resourceName string) (
 		return
 	}
 
-	glog.V(log.DETAILED_DEBUG).Infof("ecfs: Created new persistent resource %+v", pr)
+	glog.V(log.VERBOSE_DEBUG).Infof("ecfs: Created new persistent resource %+v", pr)
 	return
 }
 
@@ -94,7 +94,7 @@ func (pr *PersistentResource) resourceKey() string {
 func (pr *PersistentResource) loadFromPersistentStore() error {
 	LastAliveWithPartialTTL := pr.LastAlive.Add(TTL / 3)
 	if LastAliveWithPartialTTL.After(time.Now()) {
-		glog.V(log.DETAILED_DEBUG).Infof("ecfs: Using cached persistent resource for %v %v",
+		glog.V(log.VERBOSE_DEBUG).Infof("ecfs: Using cached persistent resource for %v %v",
 			resourceTypeName[pr.ResourceType], pr.ResourceName)
 		return nil
 	}
@@ -105,7 +105,7 @@ func (pr *PersistentResource) loadFromPersistentStore() error {
 	data, err := co.GetConfigMap(Namespace(), confMapName)
 	if err != nil {
 		if isErrorDoesNotExist(err) {
-			glog.V(log.DETAILED_DEBUG).Infof("ecfs: Config map %v not found - assuming new resource", confMapName)
+			glog.V(log.VERBOSE_DEBUG).Infof("ecfs: Config map %v not found - assuming new resource", confMapName)
 		} else {
 			return errors.WrapPrefix(err, fmt.Sprintf("Failed to get config map %v", confMapName), 0)
 		}
@@ -142,14 +142,13 @@ func (pr *PersistentResource) isAlive() (isAlive bool) {
 func (pr *PersistentResource) isOwnedByMe() (ownedByMe bool) {
 	owner := pr.GetOwner()
 	if owner == GetPluginNodeName() {
-		// TODO: Rename DETAILED_DEBUG to VERBOSE_DEBUG
-		glog.V(log.DETAILED_DEBUG).Infof("ecfs: Resource is owned by the current plugin instance (%v)", owner)
+		glog.V(log.VERBOSE_DEBUG).Infof("ecfs: Resource is owned by the current plugin instance (%v)", owner)
 		return true
 	} else {
 		if owner == "" {
-			glog.V(log.DETAILED_DEBUG).Infof("ecfs: Resource has no owner")
+			glog.V(log.VERBOSE_DEBUG).Infof("ecfs: Resource has no owner")
 		} else {
-			glog.V(log.DETAILED_DEBUG).Infof("ecfs: Resource is not owned by the current plugin instance %v (owner %v)",
+			glog.V(log.VERBOSE_DEBUG).Infof("ecfs: Resource is not owned by the current plugin instance %v (owner %v)",
 				GetPluginNodeName(), owner)
 		}
 		return false
@@ -215,7 +214,7 @@ func (pr *PersistentResource) takeOwnership() (err error) {
 	if pr.isAlive() && !pr.isOwnedByMe() {
 		err = errors.Errorf("Can't take ownership - resource is owned by another active plugin instance - %v",
 			originalOwner)
-		glog.V(log.DETAILED_DEBUG).Infof(err.Error())
+		glog.V(log.VERBOSE_DEBUG).Infof(err.Error())
 		return
 	}
 
@@ -233,7 +232,7 @@ func (pr *PersistentResource) takeOwnership() (err error) {
 	// since K8s doesn't flood the plugin with duplicate requests
 	if pr.isAlive() && pr.isOwnedByMe() {
 		if originalOwner == GetPluginNodeName() {
-			glog.V(log.DETAILED_DEBUG).Infof("ecfs: Resource ownership confirmed (%v)", originalOwner)
+			glog.V(log.VERBOSE_DEBUG).Infof("ecfs: Resource ownership confirmed (%v)", originalOwner)
 		} else {
 			glog.V(log.DETAILED_INFO).Infof("ecfs: Transferred resource ownership to %v (from %v)",
 				GetPluginNodeName(), originalOwner)
@@ -241,7 +240,7 @@ func (pr *PersistentResource) takeOwnership() (err error) {
 	} else {
 		err = errors.Errorf("Failed to transfer resource ownership to %v (owned by %v)",
 			GetPluginNodeName(), pr.GetOwner())
-		glog.V(log.DETAILED_DEBUG).Infof(err.Error())
+		glog.V(log.VERBOSE_DEBUG).Infof(err.Error())
 		return
 	}
 
@@ -254,7 +253,7 @@ func (pr *PersistentResource) KeepAlive() (err error) {
 	err = pr.takeOwnership()
 	if err != nil {
 		err = errors.WrapPrefix(err, "Can't keep alive", 0)
-		glog.V(log.DETAILED_DEBUG).Infof(err.Error())
+		glog.V(log.VERBOSE_DEBUG).Infof(err.Error())
 		return
 	}
 	return
@@ -295,7 +294,7 @@ func (pr *PersistentResource) Delete() (err error) {
 	err = co.DeleteConfigMap(Namespace(), pr.resourceKey())
 	if err != nil {
 		if isErrorDoesNotExist(err) {
-			glog.V(log.DETAILED_DEBUG).Infof("ecfs: Config map %v not found - assuming success", pr.resourceKey())
+			glog.V(log.VERBOSE_DEBUG).Infof("ecfs: Config map %v not found - assuming success", pr.resourceKey())
 			err = nil
 		} else {
 			err = errors.WrapPrefix(err, fmt.Sprintf("Failed to delete persistent resource: %v", pr.resourceKey()), 0)
