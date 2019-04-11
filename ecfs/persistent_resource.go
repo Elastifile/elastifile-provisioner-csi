@@ -144,7 +144,7 @@ func (pr *PersistentResource) isOwnedByMe() (ownedByMe bool) {
 	owner := pr.GetOwner()
 	if owner == GetPluginNodeName() {
 		// TODO: Rename DETAILED_DEBUG to VERBOSE_DEBUG
-		glog.V(log.DETAILED_DEBUG).Infof("ecfs: Resource is owned by the current plugin instance")
+		glog.V(log.DETAILED_DEBUG).Infof("ecfs: Resource is owned by the current plugin instance (%v)", owner)
 		return true
 	} else {
 		if owner == "" {
