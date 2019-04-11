@@ -69,7 +69,7 @@ func (cs *controllerServer) CreateVolume(ctx context.Context, req *csi.CreateVol
 		glog.Errorf(err.Error())
 		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
-	glog.V(log.DETAILED_DEBUG).Infof("ecfs: CreateVolume options: %+v", volOptions)
+	glog.V(log.VERBOSE_DEBUG).Infof("ecfs: CreateVolume options: %+v", volOptions)
 
 	// Check if volume with this name has already been requested - this operation MUST be idempotent
 	var volumeId volumeHandleType
@@ -365,7 +365,7 @@ func (cs *controllerServer) ListSnapshots(ctx context.Context, req *csi.ListSnap
 		description = " - " + strings.Join(args, ", ")
 	}
 	glog.V(log.INFO).Infof("ecfs: Listing snapshots %v", description)
-	glog.V(log.DETAILED_DEBUG).Infof("ecfs: ListSnapshots - enter. req: %+v", *req)
+	glog.V(log.VERBOSE_DEBUG).Infof("ecfs: ListSnapshots - enter. req: %+v", *req)
 
 	var ems emanageClient
 	ecfsSnapshots, nextToken, err := listSnapshots(ems.GetClient(), req.GetSnapshotId(), req.GetSourceVolumeId(),
@@ -375,7 +375,7 @@ func (cs *controllerServer) ListSnapshots(ctx context.Context, req *csi.ListSnap
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	glog.V(log.DETAILED_DEBUG).Infof("ecfs: Listing snapshots: %+v", ecfsSnapshots)
+	glog.V(log.VERBOSE_DEBUG).Infof("ecfs: Listing snapshots: %+v", ecfsSnapshots)
 
 	var listEntries []*csi.ListSnapshotsResponse_Entry
 	for _, ecfsSnapshot := range ecfsSnapshots {

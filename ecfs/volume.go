@@ -247,7 +247,7 @@ func createVolumeFromSnapshot(emsClient *emanageClient, srcSnapName string, dstV
 	// Testing instrumentation
 	delaySec := getDebugValueInt(debugValueCloneDelaySec, nil)
 	if delaySec > 0 {
-		glog.V(log.DETAILED_DEBUG).Infof("ecfs: DEBUG - delaying volume creation completion by %v sec", delaySec)
+		glog.V(log.VERBOSE_DEBUG).Infof("ecfs: DEBUG - delaying volume creation completion by %v sec", delaySec)
 		time.Sleep(time.Duration(delaySec) * time.Second)
 	}
 
@@ -288,7 +288,7 @@ func copyDirWithKeepalive(srcSnapMountPath, dstVolMountPath, volumeName string) 
 	// Testing instrumentation
 	delaySec := getDebugValueInt(debugValueCopyDelaySec, nil)
 	if delaySec > 0 {
-		glog.V(log.DETAILED_DEBUG).Infof("ecfs: DEBUG - delaying copy completion by %v sec", delaySec)
+		glog.V(log.VERBOSE_DEBUG).Infof("ecfs: DEBUG - delaying copy completion by %v sec", delaySec)
 		time.Sleep(time.Duration(delaySec) * time.Second)
 	}
 

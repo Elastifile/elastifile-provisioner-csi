@@ -18,7 +18,7 @@ const (
 )
 
 func logDebugValue(key string, value interface{}) {
-	glog.V(log.DETAILED_DEBUG).Infof("ecfs: Using debug value %v=%v", key, value)
+	glog.V(log.VERBOSE_DEBUG).Infof("ecfs: Using debug value %v=%v", key, value)
 }
 
 // getDebugValueInt returns string value corresponding to the key in debugConfigMapName, and the default value otherwise
@@ -32,7 +32,7 @@ func getDebugValue(key string, defaultValue *string) string {
 
 		err = errors.WrapPrefix(err, fmt.Sprintf("Failed to get debug value %v from config map %v - using default",
 			key, debugConfigMapName), 0)
-		glog.V(log.DETAILED_DEBUG).Infof(err.Error())
+		glog.V(log.VERBOSE_DEBUG).Infof(err.Error())
 	}
 
 	logDebugValue(key, value)
@@ -51,7 +51,7 @@ func getDebugValueInt(key string, defaultValue *int) (value int) {
 
 		err = errors.WrapPrefix(err, fmt.Sprintf("Failed to convert debug value %v from %v to int - using default",
 			key, valueStr), 0)
-		glog.V(log.DETAILED_DEBUG).Infof(err.Error())
+		glog.V(log.VERBOSE_DEBUG).Infof(err.Error())
 	}
 
 	logDebugValue(key, value)

@@ -100,7 +100,7 @@ func (ems *emanageClient) GetDcDefaultExportByVolumeId(volId volumeHandleType) (
 	}
 	for _, export := range exports {
 		if dc.Id == export.DataContainerId && export.Name == volumeExportName {
-			glog.V(log.DETAILED_DEBUG).Infof("ecfs: Found Dc and Export by Volume Id %v - DC: %+v EXPORT: %+v",
+			glog.V(log.VERBOSE_DEBUG).Infof("ecfs: Found Dc and Export by Volume Id %v - DC: %+v EXPORT: %+v",
 				volId, dc, export)
 			return dc, &export, nil
 		}
@@ -122,7 +122,7 @@ func (ems *emanageClient) GetDcSnapshotExportByVolumeId(volId volumeHandleType) 
 	}
 	for _, export := range exports {
 		if dc.Id == export.DataContainerId && export.Name == volumeExportName {
-			glog.V(log.DETAILED_DEBUG).Infof("ecfs: Found Snapshot Export by Volume Id - success. "+
+			glog.V(log.VERBOSE_DEBUG).Infof("ecfs: Found Snapshot Export by Volume Id - success. "+
 				"Returning DC: %+v EXPORT: %+v", dc, export)
 			return dc, &export, nil
 		}
@@ -264,7 +264,7 @@ func getSnapshotExport(emsClient *emanageClient, snapshotId int) (snapshotRef *e
 		return
 	}
 
-	glog.V(log.DETAILED_DEBUG).Infof("Found snapshot export by snapshot ID %v - snapshot: %+v export: %+v",
+	glog.V(log.VERBOSE_DEBUG).Infof("Found snapshot export by snapshot ID %v - snapshot: %+v export: %+v",
 		snapshotRef.ID, *snapshotRef, *exportRef)
 	return
 }
