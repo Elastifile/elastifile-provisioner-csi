@@ -161,7 +161,7 @@ func isErrorAlreadyExists(err error) bool {
 
 	for _, text := range errorAlreadyExists {
 		if strings.Contains(err.Error(), text) {
-			glog.V(log.DETAILED_DEBUG).Infof("ecfs: Entity already exists. Error: %v", err)
+			glog.V(log.DETAILED_DEBUG).Infof("ecfs: Error means that already exists: %v", err)
 			return true
 		}
 	}
@@ -177,7 +177,7 @@ func isErrorDoesNotExist(err error) bool {
 
 	for _, text := range errorDoesNotExist {
 		if strings.Contains(err.Error(), text) {
-			glog.V(log.DETAILED_DEBUG).Infof("ecfs: Entity does not exist. Error: %v", err)
+			glog.V(log.DETAILED_DEBUG).Infof("ecfs: Error means that entity does not exist: %v", err)
 			return true
 		}
 	}

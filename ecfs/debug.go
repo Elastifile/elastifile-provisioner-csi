@@ -17,6 +17,12 @@ const (
 	debugValueCopyDelaySec  = "copyDelaySec"
 )
 
+func logDebugValue(key string, value interface{}) {
+	glog.V(log.DETAILED_DEBUG).Infof("ecfs: Using debug value %v=%v", key, value)
+}
+
+// getDebugValueInt returns string value corresponding to the key in debugConfigMapName, and the default value otherwise
+// If nil is specified, zero value is returned
 func getDebugValue(key string, defaultValue *string) string {
 	value, err := co.GetConfigMapValue(Namespace(), debugConfigMapName, key)
 	if err != nil {
@@ -29,10 +35,12 @@ func getDebugValue(key string, defaultValue *string) string {
 		glog.V(log.DETAILED_DEBUG).Infof(err.Error())
 	}
 
-	glog.V(log.DETAILED_DEBUG).Infof("ecfs: Returning debug value for %v: %v", key, value)
+	logDebugValue(key, value)
 	return value
 }
 
+// getDebugValueInt returns integer value corresponding to the key in debugConfigMapName, and the default value otherwise
+// If nil is specified, zero value is returned
 func getDebugValueInt(key string, defaultValue *int) (value int) {
 	valueStr := getDebugValue(key, nil)
 	value, err := strconv.Atoi(valueStr)
@@ -46,6 +54,6 @@ func getDebugValueInt(key string, defaultValue *int) (value int) {
 		glog.V(log.DETAILED_DEBUG).Infof(err.Error())
 	}
 
-	glog.V(log.DETAILED_DEBUG).Infof("ecfs: Returning debug value for %v: %v", key, value)
+	logDebugValue(key, value)
 	return value
 }
