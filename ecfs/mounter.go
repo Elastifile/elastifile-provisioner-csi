@@ -79,6 +79,7 @@ func mountEcfs(mountPoint string, volId volumeHandleType) error {
 	return nil
 }
 
+// mountEcfsSnapshot creates a snapshot export and mounts it
 func mountEcfsSnapshot(mountPoint string, snapshot *emanage.Snapshot) error {
 	if err := createMountPoint(mountPoint); err != nil {
 		return errors.Wrap(err, 0)

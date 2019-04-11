@@ -189,6 +189,10 @@ func isWorkaround(desc string) bool {
 	return true
 }
 
+func logSecondaryError(original, secondary error) {
+	glog.Warning(errors.WrapPrefix(secondary, fmt.Sprintf("Secondary error, happened after %v", original), 0))
+}
+
 func truncateStr(str string, maxLen int) string {
 	if len(str) > maxLen {
 		return str[:maxLen]

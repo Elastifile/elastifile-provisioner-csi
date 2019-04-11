@@ -114,12 +114,19 @@ func createEmptyVolume(emsClient *emanageClient, volOptions *volumeOptions) (vol
 	glog.V(log.DETAILED_INFO).Infof("ecfs: Creating Volume - settings: %+v", volOptions)
 	volumeId = volOptions.VolumeId
 
+	// Create Data Container
 	var dc *emanage.DataContainer
 	dc, err = createDc(emsClient, volOptions)
 	if err != nil {
 		if isErrorAlreadyExists(err) {
-			glog.V(log.DEBUG).Infof("ecfs: Volume %v was already created - nothing to do", volOptions.VolumeId)
-			err = nil
+			glog.V(log.DEBUG).Infof("ecfs: Volume %v was already created - assuming it was created "+
+				"during previous, failed, attempt", volumeId)
+			var e error
+			dc, e = emsClient.GetDcByName(string(volumeId))
+			if e != nil {
+				logSecondaryError(err, e)
+				return
+			}
 		} else {
 			err = errors.Wrap(err, 0)
 			return "", errors.Wrap(err, 0)
@@ -159,18 +166,32 @@ func createVolumeFromSnapshot(emsClient *emanageClient, srcSnapName string, dstV
 	// Create destination volume
 	dstVolumeId, err = createEmptyVolume(emsClient, dstVolOptions)
 	if err != nil {
-		err = errors.WrapPrefix(err, fmt.Sprintf("Failed to create destination volume %v",
-			dstVolOptions.VolumeId), 0)
-		glog.Errorf(err.Error())
-		err = status.Error(codes.Internal, err.Error())
-		return
+		if !isErrorAlreadyExists(err) {
+			err = errors.WrapPrefix(err, fmt.Sprintf("Failed to create destination volume %v",
+				dstVolOptions.VolumeId), 0)
+			glog.Errorf(err.Error())
+			err = status.Error(codes.Internal, err.Error())
+			return
+		} else {
+			glog.V(log.DEBUG).Infof("ecfs: Destination volume %v exists. Assuming CSI retried operation "+
+				"that was previous aborted", dstVolOptions.VolumeId)
+		}
 	}
 
 	// Mount the source snapshot
 	err = mountEcfsSnapshot(srcSnapMountPath, srcSnapshot)
 	if err != nil {
-		err = errors.WrapPrefix(err, "Failed to mount source snapshot's export", 0)
-		return
+		isMount, e := isMountPoint(srcSnapMountPath) // TODO: Consider remounting or using unique paths
+		if e != nil {
+			logSecondaryError(err, e)
+		}
+		if !isMount {
+			err = errors.WrapPrefix(err, "Failed to mount source snapshot's export", 0)
+			return
+		} else {
+			glog.V(log.DEBUG).Infof("ecfs: Source snapshot is already mounted on %v - "+
+				"assuming it was mounted during previous, aborted, attempt", srcSnapMountPath)
+		}
 	}
 
 	defer func() { // Umount the source export
@@ -180,7 +201,7 @@ func createVolumeFromSnapshot(emsClient *emanageClient, srcSnapName string, dstV
 				err = errors.WrapPrefix(e, "Failed to unmount source snapshot", 0)
 				glog.Warning(err.Error())
 			} else {
-				glog.Warning(errors.WrapPrefix(e, fmt.Sprintf("Secondary error, happened after %v", err), 0))
+				logSecondaryError(err, e)
 			}
 		}
 	}()
@@ -189,8 +210,17 @@ func createVolumeFromSnapshot(emsClient *emanageClient, srcSnapName string, dstV
 	dstVolMountPath := fmt.Sprintf("/mnt/%v", dstVolumeId)
 	err = mountEcfs(dstVolMountPath, dstVolumeId)
 	if err != nil {
-		err = errors.WrapPrefix(err, "Failed to mount destination volume", 0)
-		return
+		isMount, e := isMountPoint(dstVolMountPath) // TODO: Consider remounting or using unique paths
+		if e != nil {
+			logSecondaryError(err, e)
+		}
+		if !isMount {
+			err = errors.WrapPrefix(err, "Failed to mount destination volume", 0)
+			return
+		} else {
+			glog.V(log.DEBUG).Infof("ecfs: Destination volume is already mounted on %v - "+
+				"assuming it was mounted during previous, aborted, attempt", dstVolMountPath)
+		}
 	}
 
 	defer func() { // Umount the destination volume
@@ -200,7 +230,7 @@ func createVolumeFromSnapshot(emsClient *emanageClient, srcSnapName string, dstV
 				err = errors.WrapPrefix(e, "Failed to unmount destination volume", 0)
 				glog.Warning(err.Error())
 			} else {
-				glog.Warning(errors.WrapPrefix(e, fmt.Sprintf("Secondary error, happened after %v", err), 0))
+				logSecondaryError(err, e)
 			}
 		}
 	}()
@@ -289,7 +319,7 @@ func cloneVolume(emsClient *emanageClient, source *csi.VolumeContentSource_Volum
 				err = errors.WrapPrefix(e, fmt.Sprintf("Failed to delete source snapshot %v", srcSnapName), 0)
 				glog.Warning(e.Error())
 			} else {
-				glog.Warning(errors.WrapPrefix(e, fmt.Sprintf("Secondary error, happened after %v", err), 0))
+				logSecondaryError(err, e)
 			}
 		}
 	}()
