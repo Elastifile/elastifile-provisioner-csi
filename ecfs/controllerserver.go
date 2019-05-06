@@ -110,25 +110,25 @@ func (cs *controllerServer) CreateVolume(ctx context.Context, req *csi.CreateVol
 		source := req.GetVolumeContentSource()
 		sourceType := source.GetType()
 		switch sourceType.(type) {
-		case *csi.VolumeContentSource_Volume: // Clone volume
-			srcVolume := source.GetVolume()
-			glog.V(log.HIGH_LEVEL_INFO).Infof("ecfs: Cloning volume %v to %v",
-				srcVolume.GetVolumeId(), req.GetName())
-			volumeId, err = cloneVolume(ems.GetClient(), srcVolume, volOptions)
-			if err != nil {
-				err = errors.WrapPrefix(err, fmt.Sprintf("Failed to clone volume %v to %v",
-					srcVolume.GetVolumeId(), req.GetName()), 0)
-				glog.Errorf(err.Error())
-				return nil, status.Error(codes.Internal, err.Error())
-			}
+		//case *csi.VolumeContentSource_Volume: // Clone volume
+		//	srcVolume := source.GetVolume()
+		//	glog.V(log.HIGH_LEVEL_INFO).Infof("ecfs: Cloning volume %v to %v",
+		//		srcVolume.GetVolumeId(), req.GetName())
+		//	volumeId, err = cloneVolume(ems.GetClient(), srcVolume, volOptions)
+		//	if err != nil {
+		//		err = errors.WrapPrefix(err, fmt.Sprintf("Failed to clone volume %v to %v",
+		//			srcVolume.GetVolumeId(), req.GetName()), 0)
+		//		glog.Errorf(err.Error())
+		//		return nil, status.Error(codes.Internal, err.Error())
+		//	}
 		case *csi.VolumeContentSource_Snapshot: // Restore from snapshot
 			snapshot := source.GetSnapshot()
 			glog.V(log.HIGH_LEVEL_INFO).Infof("ecfs: Creating volume %v from snapshot %v",
-				req.GetName(), snapshot.GetSnapshotId())
+				req.GetName(), snapshot.GetId())
 			volumeId, err = restoreSnapshotToVolume(ems.GetClient(), snapshot, volOptions)
 			if err != nil {
 				err = errors.WrapPrefix(err, fmt.Sprintf("Failed to create volume %v from snapshot %v",
-					req.GetName(), snapshot.GetSnapshotId()), 0)
+					req.GetName(), snapshot.GetId()), 0)
 				glog.Errorf(err.Error())
 				return nil, status.Error(codes.Internal, err.Error())
 			}
@@ -222,20 +222,21 @@ func (cs *controllerServer) ValidateVolumeCapabilities(ctx context.Context, req 
 }
 
 func getCreateSnapshotResponse(ecfsSnapshot *emanage.Snapshot, req *csi.CreateSnapshotRequest) (response *csi.CreateSnapshotResponse, err error) {
-	creationTimestamp, err := parseTimestamp(ecfsSnapshot.CreatedAt)
+	creationTimestamp, err := parseTimestampRFC3339(ecfsSnapshot.CreatedAt)
 	if err != nil {
 		err = errors.Wrap(err, 0)
 		return
 	}
 
-	isReady := isSnapshotUsable(ecfsSnapshot)
-
+	csiSnapshotStatus := snapshotStatusEcfsToCsi(ecfsSnapshot.Status)
 	response = &csi.CreateSnapshotResponse{
 		Snapshot: &csi.Snapshot{
-			SnapshotId:     ecfsSnapshot.Name,
+			Id:             ecfsSnapshot.Name,
 			SourceVolumeId: req.GetSourceVolumeId(),
-			CreationTime:   creationTimestamp,
-			ReadyToUse:     isReady,
+			CreatedAt:      creationTimestamp,
+			Status: &csi.SnapshotStatus{
+				Type: csiSnapshotStatus,
+			},
 		},
 	}
 
@@ -279,8 +280,8 @@ func (cs *controllerServer) CreateSnapshot(ctx context.Context, req *csi.CreateS
 			return nil, status.Error(codes.Internal, err.Error())
 		}
 
-		glog.V(log.INFO).Infof("ecfs: Created snapshot %v (repeat response). Ready: %v",
-			req.GetName(), response.Snapshot.ReadyToUse)
+		glog.V(log.INFO).Infof("ecfs: Created snapshot %v (repeat response). Status: %v",
+			req.GetName(), response.Snapshot.GetStatus())
 		return // Success
 	}
 
@@ -320,7 +321,7 @@ func (cs *controllerServer) CreateSnapshot(ctx context.Context, req *csi.CreateS
 		return nil, status.Error(codes.Unknown, err.Error())
 	}
 
-	glog.V(log.INFO).Infof("ecfs: Created snapshot %v. Ready: %v", req.GetName(), response.Snapshot.ReadyToUse)
+	glog.V(log.INFO).Infof("ecfs: Created snapshot %v. Ready: %v", req.GetName(), response.Snapshot.GetStatus())
 	return // Success
 }
 
@@ -402,8 +403,8 @@ func (cs *controllerServer) ListSnapshots(ctx context.Context, req *csi.ListSnap
 }
 
 // TODO: Implement (CSI 1.1)
-func (cs *controllerServer) ControllerExpandVolume(ctx context.Context, req *csi.ControllerExpandVolumeRequest) (*csi.ControllerExpandVolumeResponse, error) {
-	glog.V(log.DEBUG).Infof("ControllerExpandVolume - enter. req: %+v", *req)
-	// Set VolumeExpansion = ONLINE
-	panic("ControllerExpandVolume not implemented")
-}
+//func (cs *controllerServer) ControllerExpandVolume(ctx context.Context, req *csi.ControllerExpandVolumeRequest) (*csi.ControllerExpandVolumeResponse, error) {
+//	glog.V(log.DEBUG).Infof("ControllerExpandVolume - enter. req: %+v", *req)
+//	// Set VolumeExpansion = ONLINE
+//	panic("ControllerExpandVolume not implemented")
+//}

@@ -210,6 +210,10 @@ func snapshotStatusEcfsToCsi(ecfsSnapshotStatus string) csi.SnapshotStatus_Type 
 	return csiSnapshotStatus
 }
 
+func isSnapshotUsable(snapshot *emanage.Snapshot) bool {
+	return snapshot.Status == ecfsSnapshotStatus_VALID
+}
+
 func createExportOnSnapshot(emsClient *emanageClient, snapshot *emanage.Snapshot, volOptions *volumeOptions) (exportRef *emanage.Export, err error) {
 	var (
 		exportName = snapshotExportName

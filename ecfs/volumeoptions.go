@@ -19,7 +19,8 @@ package main
 import (
 	"strconv"
 
-	"github.com/container-storage-interface/spec/lib/go/csi"
+	"github.com/container-storage-interface/spec/lib/go/csi/v0"
+	//"github.com/container-storage-interface/spec/lib/go/csi"
 	"github.com/golang/glog"
 
 	"csi-provisioner-elastifile/ecfs/log"

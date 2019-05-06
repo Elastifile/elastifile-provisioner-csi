@@ -26,7 +26,7 @@ import (
 )
 
 const (
-	Version = "0.3.0"
+	Version = "0.4.0"
 )
 
 type ecfsDriver struct {
@@ -78,7 +78,7 @@ func (fs *ecfsDriver) Run(driverName, nodeId, endpoint, volumeMounter string) {
 	fs.driver.AddControllerServiceCapabilities([]csi.ControllerServiceCapability_RPC_Type{
 		csi.ControllerServiceCapability_RPC_CREATE_DELETE_VOLUME,
 		csi.ControllerServiceCapability_RPC_CREATE_DELETE_SNAPSHOT,
-		csi.ControllerServiceCapability_RPC_CLONE_VOLUME,
+		//csi.ControllerServiceCapability_RPC_CLONE_VOLUME,
 		csi.ControllerServiceCapability_RPC_LIST_SNAPSHOTS,
 		//csi.ControllerServiceCapability_RPC_GET_CAPACITY, // TODO: Add support for GetCapacity API (what's the use case?)
 		//csi.ControllerServiceCapability_RPC_LIST_VOLUMES, // TODO: Add support for ListVolumes API (what's the use case?)
