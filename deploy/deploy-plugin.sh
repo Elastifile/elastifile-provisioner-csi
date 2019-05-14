@@ -61,7 +61,7 @@ fi
 OBJECTS=(templates/configmap templates/secret templates/csi-attacher-rbac templates/csi-provisioner-rbac templates/csi-nodeplugin-rbac templates/csi-snapshotter-rbac templates/csi-snapshotter csi-ecfsplugin-attacher csi-ecfsplugin-provisioner templates/storageclass templates/csi-ecfsplugin snapshotclass)
 
 pushd ${DEPLOYMENT_BASE}
-assert_cmd ./create_crd.sh
+exec_cmd ./create_crd.sh
 popd
 
 for OBJ in ${OBJECTS[@]}; do
