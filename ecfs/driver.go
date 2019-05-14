@@ -17,6 +17,7 @@ limitations under the License.
 package main
 
 import (
+	"csi-provisioner-elastifile/ecfs/efaas"
 	"github.com/container-storage-interface/spec/lib/go/csi"
 	"github.com/golang/glog"
 	"github.com/kubernetes-csi/drivers/pkg/csi-common"
@@ -66,6 +67,8 @@ func (fs *ecfsDriver) Run(driverName, nodeId, endpoint, volumeMounter string) {
 	// Pro: Early failures are easier to debug
 	// Con: The system may become available later, and this would result in unnecessary failures
 	// Maybe add a warning instead of failing here
+
+	efaas.EFaaS1()
 
 	// Initialize default library driver
 	glog.V(log.HIGH_LEVEL_INFO).Infof("ecfs: Starting driver: %v version: %v", driverName, Version)
