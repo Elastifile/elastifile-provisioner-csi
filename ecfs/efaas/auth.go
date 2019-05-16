@@ -19,6 +19,7 @@ import (
 )
 
 var (
+	BaseURL      = "https://bronze-eagle.gcp.elastifile.com/api/v1"
 	RegionsURL   = "https://bronze-eagle.gcp.elastifile.com/api/v1/regions"
 	InstancesURL = "https://bronze-eagle.gcp.elastifile.com/api/v1/projects/276859139519/instances" // 934 = 276859139519
 )
