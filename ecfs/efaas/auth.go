@@ -19,9 +19,11 @@ import (
 )
 
 var (
-	BaseURL      = "https://bronze-eagle.gcp.elastifile.com/api/v1"
-	RegionsURL   = "https://bronze-eagle.gcp.elastifile.com/api/v1/regions"
-	InstancesURL = "https://bronze-eagle.gcp.elastifile.com/api/v1/projects/276859139519/instances" // 934 = 276859139519
+	BaseURL    = "https://bronze-eagle.gcp.elastifile.com/api/v2"
+	RegionsURL = "https://bronze-eagle.gcp.elastifile.com/api/v2/regions"
+	//ProjectId    = "276859139519" // 934
+	ProjectId    = "602010805072"                                                                   // golden-eagle-consumer-10
+	InstancesURL = "https://bronze-eagle.gcp.elastifile.com/api/v2/projects/276859139519/instances" // 934 = 276859139519
 )
 
 const (
