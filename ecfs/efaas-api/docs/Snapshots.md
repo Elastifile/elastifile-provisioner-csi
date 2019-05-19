@@ -8,6 +8,8 @@ Name | Type | Description | Notes
 **Retention** | **float32** | Snapshot retention policy. The number of days to hold the snapshot till automatic deletion. Default 0, meaning no retention policy defined. | [default to null]
 **InstanceId** | **string** | [Output Only] The filesystem instance id that this snapshot was taken for. | [optional] [default to null]
 **InstanceName** | **string** | [Output Only] The filesystem instance name that this snapshot was taken for. | [optional] [default to null]
+**FilesystemId** | **string** | [Output Only] The filesystem id that this snapshot was taken for. | [optional] [default to null]
+**FilesystemName** | **string** | [Output Only] The filesystem name that this snapshot was taken for. | [optional] [default to null]
 **Region** | **string** | Snapshot region location. | [optional] [default to null]
 **Size** | **int32** | [Output Only] Snapshot size in bytes. | [optional] [default to null]
 **Schedule** | **string** | Snapshot scheduling Daily, Weekly, Monthly or Manual. | [optional] [default to null]
