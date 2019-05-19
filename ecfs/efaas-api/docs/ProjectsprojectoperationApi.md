@@ -1,6 +1,6 @@
 # \ProjectsprojectoperationApi
 
-All URIs are relative to *https://localhost/api/v1*
+All URIs are relative to *https://localhost/api/v2*
 
 Method | HTTP request | Description
 ------------- | ------------- | -------------

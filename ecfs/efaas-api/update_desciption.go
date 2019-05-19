@@ -10,11 +10,8 @@
 
 package EfaasApi
 
-type Errors struct {
+type UpdateDesciption struct {
 
-	Code string `json:"code,omitempty"`
-
-	Location string `json:"location,omitempty"`
-
-	Message string `json:"message,omitempty"`
+	// [Output Only] A textual description of the resource.
+	Description string `json:"description"`
 }
