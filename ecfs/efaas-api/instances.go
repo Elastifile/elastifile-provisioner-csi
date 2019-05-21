@@ -37,7 +37,7 @@ type Instances struct {
 	CapacityUnitType string `json:"capacityUnitType,omitempty"`
 
 	// The allocated capacity in bytes
-	AllocatedCapacity int32 `json:"allocatedCapacity,omitempty"`
+	AllocatedCapacity int64 `json:"allocatedCapacity,omitempty"`
 
 	// Region name for this request, required if serviceClass.serviceProtection.protectionMode is set to 'multi'.
 	Region string `json:"region,omitempty"`

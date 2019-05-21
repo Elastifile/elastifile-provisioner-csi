@@ -11,7 +11,7 @@ Name | Type | Description | Notes
 **ServiceClassDescription** | **string** | ServiceClass descriptive name | [optional] [default to null]
 **ProvisionedCapacityUnits** | **float32** | The number of storage capacity units provisioned | [default to null]
 **CapacityUnitType** | **string** | The unit used for capacity, possible values are: Steps, Bytes.  Default value is Steps. | [optional] [default to null]
-**AllocatedCapacity** | **int32** | The allocated capacity in bytes | [optional] [default to null]
+**AllocatedCapacity** | **int64** | The allocated capacity in bytes | [optional] [default to null]
 **Region** | **string** | Region name for this request, required if serviceClass.serviceProtection.protectionMode is set to &#39;multi&#39;. | [optional] [default to null]
 **Zone** | **string** | Zone name for this request, required if serviceClass.serviceProtection.protectionMode is set to &#39;single&#39;. | [optional] [default to null]
 **Network** | **string** | Name of your VPC network connected with service producer network. | [default to null]

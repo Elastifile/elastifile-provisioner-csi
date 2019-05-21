@@ -45,7 +45,7 @@ func NewProjectsprojectinstancesApiWithBasePath(basePath string) *Projectsprojec
  * @param payload 
  * @return *Operation
  */
-func (a ProjectsprojectinstancesApi) AddFilesystem(name string, project string, payload DataContainer) (*Operation, *APIResponse, error) {
+func (a ProjectsprojectinstancesApi) AddFilesystem(name string, project string, payload DataContainerAdd) (*Operation, *APIResponse, error) {
 
 	var localVarHttpMethod = strings.ToUpper("Post")
 	// create path and map variables

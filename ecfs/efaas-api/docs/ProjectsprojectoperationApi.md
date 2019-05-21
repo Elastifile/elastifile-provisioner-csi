@@ -9,7 +9,7 @@ Method | HTTP request | Description
 
 
 # **GetOperation**
-> []Operation GetOperation($resourceId, $project)
+> Operation GetOperation($resourceId, $project)
 
 Return operation resource
 
@@ -23,7 +23,7 @@ Name | Type | Description  | Notes
 
 ### Return type
 
-[**[]Operation**](Operation.md)
+[**Operation**](Operation.md)
 
 ### Authorization
 

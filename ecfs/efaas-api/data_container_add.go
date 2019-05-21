@@ -10,10 +10,7 @@
 
 package EfaasApi
 
-type DataContainer struct {
-
-	// [Output Only] The unique identifier for the resource. This identifier is defined by the server.
-	Id string `json:"id,omitempty"`
+type DataContainerAdd struct {
 
 	// Filesystem name
 	Name string `json:"name"`
@@ -27,20 +24,9 @@ type DataContainer struct {
 	// Set the size of a filesystem if filesystemQuotaType is set to fixed. If it is set to auto, this value is ignored and quota is the instance total size.
 	HardQuota int64 `json:"hardQuota,omitempty"`
 
-	// instance utilization metrics
-	Utilization Utilization `json:"utilization,omitempty"`
-
-	Exports []Export `json:"exports,omitempty"`
-
 	// Snapshot object
-	Snapshots SnapshotSchedule `json:"snapshots,omitempty"`
+	Snapshot SnapshotSchedule `json:"snapshot,omitempty"`
 
 	// Defines the access rights to the File System. This is a list of access rights configured by the client for the file system.
 	Accessors Accessors `json:"accessors,omitempty"`
-
-	// [Output Only] Creation timestamp in RFC3339 text format.
-	CreationTimestamp string `json:"creationTimestamp,omitempty"`
-
-	// [Output Only] Update timestamp in RFC3339 text format.
-	UpdateTimestamp string `json:"updateTimestamp,omitempty"`
 }
