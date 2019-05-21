@@ -21,7 +21,6 @@ All URIs are relative to *https://localhost/api/v2*
 
 Class | Method | HTTP request | Description
 ------------ | ------------- | ------------- | -------------
-*AuthApi* | [**Login**](docs/AuthApi.md#login) | **Post** /auth/login | Authenticates using JWT from Google OAuth
 *ProjectsApi* | [**GetProject**](docs/ProjectsApi.md#getproject) | **Get** /projects/{project} | Get project resource
 *ProjectsApi* | [**ListProjects**](docs/ProjectsApi.md#listprojects) | **Get** /projects | List projects
 *ProjectsApi* | [**ProjectAddUsers**](docs/ProjectsApi.md#projectaddusers) | **Post** /projects/{project}/addUsers | Add users to project
@@ -67,12 +66,13 @@ Class | Method | HTTP request | Description
  - [CapacityUnits](docs/CapacityUnits.md)
  - [ClearTier](docs/ClearTier.md)
  - [DataContainer](docs/DataContainer.md)
+ - [DataContainerAdd](docs/DataContainerAdd.md)
  - [Deprecated](docs/Deprecated.md)
  - [Errors](docs/Errors.md)
  - [Events](docs/Events.md)
  - [EventsCount](docs/EventsCount.md)
+ - [Export](docs/Export.md)
  - [Instances](docs/Instances.md)
- - [Login](docs/Login.md)
  - [ModelError](docs/ModelError.md)
  - [Operation](docs/Operation.md)
  - [Projects](docs/Projects.md)

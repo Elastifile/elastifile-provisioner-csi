@@ -42,9 +42,9 @@ func NewProjectsprojectoperationApiWithBasePath(basePath string) *Projectsprojec
  *
  * @param resourceId Operation resource id
  * @param project 
- * @return []Operation
+ * @return *Operation
  */
-func (a ProjectsprojectoperationApi) GetOperation(resourceId string, project string) ([]Operation, *APIResponse, error) {
+func (a ProjectsprojectoperationApi) GetOperation(resourceId string, project string) (*Operation, *APIResponse, error) {
 
 	var localVarHttpMethod = strings.ToUpper("Get")
 	// create path and map variables
@@ -101,7 +101,7 @@ func (a ProjectsprojectoperationApi) GetOperation(resourceId string, project str
 	if localVarHttpHeaderAccept != "" {
 		localVarHeaderParams["Accept"] = localVarHttpHeaderAccept
 	}
-	var successPayload = new([]Operation)
+	var successPayload = new(Operation)
 	localVarHttpResponse, err := a.Configuration.APIClient.CallAPI(localVarPath, localVarHttpMethod, localVarPostBody, localVarHeaderParams, localVarQueryParams, localVarFormParams, localVarFileName, localVarFileBytes)
 
 	var localVarURL, _ = url.Parse(localVarPath)
@@ -113,10 +113,10 @@ func (a ProjectsprojectoperationApi) GetOperation(resourceId string, project str
 	}
 
 	if err != nil {
-		return *successPayload, localVarAPIResponse, err
+		return successPayload, localVarAPIResponse, err
 	}
 	err = json.Unmarshal(localVarHttpResponse.Body(), &successPayload)
-	return *successPayload, localVarAPIResponse, err
+	return successPayload, localVarAPIResponse, err
 }
 
 /**

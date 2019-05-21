@@ -32,7 +32,7 @@ Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
  **name** | **string**| Resource name | 
  **project** | **string**|  | 
- **payload** | [**DataContainer**](DataContainer.md)|  | 
+ **payload** | [**DataContainerAdd**](DataContainerAdd.md)|  | 
 
 ### Return type
 
