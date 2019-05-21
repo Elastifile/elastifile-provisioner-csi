@@ -176,6 +176,7 @@ func GetEfaasToken(data []byte) (googleIdToken string, err error) {
 	return
 }
 
+// Deprecated
 func demo1(data []byte) (res []byte, err error) {
 	client, err := GetEfaasClient(data)
 	if err != nil {
