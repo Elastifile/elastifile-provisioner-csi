@@ -4,8 +4,8 @@ import (
 	"crypto/tls"
 	"fmt"
 	"net/http"
+	"size"
 	"testing"
-	"time"
 
 	efaasapi "csi-provisioner-elastifile/ecfs/efaas-api"
 )
@@ -25,7 +25,23 @@ var jsonData = []byte(`
 	}
 	`)
 
-func TestREST(t *testing.T) {
+const (
+	testInstName  = "jean-instance1"
+	testFsName    = "fs1"
+	testSnapName  = "snap6"
+	testShareName = "share1"
+)
+
+func testEfaasConf() (efaasConf *efaasapi.Configuration) {
+	efaasConf, err := NewEfaasConf(jsonData)
+	if err != nil {
+		panic(fmt.Sprintf("Failed to create NewEfaasConf %v", err.Error()))
+	}
+
+	return efaasConf
+}
+
+func TestDirectAPI_demo1(t *testing.T) {
 	t.Parallel()
 
 	res, err := demo1(jsonData)
@@ -36,7 +52,7 @@ func TestREST(t *testing.T) {
 	t.Logf("RES: %v", string(res))
 }
 
-func TestAPI(t *testing.T) {
+func TestDirectAPI_apiCallGet(t *testing.T) {
 	client, err := GetEfaasClient(jsonData)
 	if err != nil {
 		t.Fatal(fmt.Sprintf("AAAAA %v", err.Error()))
@@ -50,7 +66,7 @@ func TestAPI(t *testing.T) {
 	t.Logf("RES: %v", string(res))
 }
 
-func TestSwaggerLowLevelAPI(t *testing.T) {
+func TestOpenAPI_CallAPI(t *testing.T) {
 	client, err := GetEfaasClient(jsonData)
 	if err != nil {
 		t.Fatal(fmt.Sprintf("AAAAA %v", err.Error()))
@@ -84,21 +100,73 @@ func TestSwaggerLowLevelAPI(t *testing.T) {
 }
 
 func TestOpenAPI_CreateInstance(t *testing.T) {
-	efaasConf, err := NewEfaasConf(jsonData)
+	efaasConf := testEfaasConf()
+
+	err := CreateDefaultInstance(efaasConf, testInstName)
 	if err != nil {
-		t.Fatal(fmt.Sprintf("AAAAA %v", err.Error()))
+		t.Fatal("CreateDefaultInstance failed", "err", err)
 	}
 
-	instancesAPI := efaasapi.ProjectsprojectinstancesApi{Configuration: efaasConf}
+	inst, err := GetInstance(efaasConf, testInstName)
+	if err != nil {
+		t.Fatal(fmt.Sprintf("GetInstance failed: %v", err.Error()))
+	}
+	if inst.Name != testInstName {
+		t.Fatal(fmt.Sprintf("Instance name (%v) doesn't match the requested one ('%v')", inst.Name, testInstName))
+	}
+	t.Logf("Instance: %#v", inst)
+}
 
-	snapshots := efaasapi.SnapshotSchedule{
+func TestOpenAPI_GetInstance(t *testing.T) {
+	efaasConf := testEfaasConf()
+
+	inst, err := GetInstance(efaasConf, testInstName)
+	if err != nil {
+		t.Fatal(fmt.Sprintf("GetInstance failed: %v", err.Error()))
+	}
+
+	t.Logf("Instance: %#v", inst)
+}
+
+func TestOpenAPI_UpdateFilesystemQuotaById(t *testing.T) {
+	efaasConf := testEfaasConf()
+
+	fs, err := GetFilesystemByName(efaasConf, testInstName, testFsName)
+	if err != nil {
+		t.Fatal(fmt.Sprintf("GetFilesystemByName %v failed: %v", testFsName, err.Error()))
+	}
+
+	quota := 5 * size.GiB
+	err = UpdateFilesystemQuotaById(efaasConf, testInstName, fs.Id, quota)
+	if err != nil {
+		t.Fatal(fmt.Sprintf("UpdateFilesystemQuotaByName failed. fs: %v quota: %v err: %v",
+			testFsName, quota, err.Error()))
+	}
+}
+
+func TestOpenAPI_UpdateFilesystemQuotaByName(t *testing.T) {
+	efaasConf := testEfaasConf()
+
+	quota := 5 * size.GiB
+	err := UpdateFilesystemQuotaByName(efaasConf, testInstName, testFsName, quota)
+	if err != nil {
+		t.Fatal(fmt.Sprintf("UpdateFilesystemQuotaByName failed. fs: %v quota: %v err: %v",
+			testFsName, quota, err.Error()))
+	}
+}
+
+func TestOpenAPI_AddFilesystem(t *testing.T) {
+	efaasConf := testEfaasConf()
+
+	fsName := testFsName
+	snapshot := efaasapi.SnapshotSchedule{
 		Enable:    false,
 		Schedule:  "Monthly",
-		Retention: 0.0,
+		Retention: 2.0,
 	}
 
 	accessor1 := efaasapi.AccessorItems{
-		SourceRange:  "10.142.0.0/20", // TODO: Detect the range via K8s OR get it at deploy time
+		SourceRange:  "all",
 		AccessRights: "readWrite",
 	}
 
@@ -106,65 +174,149 @@ func TestOpenAPI_CreateInstance(t *testing.T) {
 		Items: []efaasapi.AccessorItems{accessor1},
 	}
 
-	filesystem := efaasapi.DataContainer{
-		Name:        "dc1",                          // Filesystem name
-		Description: fmt.Sprintf("Filesystem desc"), // Filesystem description
-		QuotaType:   "fixed",                        // Supported values are: auto and fixed. Use auto if you have one filesystem, the size of the filesystem will be the same as the instance size. Use fixed if you have more than one filesystem, and set the filesystem size through filesystemQuota.
-		HardQuota:   10 * 1024 * 1024 * 1024,        // Set the size of a filesystem if filesystemQuotaType is set to fixed. If it is set to auto, this value is ignored and quota is the instance total size.
-		Snapshot:    snapshots,                      // Snapshot object
-		Accessors:   accessors,                      // Defines the access rights to the File System. This is a listof access rights configured by the client for the file system.
+	filesystem := efaasapi.DataContainerAdd{
+		Name:        fsName,
+		HardQuota:   int64(10 * size.GiB),
+		QuotaType:   QuotaTypeFixed,
+		Description: fmt.Sprintf("Filesystem %v", fsName),
+		Accessors:   accessors,
+		Snapshot:    snapshot,
 	}
 
-	payload := efaasapi.Instances{
-		Name:                     "jean-instance1",
-		Description:              "eFaaS instance description",
-		ServiceClass:             "capacity-optimized-az",
-		Region:                   "us-east1",
-		Zone:                     "us-east1-b",
-		ProvisionedCapacityUnits: 3,
-		Network:                  "default",
-		Filesystems:              []efaasapi.DataContainer{filesystem},
-	}
-
-	op, resp, err := instancesAPI.CreateInstance(ProjectId, payload, "")
+	err := AddFilesystem(efaasConf, testInstName, filesystem)
 	if err != nil {
-		t.Fatal(fmt.Sprintf("AAAAA %v", err.Error()))
-	}
-
-	if resp.StatusCode > http.StatusAccepted {
-		t.Fatal("HTTP request failed", "status code", resp.StatusCode, "status", resp.Status)
-	}
-
-	t.Logf("Opration: %#v", op)
-	t.Logf("Response: %#v", resp)
-	t.Logf("Response payload: %v", fmt.Sprint(string(resp.Payload)))
-
-	t.Logf("Waiting for operation id %v ...", op.Id)
-
-	err = WaitForOperationStatusComplete(efaasConf, op.Id, time.Hour)
-	if err != nil {
-		t.Fatal("WaitForOperationStatusComplete failed", "err", err)
+		t.Fatal(fmt.Sprintf("AddFilesystem failed: %v", err.Error()))
 	}
 }
 
-func TestOpenAPI_GetInstance(t *testing.T) { // Works (with update of int32 to int64)
-	efaasConf, err := NewEfaasConf(jsonData)
+func TestOpenAPI_DeleteFilesystem(t *testing.T) {
+	efaasConf := testEfaasConf()
+
+	err := DeleteFilesystem(efaasConf, testInstName, testFsName)
 	if err != nil {
-		t.Fatal(fmt.Sprintf("AAAAA %v", err.Error()))
+		t.Fatal(fmt.Sprintf("DeleteFilesystem %v failed: %v", testFsName, err.Error()))
 	}
+}
 
-	instancesAPI := efaasapi.ProjectsprojectinstancesApi{Configuration: efaasConf}
+func TestOpenAPI_ListSnapshots(t *testing.T) {
+	efaasConf := testEfaasConf()
 
-	inst, resp, err := instancesAPI.GetInstance("test-instance--efb4feee-1", ProjectId)
+	snapshots, err := ListSnapshots(efaasConf, testInstName, testFsName)
 	if err != nil {
-		t.Fatal(fmt.Sprintf("AAAAA %v", err.Error()))
+		t.Fatal(fmt.Sprintf("ListSnapshots for filesyetem %v failed: %v", testFsName, err.Error()))
+	}
+	for _, snap := range snapshots {
+		t.Logf("Snap %v (%v): %#v", snap.Id, snap.Name, snap)
+	}
+}
+
+func TestOpenAPI_GetSnapshotByName(t *testing.T) {
+	efaasConf := testEfaasConf()
+
+	snap, err := GetSnapshotByName(efaasConf, testInstName, testFsName, testSnapName)
+	if err != nil {
+		t.Fatal(fmt.Sprintf("GetSnapshot failed: %v", err.Error()))
+	}
+	t.Logf("Snap %v (%v): %#v", snap.Id, snap.Name, snap)
+}
+
+func TestOpenAPI_GetSnapshotById(t *testing.T) {
+	// TODO: Implement
+}
+
+func TestOpenAPI_CreateSnapshot(t *testing.T) {
+	efaasConf := testEfaasConf()
+
+	// Create snapshot
+	snapshot := efaasapi.Snapshot{
+		Name:      testSnapName,
+		Retention: 3.0,
+	}
+	err := CreateSnapshot(efaasConf, testInstName, testFsName, snapshot)
+	if err != nil {
+		t.Fatal(fmt.Sprintf("CreateSnapshot failed - %v", err.Error()))
 	}
 
-	if resp.StatusCode >= 300 {
-		t.Fatal("HTTP request failed", "status code", resp.StatusCode, "status", resp.Status)
+	// Verify snapshot creation
+	snapshots, err := ListSnapshots(efaasConf, testInstName, testFsName)
+	if err != nil {
+		t.Fatalf("ListSnapshots failed: %v", err.Error())
 	}
 
-	t.Logf("Instance: %#v", inst)
-	t.Logf("Response: %#v", resp)
-	t.Logf("Response payload: %v", fmt.Sprint(string(resp.Payload)))
+	var found bool
+	for _, snap := range snapshots {
+		if snap.Name == testSnapName {
+			t.Logf("Snap %v (%v): %#v", snap.Id, snap.Name, snap)
+			found = true
+		}
+	}
+
+	if !found {
+		t.Fatalf("Snapshot %v not found", testSnapName)
+	}
+}
+
+func TestOpenAPI_DeleteSnapshot(t *testing.T) {
+	efaasConf := testEfaasConf()
+
+	// Delete snapshot
+	err := DeleteSnapshot(efaasConf, testInstName, testFsName, testSnapName)
+	if err != nil {
+		t.Fatal(fmt.Sprintf("DeleteSnapshot %v failed: %v", testSnapName, err.Error()))
+	}
+
+	// Verify snapshot has been deleted
+	snapshots, err := ListSnapshots(efaasConf, testInstName, testFsName)
+	if err != nil {
+		t.Fatalf("ListSnapshots failed: %v", err.Error())
+	}
+
+	for _, snap := range snapshots {
+		if snap.Name == testSnapName {
+			t.Fatalf("Snapshot %v found when it should've been deleted", testSnapName)
+		}
+	}
+}
+
+func TestGetShare(t *testing.T) {
+	efaasConf := testEfaasConf()
+
+	share, err := GetShare(efaasConf, testInstName, testFsName, testSnapName)
+	if err != nil {
+		t.Fatal(fmt.Sprintf("GetShare failed for snapshot %v", testSnapName))
+	}
+
+	t.Logf("Share on snapshot %v: %+v", testSnapName, *share)
+}
+
+func TestOpenAPI_CreateShare(t *testing.T) {
+	efaasConf := testEfaasConf()
+
+	err := CreateShare(efaasConf, testInstName, testFsName, testSnapName, testShareName)
+	if err != nil {
+		t.Fatal(fmt.Sprintf("CreateShare failed: %v", err.Error()))
+	}
+
+	share, err := GetShare(efaasConf, testInstName, testFsName, testSnapName)
+	if err != nil {
+		t.Fatal(fmt.Sprintf("Failed to get share on snapshot %v", err.Error()))
+	}
+
+	if share.Name != testShareName {
+		t.Fatal(fmt.Sprintf("Share %v not found on snapshot %v", testShareName, testSnapName))
+	}
+}
+
+func TestOpenAPI_DeleteShare(t *testing.T) {
+	efaasConf := testEfaasConf()
+
+	err := DeleteShare(efaasConf, testInstName, testFsName, testSnapName)
+	if err != nil {
+		t.Fatal(fmt.Sprintf("DeleteShare from snapshot %v failed: %v", testSnapName, err.Error()))
+	}
+
+	share, err := GetShare(efaasConf, testInstName, testFsName, testSnapName)
+	if err == nil {
+		t.Fatal(fmt.Sprintf("Received snapshot share when it was supposed to have been deleted: %#v", *share))
+	}
 }
