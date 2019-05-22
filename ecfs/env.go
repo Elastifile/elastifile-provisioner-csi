@@ -13,6 +13,7 @@ const (
 	envVarK8sNodeID = "NODE_ID"
 	envAppName      = "APP_NAME"
 	envEKFS         = "EKFS"
+	envEFAAS        = "CSI_EFAAS"
 
 	// Defaults
 	defaultNamespace = "default"
@@ -30,6 +31,23 @@ func IsEKFS() bool {
 	if err != nil {
 		glog.Warningf("Failed to parse environment variable %v's value (%v) as bool - assuming running in EKFS",
 			envEKFS, isEkfsStr)
+		return true
+	}
+
+	return isEkfs
+}
+
+// IsEFAAS checks if we're running in EFaaS environment
+func IsEFAAS() bool {
+	isEfaasStr := os.Getenv(envEFAAS)
+	if isEfaasStr == "" {
+		return false
+	}
+
+	isEkfs, err := strconv.ParseBool(isEfaasStr)
+	if err != nil {
+		glog.Warningf("Failed to parse environment variable %v's value (%v) as bool - assuming running in EKFS",
+			envEKFS, isEfaasStr)
 		return true
 	}
 

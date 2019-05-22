@@ -88,12 +88,16 @@ func (cs *controllerServer) CreateVolume(ctx context.Context, req *csi.CreateVol
 	}
 
 	// TODO: Don't create eManage client for each action (will need relogin support)
-	// This has to wait until the new unified emanage client is available, since that one has generic relogin handler support
+	//  This has to wait until the new unified emanage client is available, since that one has generic relogin handler support
 	var ems emanageClient
 
 	if req.GetVolumeContentSource() == nil { // Create a regular volume, i.e. new empty Data Container
 		glog.V(log.DEBUG).Infof("ecfs: Creating regular volume %v", req.GetName())
-		volumeId, err = createEmptyVolume(ems.GetClient(), volOptions)
+		if IsEFAAS() {
+			volumeId, err = efaasCreateEmptyVolume(volOptions)
+		} else { // Regular EMS
+			volumeId, err = createEmptyVolume(ems.GetClient(), volOptions)
+		}
 		if err != nil {
 			err = errors.WrapPrefix(err, fmt.Sprintf("Failed to create volume %v", req.GetName()), 0)
 			glog.Errorf(err.Error())
@@ -158,7 +162,11 @@ func (cs *controllerServer) DeleteVolume(ctx context.Context, req *csi.DeleteVol
 		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
 
-	err = deleteVolume(ems.GetClient(), volName)
+	if IsEFAAS() {
+		err = efaasDeleteVolume(volName)
+	} else {
+		err = deleteVolume(ems.GetClient(), volName)
+	}
 	if err != nil {
 		if isErrorDoesNotExist(err) { // Operation MUST be idempotent
 			glog.V(log.DEBUG).Infof("ecfs: Volume id %v not found - assuming already deleted", volName)
