@@ -17,6 +17,7 @@ limitations under the License.
 package main
 
 import (
+	"csi-provisioner-elastifile/ecfs/efaas"
 	"fmt"
 	"os"
 
@@ -43,21 +44,53 @@ func getNfsAddress() (string, error) {
 	return settings[nfsAddress], nil
 }
 
-func mountEcfs(mountPoint string, volId volumeHandleType) error {
+func getNfsExportEcfs(volId volumeHandleType) (nfsExport string, err error) {
 	nfsAddr, err := getNfsAddress()
 	if err != nil {
-		return errors.WrapPrefix(err, "Failed to mount ECFS export", 0)
+		err = errors.WrapPrefix(err, fmt.Sprintf("Failed to get ECFS export for filesystem %v", volId), 0)
+		return
+	}
+
+	var emsClient emanageClient
+	dc, export, err := emsClient.GetDcDefaultExportByVolumeId(volId)
+	if err != nil {
+		err = errors.WrapPrefix(err, fmt.Sprintf("Failed to get DC/export for Volume Id %s", volId), 0)
+		return
+	}
+
+	return fmt.Sprintf("%v:%v/%v", nfsAddr, dc.Name, export.Name), nil
+}
+
+func getNfsExportEfaas(volId volumeHandleType) (nfsExport string, err error) {
+	efaasConf := newEfaasConf()
+	fs, err := efaas.GetFilesystemByName(efaasConf, efaasGetInstanceName(), string(volId))
+	if err != nil {
+		err = errors.WrapPrefix(err, fmt.Sprintf("Failed to get eFaaS filesystem %v", volId), 0)
+		return
+	}
+	if len(fs.Exports) == 0 {
+		err = errors.Errorf("eFaaS filesystem %v has no exports", volId)
+		return
+	}
+	nfsExport = fs.Exports[0].NfsMountPoint
+	return
+}
+
+func mountEcfs(mountPoint string, volId volumeHandleType) (err error) {
+	var nfsExport string
+
+	glog.V(log.INFO).Infof("ecfs: Mounting volume %v on %v", volId, mountPoint)
+	if IsEFAAS() {
+		nfsExport, err = getNfsExportEfaas(volId)
+	} else {
+		nfsExport, err = getNfsExportEcfs(volId)
+	}
+	if err != nil {
+		return errors.WrapPrefix(err, fmt.Sprintf("Failed to get NFS export for volume %v", volId), 0)
 	}
 
 	if err = createMountPoint(mountPoint); err != nil {
 		return err
-	}
-
-	glog.V(log.INFO).Infof("ecfs: Mounting volume %v on %v", volId, mountPoint)
-	var emsClient emanageClient
-	dc, export, err := emsClient.GetDcDefaultExportByVolumeId(volId)
-	if err != nil {
-		return errors.WrapPrefix(err, fmt.Sprintf("Failed to get DC/export for Volume Id %s", volId), 0)
 	}
 
 	// TODO: Add support for mount options once mountOptions and SupportsMountOption() are supported in K8s
@@ -66,7 +99,7 @@ func mountEcfs(mountPoint string, volId volumeHandleType) error {
 		"-vvv",
 		"-t", "nfs",
 		"-o", "nolock,vers=3", // TODO: Remove these defaults once mount works
-		fmt.Sprintf("%v:%v/%v", nfsAddr, dc.Name, export.Name),
+		nfsExport,
 		mountPoint,
 	}
 

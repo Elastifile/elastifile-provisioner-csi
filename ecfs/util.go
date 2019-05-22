@@ -166,6 +166,7 @@ func isErrorAlreadyExists(err error) bool {
 	var errorAlreadyExists = []string{
 		"has already been taken",
 		"already exist",
+		"CONFLICT", // TODO: Fetch the exact error with HTTP 409
 	}
 
 	for _, text := range errorAlreadyExists {

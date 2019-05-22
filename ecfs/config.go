@@ -26,6 +26,10 @@ const (
 	// K8s service names' suffixes, appended to APP_NAME, e.g. "elastifile-app"
 	k8sServiceNfsVipSuffix     = "-elastifile-svc"
 	k8sServiceEmanageVipSuffix = "-emanage-svc"
+
+	// eFaaS
+	efaasSecretsName      = "csi-efaas"
+	efaasSecretsKeySaJson = "sa-json"
 )
 
 type config struct {
@@ -48,7 +52,11 @@ func GetPluginSettings() (configMap map[string]string, secrets map[string][]byte
 	}
 
 	glog.V(log.DETAILED_INFO).Infof("ecfs: Loading configuration from secrets '%v'", secretsName)
-	secrets, err = co.GetSecret(Namespace(), secretsName)
+	if IsEFAAS() {
+		secrets, err = co.GetSecret(Namespace(), efaasSecretsName)
+	} else {
+		secrets, err = co.GetSecret(Namespace(), secretsName)
+	}
 	if err != nil {
 		err = errors.WrapPrefix(err, "Failed to get secrets", 0)
 	}
