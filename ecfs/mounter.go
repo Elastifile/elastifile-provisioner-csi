@@ -17,12 +17,14 @@ limitations under the License.
 package main
 
 import (
-	"csi-provisioner-elastifile/ecfs/efaas"
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/golang/glog"
 
+	"csi-provisioner-elastifile/ecfs/efaas"
+	efaasapi "csi-provisioner-elastifile/ecfs/efaas-api"
 	"csi-provisioner-elastifile/ecfs/log"
 	"github.com/elastifile/emanage-go/src/emanage-client"
 	"github.com/elastifile/errors"
@@ -111,8 +113,8 @@ func mountEcfs(mountPoint string, volId volumeHandleType) (err error) {
 	return nil
 }
 
-// mountEcfsSnapshot creates a snapshot export and mounts it
-func mountEcfsSnapshot(mountPoint string, snapshot *emanage.Snapshot) error {
+// mountEmsSnapshot creates an EMS snapshot export and mounts it
+func mountEmsSnapshot(mountPoint string, snapshot *emanage.Snapshot) error {
 	if err := createMountPoint(mountPoint); err != nil {
 		return errors.Wrap(err, 0)
 	}
@@ -153,6 +155,46 @@ func mountEcfsSnapshot(mountPoint string, snapshot *emanage.Snapshot) error {
 		"-t", "nfs",
 		"-o", "ro,nolock,vers=3",
 		fmt.Sprintf("%v:%v", nfsAddr, snapshotExportPath),
+		mountPoint,
+	}
+
+	err = mountNfs(args...)
+	if err != nil {
+		return errors.WrapPrefix(err, "Failed to mount ECFS snapshot export", 0)
+	}
+
+	return nil
+}
+
+// mountEfaasSnapshot creates an eFaaS snapshot export and mounts it
+func mountEfaasSnapshot(mountPoint string, snapName string) error {
+	if err := createMountPoint(mountPoint); err != nil {
+		return errors.Wrap(err, 0)
+	}
+
+	glog.V(log.DETAILED_INFO).Infof("ecfs: Mounting snapshot %v on %v", snapName, mountPoint)
+	efaasConf := newEfaasConf()
+	share, err := efaas.GetShare(efaasConf, efaasGetInstanceName(), snapName)
+	if err != nil {
+		return errors.WrapPrefix(err, fmt.Sprintf("Failed to get share for snapshot %v", snapName), 0)
+	}
+
+	exportPath := share.NfsMountPoint
+	if isWorkaround("'default' in export path") {
+		var fs efaasapi.DataContainer
+		fs, err = efaas.GetFilesystemBySnapshotName(efaasConf, efaasGetInstanceName(), snapName)
+		if err != nil {
+			return errors.WrapPrefix(err, fmt.Sprintf("Failed to get filesystem by snapshot name %v", snapName), 0)
+		}
+
+		exportPath = strings.Replace(exportPath, "default", fs.Name, 1)
+	}
+
+	args := []string{
+		"-vvv",
+		"-t", "nfs",
+		"-o", "ro,nolock,vers=3",
+		exportPath,
 		mountPoint,
 	}
 

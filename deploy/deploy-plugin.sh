@@ -1,17 +1,29 @@
 #!/usr/bin/env bash
 
+# ==== User-configurable variables =====
 # Template expansion variables with default values
+
+# Generic deployment variables
 : ${PLUGIN_TAG:="dev"} # Docker image tag
+: ${NAMESPACE:="default"} # K8s namespace to use for CSI plugin deployment
+
+# EMS related variables
 : ${MGMT_ADDR:="UNDEFINED"} # Management address
 : ${MGMT_USER:="admin"} # Management user
 : ${MGMT_PASS:="Y2hhbmdlbWU="} # Management user's password (base64 encoded)
 : ${NFS_ADDR:="10.255.255.1"} # NFS load balancer's address
-: ${NAMESPACE:="default"} # K8s namespace to use for CSI plugin deployment
 : ${EKFS:="false"} # Optional. If true, there's no need to specify MGMT_ADDR and NFS_ADDR
-# In order to set one of the above values, run this script prefixed by the variable assignment. For example:
-# PLUGIN_TAG=v0.1.0 MGMT_USER=manager ./deploy-plugin.sh
 
-# Other variables
+# EFAAS related variables
+: ${CSI_EFAAS_INSTANCE:=""} # Optional. If set, it means the plugin is expected to run against eFaaS
+: ${CSI_EFAAS_SA_KEY:=""} # Required if CSI_EFAAS_INSTANCE is set. Base64 encoded service account key file's contents (in JSON format) can be acquired from https://console.developers.google.com/apis/credentials
+
+# In order to set one of the above values, run this script prefixed by the variable assignment. For example:
+# PLUGIN_TAG=v0.1.0 ./deploy-plugin.sh
+
+# ==== End of user-configurable variables =====
+
+# Internal variables
 MYNAME=$(basename $0)
 MYPATH=$(dirname $0)
 
@@ -58,7 +70,7 @@ else
     log_info \$K8S_USER not specified - assuming the script is running under service account with cluster-admin role
 fi
 
-OBJECTS=(templates/configmap templates/secret templates/csi-attacher-rbac templates/csi-provisioner-rbac templates/csi-nodeplugin-rbac templates/csi-snapshotter-rbac templates/csi-snapshotter csi-ecfsplugin-attacher csi-ecfsplugin-provisioner templates/storageclass templates/csi-ecfsplugin snapshotclass)
+OBJECTS=(templates/configmap templates/secret templates/csi-attacher-rbac templates/csi-provisioner-rbac templates/csi-nodeplugin-rbac templates/csi-snapshotter-rbac csi-ecfsplugin-attacher csi-ecfsplugin-provisioner templates/csi-snapshotter templates/storageclass templates/csi-ecfsplugin snapshotclass)
 
 pushd ${DEPLOYMENT_BASE}
 exec_cmd ./create_crd.sh
@@ -67,7 +79,7 @@ popd
 for OBJ in ${OBJECTS[@]}; do
     if [[ "${OBJ}" == *"templates"* ]]; then
         log_info "Creating ${OBJ} from template"
-        PLUGIN_TAG=${PLUGIN_TAG} NAMESPACE=${NAMESPACE} MGMT_ADDR=${MGMT_ADDR} MGMT_USER=${MGMT_USER} MGMT_PASS=${MGMT_PASS} NFS_ADDR=${NFS_ADDR} EKFS=${EKFS} envsubst < "${DEPLOYMENT_BASE}/${OBJ}.yaml" | kubectl create -f - --namespace ${NAMESPACE} ${DRY_RUN_FLAG}
+        PLUGIN_TAG=${PLUGIN_TAG} NAMESPACE=${NAMESPACE} MGMT_ADDR=${MGMT_ADDR} MGMT_USER=${MGMT_USER} MGMT_PASS=${MGMT_PASS} NFS_ADDR=${NFS_ADDR} EKFS=${EKFS} CSI_EFAAS_INSTANCE=${CSI_EFAAS_INSTANCE} CSI_EFAAS_SA_KEY=${CSI_EFAAS_SA_KEY} envsubst < "${DEPLOYMENT_BASE}/${OBJ}.yaml" | kubectl create -f - --namespace ${NAMESPACE} ${DRY_RUN_FLAG}
         assert $? "Failed to create ${OBJ} from template"
     else
         log_info "Creating ${OBJ}"

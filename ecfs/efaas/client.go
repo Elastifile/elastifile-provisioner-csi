@@ -227,6 +227,22 @@ func GetFilesystemById(efaasConf *efaasapi.Configuration, instanceName string, f
 	return
 }
 
+func GetFilesystemBySnapshotName(efaasConf *efaasapi.Configuration, instanceName string, snapName string) (filesystem efaasapi.DataContainer, err error) {
+	snap, err := GetSnapshotByName(efaasConf, instanceName, snapName)
+	if err != nil {
+		err = errors.WrapPrefix(err, fmt.Sprintf("Failed to get snapshot %v", snapName), 0)
+		return
+	}
+
+	filesystem, err = GetFilesystemById(efaasConf, instanceName, snap.FilesystemId)
+	if err != nil {
+		err = errors.WrapPrefix(err, fmt.Sprintf("Failed to get filesystem %v", snap.FilesystemName), 0)
+		return
+	}
+
+	return
+}
+
 func GetFilesystemByName(efaasConf *efaasapi.Configuration, instanceName string, fsName string) (filesystem efaasapi.DataContainer, err error) {
 	inst, err := GetInstance(efaasConf, instanceName)
 	if err != nil {
@@ -447,21 +463,8 @@ func DeleteFilesystem(efaasConf *efaasapi.Configuration, instanceName string, fs
 	return
 }
 
-func GetSnapshotById(efaasConf *efaasapi.Configuration, instanceName string, fsName string, snapId string) (snapshot *efaasapi.Snapshots, err error) {
-	snapshotsAPI := efaasapi.ProjectsprojectsnapshotsApi{Configuration: efaasConf}
-	snapshot, resp, err := snapshotsAPI.GetSnapshot(ProjectId, snapId)
-	err = CheckApiCall(err, resp, nil)
-	if err != nil {
-		err = errors.WrapPrefix(err, fmt.Sprintf("Failed to get snapshot by Id %v. Filesystem name: %v",
-			snapId, fsName), 0)
-		return
-	}
-
-	return
-}
-
-func GetSnapshotByName(efaasConf *efaasapi.Configuration, instanceName string, fsName string, snapName string) (snapshot *efaasapi.Snapshots, err error) {
-	snapshots, err := ListSnapshots(efaasConf, instanceName, fsName)
+func GetSnapshotByFsAndName(efaasConf *efaasapi.Configuration, instanceName string, fsName string, snapName string) (snapshot *efaasapi.Snapshots, err error) {
+	snapshots, err := ListSnapshotsByFsName(efaasConf, instanceName, fsName)
 	if err != nil {
 		err = errors.WrapPrefix(err, fmt.Sprintf("Failed to list snapshots in filesystem %v", fsName), 0)
 		return
@@ -478,14 +481,59 @@ func GetSnapshotByName(efaasConf *efaasapi.Configuration, instanceName string, f
 	return
 }
 
-func ListSnapshots(efaasConf *efaasapi.Configuration, instanceName string, fsName string) (snapshots []efaasapi.Snapshots, err error) {
+func ListInstanceSnapshots(efaasConf *efaasapi.Configuration, instanceName string) (snapshots []efaasapi.Snapshots, err error) {
+	glog.V(log.DEBUG).Infof("Listing all snapshots")
+
+	snapshotsAPI := efaasapi.ProjectsprojectsnapshotsApi{Configuration: efaasConf}
+	snapshots, resp, err := snapshotsAPI.ListInstanceSnapshots(ProjectId, instanceName, "")
+	err = CheckApiCall(err, resp, nil)
+	if err != nil {
+		err = errors.WrapPrefix(err, fmt.Sprintf("Failed to list instance snapshots"), 0)
+		return
+	}
+
+	return
+}
+
+func GetSnapshotByName(efaasConf *efaasapi.Configuration, instanceName string, snapName string) (snapshot *efaasapi.Snapshots, err error) {
+	snapshots, err := ListInstanceSnapshots(efaasConf, instanceName)
+	if err != nil {
+		err = errors.WrapPrefix(err, fmt.Sprintf("Failed to list all snapshots"), 0)
+		return
+	}
+
+	for _, snap := range snapshots {
+		if snap.Name == snapName {
+			snapshot = &snap
+			return
+		}
+	}
+
+	err = errors.Errorf("Snapshot name %v not found", snapName)
+	return
+}
+
+func GetSnapshotById(efaasConf *efaasapi.Configuration, snapId string) (snapshot *efaasapi.Snapshots, err error) {
+	glog.V(log.DEBUG).Infof("Getting snapshot by Id %v", snapId)
+	snapshotsAPI := efaasapi.ProjectsprojectsnapshotsApi{Configuration: efaasConf}
+	snapshot, resp, err := snapshotsAPI.GetSnapshot(ProjectId, snapId)
+	err = CheckApiCall(err, resp, nil)
+	if err != nil {
+		err = errors.WrapPrefix(err, fmt.Sprintf("Failed to get snapshots byt Id %v", snapId), 0)
+		return
+	}
+
+	return
+}
+
+func ListSnapshotsByFsName(efaasConf *efaasapi.Configuration, instanceName string, fsName string) (snapshots []efaasapi.Snapshots, err error) {
 	fs, err := GetFilesystemByName(efaasConf, instanceName, fsName)
 	if err != nil {
 		err = errors.WrapPrefix(err, fmt.Sprintf("Failed to get filesystem by name %v", fsName), 0)
 		return
 	}
 
-	glog.V(log.HIGH_LEVEL_INFO).Infof("Listing snapshots for filesystem %v", fsName)
+	glog.V(log.DEBUG).Infof("Listing snapshots for filesystem %v", fsName)
 	snapshotsAPI := efaasapi.ProjectsprojectsnapshotsApi{Configuration: efaasConf}
 	snapshots, resp, err := snapshotsAPI.ListSnapshots(ProjectId, fs.Id, instanceName)
 	err = CheckApiCall(err, resp, nil)
@@ -523,7 +571,7 @@ func CreateSnapshot(efaasConf *efaasapi.Configuration, instanceName string, fsNa
 }
 
 func DeleteSnapshot(efaasConf *efaasapi.Configuration, instanceName string, fsName string, snapName string) (err error) {
-	snap, err := GetSnapshotByName(efaasConf, instanceName, fsName, snapName)
+	snap, err := GetSnapshotByFsAndName(efaasConf, instanceName, fsName, snapName)
 	if err != nil {
 		err = errors.WrapPrefix(err, fmt.Sprintf("Failed to get snapshot by name %v from filesystem %v",
 			snapName, fsName), 0)
@@ -550,13 +598,13 @@ func DeleteSnapshot(efaasConf *efaasapi.Configuration, instanceName string, fsNa
 	return
 }
 
-func CreateShare(efaasConf *efaasapi.Configuration, instanceName string, fsName string, snapName string, shareName string) (err error) {
+func CreateShareWithFs(efaasConf *efaasapi.Configuration, instanceName string, fsName string, snapName string, shareName string) (err error) {
 	payload := efaasapi.SnapshotShareCreate{
 		// Create Share
 		ShareName: shareName,
 	}
 
-	snap, err := GetSnapshotByName(efaasConf, instanceName, fsName, snapName)
+	snap, err := GetSnapshotByFsAndName(efaasConf, instanceName, fsName, snapName)
 	if err != nil {
 		err = errors.WrapPrefix(err, fmt.Sprintf("Failed to get snapshot by name %v from filesystem %v",
 			snapName, fsName), 0)
@@ -582,8 +630,39 @@ func CreateShare(efaasConf *efaasapi.Configuration, instanceName string, fsName 
 	return
 }
 
+func CreateShare(efaasConf *efaasapi.Configuration, instanceName string, snapName string, shareName string) (err error) {
+	payload := efaasapi.SnapshotShareCreate{
+		// Create Share
+		ShareName: shareName,
+	}
+
+	snap, err := GetSnapshotByName(efaasConf, instanceName, snapName)
+	if err != nil {
+		err = errors.WrapPrefix(err, fmt.Sprintf("Failed to get snapshot by name %v", snapName), 0)
+		return
+	}
+
+	snapshotsAPI := efaasapi.ProjectsprojectsnapshotsApi{Configuration: efaasConf}
+	requestId := "" // Used for idempotency
+	op, resp, err := snapshotsAPI.CreateShare(ProjectId, snap.Id, payload, requestId)
+	err = CheckApiCall(err, resp, op)
+	if err != nil {
+		err = errors.WrapPrefix(err, fmt.Sprintf("Failed to create share on snapshot %v (%v)", snapName, snap.Id), 0)
+		return
+	}
+
+	err = WaitForOperationStatusComplete(efaasConf, op.Id, 5*time.Minute)
+	if err != nil {
+		err = errors.WrapPrefix(err, fmt.Sprintf("Waiting for share %v creation on snapshot %v failed",
+			shareName, snapName), 0)
+		return
+	}
+
+	return
+}
+
 func DeleteShare(efaasConf *efaasapi.Configuration, instanceName string, fsName string, snapName string) (err error) {
-	snap, err := GetSnapshotByName(efaasConf, instanceName, fsName, snapName)
+	snap, err := GetSnapshotByFsAndName(efaasConf, instanceName, fsName, snapName)
 	if err != nil {
 		err = errors.WrapPrefix(err, fmt.Sprintf("Failed to get snapshot by name %v from filesystem %v",
 			snapName, fsName), 0)
@@ -609,8 +688,8 @@ func DeleteShare(efaasConf *efaasapi.Configuration, instanceName string, fsName 
 	return
 }
 
-func GetShare(efaasConf *efaasapi.Configuration, instanceName string, fsName string, snapName string) (share *efaasapi.Share, err error) {
-	snap, err := GetSnapshotByName(efaasConf, instanceName, fsName, snapName)
+func GetShareWithFs(efaasConf *efaasapi.Configuration, instanceName string, fsName string, snapName string) (share *efaasapi.Share, err error) {
+	snap, err := GetSnapshotByName(efaasConf, instanceName, snapName)
 	if err != nil {
 		err = errors.WrapPrefix(err, fmt.Sprintf("Failed to get snapshot by name %v from filesystem %v",
 			snapName, fsName), 0)
@@ -620,6 +699,22 @@ func GetShare(efaasConf *efaasapi.Configuration, instanceName string, fsName str
 	share = &snap.Share
 	if share.Name == "" {
 		err = errors.Errorf("No shares found on snapshot %v on filesystem %v", snapName, fsName)
+		return
+	}
+
+	return
+}
+
+func GetShare(efaasConf *efaasapi.Configuration, instanceName string, snapName string) (share *efaasapi.Share, err error) {
+	snap, err := GetSnapshotByName(efaasConf, instanceName, snapName)
+	if err != nil {
+		err = errors.WrapPrefix(err, fmt.Sprintf("Failed to get snapshot by name %v", snapName), 0)
+		return
+	}
+
+	share = &snap.Share
+	if share.Name == "" {
+		err = errors.Errorf("No shares found on snapshot %v", snapName)
 		return
 	}
 

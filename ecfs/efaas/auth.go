@@ -194,20 +194,3 @@ func demo1(data []byte) (res []byte, err error) {
 
 	return
 }
-
-func EFaaS1() {
-	// Credentials can be obtained from the Google Developer Console (https://console.developers.google.com).
-	data := []byte(``)
-
-	//data, err := ioutil.ReadFile("/path/to/key-file.json")
-	//if err != nil {
-	//	log.Fatal(err)
-	//}
-
-	// Initiate an http.Client, request will be authorized and authenticated on the behalf of jwt.Config.Email/Subject
-	//ctx := context.Background()
-	_, err := demo1(data)
-	if err != nil {
-		panic(err.Error())
-	}
-}

@@ -7,7 +7,8 @@ DEFAULT_GCP_REGION=$(gcloud config get-value compute/region) # e.g. europe-west1
 DEFAULT_GCP_ZONE=$(gcloud config get-value compute/zone) # europe-west1-b
 
 : ${GCP_PROJECT_ID:="934"}
-: ${K8S_VERSION:="1.12.7"}
+: ${K8S_VERSION:="1.13.6-gke.0"}
+# Alpha versions can be found at https://cloud.google.com/kubernetes-engine/docs/release-notes
 
 : ${GKE_CLUSTER_NAME:="cluster-1"}
 : ${GCP_REGION:="${DEFAULT_GCP_REGION}"}

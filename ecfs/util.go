@@ -224,6 +224,21 @@ func copyDir(src, dst string) (err error) {
 	return
 }
 
+func replaceFirstDigitWithLetter(s string) string {
+	const (
+		baseDigit  = byte('0')
+		baseLetter = byte('g') // Start after the last hex digit
+	)
+
+	if s[0] < '0' || s[0] > '9' {
+		glog.V(log.DETAILED_INFO).Infof("ecfs: String doesn't begin with a digit: %v", s)
+		return s
+	}
+
+	offset := s[0] - baseDigit
+	return string(baseLetter+offset) + s[1:]
+}
+
 func GetPluginNodeName() string {
 	return os.Getenv(envVarK8sNodeID)
 }

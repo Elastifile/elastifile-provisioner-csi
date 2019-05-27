@@ -1,9 +1,13 @@
 #!/usr/bin/env bash
 
-: ${PROJECT:=elastifile-gce-lab-c934}
+: ${PROJECT:=golden-eagle-dev-consumer10}
 : ${CLUSTER:=cluster-1}
 : ${REGION:=us-east1}
-: ${ZONE:=us-east1-a}
+: ${ZONE:=us-east1-b}
+#: ${PROJECT:=elastifile-gce-lab-c934}
+#: ${CLUSTER:=cluster-1}
+#: ${REGION:=us-east1}
+#: ${ZONE:=us-east1-a}
 
 set -x
 

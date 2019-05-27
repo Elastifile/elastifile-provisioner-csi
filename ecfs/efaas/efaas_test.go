@@ -10,17 +10,19 @@ import (
 	efaasapi "csi-provisioner-elastifile/ecfs/efaas-api"
 )
 
-var jsonData = []byte(``)
+var testJsonData = []byte(``)
 
 const (
-	testInstName  = "jean-instance1"
-	testFsName    = "fs1"
-	testSnapName  = "snap6"
-	testShareName = "share1"
+	testInstName = "jean-instance1"
+	//testFsName    = "fs1"
+	testFsName    = "pvc-fc25d8c4-8003-11e9-ab7c-42010a8e006c"
+	testSnapId    = "12316016938850064433"
+	testSnapName  = "n03a0a05-8098-11e9-83ed-42010a8e0050"
+	testShareName = "e"
 )
 
 func testEfaasConf() (efaasConf *efaasapi.Configuration) {
-	efaasConf, err := NewEfaasConf(jsonData)
+	efaasConf, err := NewEfaasConf(testJsonData)
 	if err != nil {
 		panic(fmt.Sprintf("Failed to create NewEfaasConf %v", err.Error()))
 	}
@@ -28,19 +30,8 @@ func testEfaasConf() (efaasConf *efaasapi.Configuration) {
 	return efaasConf
 }
 
-func TestDirectAPI_demo1(t *testing.T) {
-	t.Parallel()
-
-	res, err := demo1(jsonData)
-	if err != nil {
-		t.Fatal(fmt.Sprintf("AAAAA %v", err.Error()))
-	}
-
-	t.Logf("RES: %v", string(res))
-}
-
 func TestDirectAPI_apiCallGet(t *testing.T) {
-	client, err := GetEfaasClient(jsonData)
+	client, err := GetEfaasClient(testJsonData)
 	if err != nil {
 		t.Fatal(fmt.Sprintf("AAAAA %v", err.Error()))
 	}
@@ -54,7 +45,7 @@ func TestDirectAPI_apiCallGet(t *testing.T) {
 }
 
 func TestOpenAPI_CallAPI(t *testing.T) {
-	client, err := GetEfaasClient(jsonData)
+	client, err := GetEfaasClient(testJsonData)
 	if err != nil {
 		t.Fatal(fmt.Sprintf("AAAAA %v", err.Error()))
 	}
@@ -185,12 +176,24 @@ func TestOpenAPI_DeleteFilesystem(t *testing.T) {
 	}
 }
 
-func TestOpenAPI_ListSnapshots(t *testing.T) {
+func TestOpenAPI_ListSnapshotsByFsName(t *testing.T) {
 	efaasConf := testEfaasConf()
 
-	snapshots, err := ListSnapshots(efaasConf, testInstName, testFsName)
+	snapshots, err := ListSnapshotsByFsName(efaasConf, testInstName, testFsName)
 	if err != nil {
-		t.Fatal(fmt.Sprintf("ListSnapshots for filesyetem %v failed: %v", testFsName, err.Error()))
+		t.Fatal(fmt.Sprintf("ListSnapshotsByFsName %v failed: %v", testFsName, err.Error()))
+	}
+	for _, snap := range snapshots {
+		t.Logf("Snap %v (%v): %#v", snap.Id, snap.Name, snap)
+	}
+}
+
+func TestOpenAPI_ListInstanceSnapshots(t *testing.T) {
+	efaasConf := testEfaasConf()
+
+	snapshots, err := ListInstanceSnapshots(efaasConf, testInstName)
+	if err != nil {
+		t.Fatal(fmt.Sprintf("ListInstanceSnapshots %v failed: %v", testInstName, err.Error()))
 	}
 	for _, snap := range snapshots {
 		t.Logf("Snap %v (%v): %#v", snap.Id, snap.Name, snap)
@@ -200,7 +203,7 @@ func TestOpenAPI_ListSnapshots(t *testing.T) {
 func TestOpenAPI_GetSnapshotByName(t *testing.T) {
 	efaasConf := testEfaasConf()
 
-	snap, err := GetSnapshotByName(efaasConf, testInstName, testFsName, testSnapName)
+	snap, err := GetSnapshotByFsAndName(efaasConf, testInstName, testFsName, testSnapName)
 	if err != nil {
 		t.Fatal(fmt.Sprintf("GetSnapshot failed: %v", err.Error()))
 	}
@@ -208,7 +211,13 @@ func TestOpenAPI_GetSnapshotByName(t *testing.T) {
 }
 
 func TestOpenAPI_GetSnapshotById(t *testing.T) {
-	// TODO: Implement
+	efaasConf := testEfaasConf()
+
+	snap, err := GetSnapshotById(efaasConf, testSnapId)
+	if err != nil {
+		t.Fatal(fmt.Sprintf("GetSnapshot failed: %v", err.Error()))
+	}
+	t.Logf("Snap %v (%v): %#v", snap.Id, snap.Name, snap)
 }
 
 func TestOpenAPI_CreateSnapshot(t *testing.T) {
@@ -225,9 +234,9 @@ func TestOpenAPI_CreateSnapshot(t *testing.T) {
 	}
 
 	// Verify snapshot creation
-	snapshots, err := ListSnapshots(efaasConf, testInstName, testFsName)
+	snapshots, err := ListSnapshotsByFsName(efaasConf, testInstName, testFsName)
 	if err != nil {
-		t.Fatalf("ListSnapshots failed: %v", err.Error())
+		t.Fatalf("ListSnapshotsByFsName failed: %v", err.Error())
 	}
 
 	var found bool
@@ -253,9 +262,9 @@ func TestOpenAPI_DeleteSnapshot(t *testing.T) {
 	}
 
 	// Verify snapshot has been deleted
-	snapshots, err := ListSnapshots(efaasConf, testInstName, testFsName)
+	snapshots, err := ListSnapshotsByFsName(efaasConf, testInstName, testFsName)
 	if err != nil {
-		t.Fatalf("ListSnapshots failed: %v", err.Error())
+		t.Fatalf("ListSnapshotsByFsName failed: %v", err.Error())
 	}
 
 	for _, snap := range snapshots {
@@ -265,26 +274,55 @@ func TestOpenAPI_DeleteSnapshot(t *testing.T) {
 	}
 }
 
-func TestGetShare(t *testing.T) {
+func TestGetShareWithFs(t *testing.T) {
 	efaasConf := testEfaasConf()
 
-	share, err := GetShare(efaasConf, testInstName, testFsName, testSnapName)
+	share, err := GetShareWithFs(efaasConf, testInstName, testFsName, testSnapName)
 	if err != nil {
-		t.Fatal(fmt.Sprintf("GetShare failed for snapshot %v", testSnapName))
+		t.Fatal(fmt.Sprintf("GetShareWithFs failed for snapshot %v", testSnapName))
 	}
 
 	t.Logf("Share on snapshot %v: %+v", testSnapName, *share)
 }
 
+func TestGetShare(t *testing.T) {
+	efaasConf := testEfaasConf()
+
+	share, err := GetShare(efaasConf, testInstName, testSnapName)
+	if err != nil {
+		t.Fatal(fmt.Sprintf("GetShareWithFs failed for snapshot %v", testSnapName))
+	}
+
+	t.Logf("Share on snapshot %v: %+v", testSnapName, *share)
+}
+
+func TestOpenAPI_CreateShareWithFs(t *testing.T) {
+	efaasConf := testEfaasConf()
+
+	err := CreateShareWithFs(efaasConf, testInstName, testFsName, testSnapName, testShareName)
+	if err != nil {
+		t.Fatal(fmt.Sprintf("CreateShareWithFs failed: %v", err.Error()))
+	}
+
+	share, err := GetShareWithFs(efaasConf, testInstName, testFsName, testSnapName)
+	if err != nil {
+		t.Fatal(fmt.Sprintf("Failed to get share on snapshot %v", err.Error()))
+	}
+
+	if share.Name != testShareName {
+		t.Fatal(fmt.Sprintf("Share %v not found on snapshot %v", testShareName, testSnapName))
+	}
+}
+
 func TestOpenAPI_CreateShare(t *testing.T) {
 	efaasConf := testEfaasConf()
 
-	err := CreateShare(efaasConf, testInstName, testFsName, testSnapName, testShareName)
+	err := CreateShare(efaasConf, testInstName, testSnapName, testShareName)
 	if err != nil {
-		t.Fatal(fmt.Sprintf("CreateShare failed: %v", err.Error()))
+		t.Fatal(fmt.Sprintf("CreateShareWithFs failed: %v", err.Error()))
 	}
 
-	share, err := GetShare(efaasConf, testInstName, testFsName, testSnapName)
+	share, err := GetShare(efaasConf, testInstName, testSnapName)
 	if err != nil {
 		t.Fatal(fmt.Sprintf("Failed to get share on snapshot %v", err.Error()))
 	}
@@ -302,7 +340,7 @@ func TestOpenAPI_DeleteShare(t *testing.T) {
 		t.Fatal(fmt.Sprintf("DeleteShare from snapshot %v failed: %v", testSnapName, err.Error()))
 	}
 
-	share, err := GetShare(efaasConf, testInstName, testFsName, testSnapName)
+	share, err := GetShareWithFs(efaasConf, testInstName, testFsName, testSnapName)
 	if err == nil {
 		t.Fatal(fmt.Sprintf("Received snapshot share when it was supposed to have been deleted: %#v", *share))
 	}
