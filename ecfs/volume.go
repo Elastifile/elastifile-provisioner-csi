@@ -179,7 +179,7 @@ func createVolumeFromSnapshot(emsClient *emanageClient, srcSnapName string, dstV
 	}
 
 	// Mount the source snapshot
-	err = mountEcfsSnapshot(srcSnapMountPath, srcSnapshot)
+	err = mountEmsSnapshot(srcSnapMountPath, srcSnapshot)
 	if err != nil {
 		isMount, e := isMountPoint(srcSnapMountPath) // TODO: Consider remounting or using unique paths
 		if e != nil {

@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"net/url"
+	"strconv"
 	"strings"
 	"time"
 
@@ -23,7 +24,7 @@ type emanageClient struct {
 
 const (
 	volumeExportName   = "root"
-	snapshotExportName = "se"
+	snapshotExportName = "e"
 )
 
 var emsConfig *config
@@ -148,11 +149,28 @@ func (ems *emanageClient) GetSnapshotByName(snapshotName string) (snapshot *eman
 	return nil, errors.Errorf("Snapshot not found by name %v", snapshotName)
 }
 
-func parseTimestamp(dateTime string) (ts *timestamp.Timestamp, err error) {
-	parsedDateTime, err := time.Parse(time.RFC3339, dateTime)
+func (ems *emanageClient) GetSnapshotByStrId(snapshotID string) (snapshot *emanage.Snapshot, err error) {
+	glog.V(log.DEBUG).Infof("ecfs: Looking for snapshot with ID: %v", snapshotID)
+	snapID, err := strconv.Atoi(snapshotID)
+	if err != nil {
+		err = errors.Wrap(err, 0)
+		return
+	}
+
+	snapshot, err = ems.GetClient().Snapshots.GetById(snapID)
+	if err != nil {
+		err = errors.Wrap(err, 0)
+		return
+	}
+
+	return
+}
+
+func parseTimestamp(dateTime string, format string) (ts *timestamp.Timestamp, err error) {
+	parsedDateTime, err := time.Parse(format, dateTime)
 	if err != nil {
 		return ts, errors.WrapPrefix(err,
-			fmt.Sprintf("Failed to parse time/date '%v' - expected format '%v'", dateTime, time.RFC3339), 0)
+			fmt.Sprintf("Failed to parse time/date '%v' - expected format '%v'", dateTime, format), 0)
 	}
 
 	ts = &timestamp.Timestamp{
@@ -161,6 +179,10 @@ func parseTimestamp(dateTime string) (ts *timestamp.Timestamp, err error) {
 	}
 
 	return ts, nil
+}
+
+func parseTimestampRFC3339(dateTime string) (ts *timestamp.Timestamp, err error) {
+	return parseTimestamp(dateTime, time.RFC3339)
 }
 
 func snapshotEcfsToCsi(ems *emanageClient, ecfsSnapshot *emanage.Snapshot) (csiSnapshot *csi.Snapshot, err error) {
@@ -172,7 +194,7 @@ func snapshotEcfsToCsi(ems *emanageClient, ecfsSnapshot *emanage.Snapshot) (csiS
 		return
 	}
 
-	creationTimestamp, err := parseTimestamp(ecfsSnapshot.CreatedAt)
+	creationTimestamp, err := parseTimestampRFC3339(ecfsSnapshot.CreatedAt)
 	if err != nil {
 		err = errors.Wrap(err, 0)
 		return

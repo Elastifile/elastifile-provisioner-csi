@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-
 	"github.com/go-errors/errors"
 	"github.com/golang/glog"
 
@@ -83,7 +82,8 @@ func (c *VolumeCache) Remove(volumeId string) (err error) {
 ///////////////////////////////////////////////////////////////////////////////
 
 type CachedSnapshot struct {
-	ID      int // ECFS snapshot ID
+	// ECFS/EFAAS snapshot ID
+	ID      string // Needs to be a string due to the nature of EFAAS snapshot ids
 	IsReady bool
 }
 
@@ -96,7 +96,7 @@ func (c *SnapshotCache) Get(snapshotName string) (cachedSnapshot *CachedSnapshot
 	return
 }
 
-func (c *SnapshotCache) Set(snapshotName string, snapshotId int, exists bool) {
+func (c *SnapshotCache) Set(snapshotName string, snapshotId string, exists bool) {
 	if *c == nil {
 		*c = make(map[string]*CachedSnapshot)
 	}
@@ -106,7 +106,7 @@ func (c *SnapshotCache) Set(snapshotName string, snapshotId int, exists bool) {
 	}
 }
 
-func (c *SnapshotCache) RemoveById(snapshotId int) {
+func (c *SnapshotCache) RemoveById(snapshotId string) {
 	for volName, snapshot := range *c {
 		if snapshot.ID == snapshotId {
 			delete(*c, volName)

@@ -69,6 +69,8 @@ spec:
                   fieldPath: metadata.namespace
             - name: EKFS
               value: "${EKFS}"
+            - name: CSI_EFAAS_INSTANCE
+              value: "${CSI_EFAAS_INSTANCE}"
           volumeMounts:
             - name: plugin-dir
               mountPath: /var/lib/kubelet/plugins_registry/csi-ecfsplugin

@@ -18,6 +18,7 @@ package main
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 
 	"github.com/container-storage-interface/spec/lib/go/csi"
@@ -27,6 +28,7 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
+	efaasapi "csi-provisioner-elastifile/ecfs/efaas-api"
 	"csi-provisioner-elastifile/ecfs/log"
 	"github.com/elastifile/emanage-go/src/emanage-client"
 	"github.com/elastifile/errors"
@@ -111,7 +113,11 @@ func (cs *controllerServer) CreateVolume(ctx context.Context, req *csi.CreateVol
 			srcVolume := source.GetVolume()
 			glog.V(log.HIGH_LEVEL_INFO).Infof("ecfs: Cloning volume %v to %v",
 				srcVolume.GetVolumeId(), req.GetName())
-			volumeId, err = cloneVolume(ems.GetClient(), srcVolume, volOptions)
+			if IsEFAAS() {
+				volumeId, err = efaasCloneVolume(srcVolume, volOptions)
+			} else {
+				volumeId, err = cloneVolume(ems.GetClient(), srcVolume, volOptions)
+			}
 			if err != nil {
 				err = errors.WrapPrefix(err, fmt.Sprintf("Failed to clone volume %v to %v",
 					srcVolume.GetVolumeId(), req.GetName()), 0)
@@ -122,7 +128,11 @@ func (cs *controllerServer) CreateVolume(ctx context.Context, req *csi.CreateVol
 			snapshot := source.GetSnapshot()
 			glog.V(log.HIGH_LEVEL_INFO).Infof("ecfs: Creating volume %v from snapshot %v",
 				req.GetName(), snapshot.GetSnapshotId())
-			volumeId, err = restoreSnapshotToVolume(ems.GetClient(), snapshot, volOptions)
+			if IsEFAAS() {
+				volumeId, err = efaasRestoreSnapshotToVolume(snapshot, volOptions)
+			} else {
+				volumeId, err = restoreSnapshotToVolume(ems.GetClient(), snapshot, volOptions)
+			}
 			if err != nil {
 				err = errors.WrapPrefix(err, fmt.Sprintf("Failed to create volume %v from snapshot %v",
 					req.GetName(), snapshot.GetSnapshotId()), 0)
@@ -219,7 +229,7 @@ func (cs *controllerServer) ValidateVolumeCapabilities(ctx context.Context, req 
 }
 
 func getCreateSnapshotResponse(ecfsSnapshot *emanage.Snapshot, req *csi.CreateSnapshotRequest) (response *csi.CreateSnapshotResponse, err error) {
-	creationTimestamp, err := parseTimestamp(ecfsSnapshot.CreatedAt)
+	creationTimestamp, err := parseTimestampRFC3339(ecfsSnapshot.CreatedAt)
 	if err != nil {
 		err = errors.Wrap(err, 0)
 		return
@@ -239,29 +249,49 @@ func getCreateSnapshotResponse(ecfsSnapshot *emanage.Snapshot, req *csi.CreateSn
 	return
 }
 
-func (cs *controllerServer) CreateSnapshot(ctx context.Context, req *csi.CreateSnapshotRequest) (response *csi.CreateSnapshotResponse, err error) {
-	var ems emanageClient
-
+func fixSnapshotName(snapshotName string) (fixedSnapshotName string, err error) {
+	fixedSnapshotName = snapshotName
 	if isWorkaround("80 chars limit") {
-		glog.V(log.DEBUG).Infof("ecfs: Received snapshot create request - %+v", req.GetName())
-		var snapshotName = req.GetName()
-		k8sSnapshotPrefix := "snapshot-"
-		snapshotName = strings.TrimPrefix(snapshotName, k8sSnapshotPrefix)
-		if len(snapshotName) > maxSnapshotNameLen {
-			//snapshotName = truncateStr(req.Name, maxSnapshotNameLen)
+		const k8sSnapshotPrefix = "snapshot-" // Fixed part of the K8s snapshot names
+		fixedSnapshotName = strings.TrimPrefix(fixedSnapshotName, k8sSnapshotPrefix)
+		if len(fixedSnapshotName) > maxSnapshotNameLen {
+			//fixedSnapshotName = truncateStr(req.Name, maxSnapshotNameLen) // Not reliable
 			err = errors.Errorf("Snapshot name exceeds max allowed length of %v characters - %v "+
-				"(truncated version: %v)", maxSnapshotNameLen, req.GetName(), snapshotName)
-			return nil, status.Error(codes.InvalidArgument, err.Error())
+				"(truncated version: %v)", maxSnapshotNameLen, snapshotName, fixedSnapshotName)
+			return "", status.Error(codes.InvalidArgument, err.Error())
 		}
-		req.Name = snapshotName
 	}
 
-	var ecfsSnapshot *emanage.Snapshot
+	if IsEFAAS() && isWorkaround("Filesystem name length/name starts with a letter") { // eFaaS requires the snapshot to begin with a lowercase alpha character
+		fixedSnapshotName = replaceFirstDigitWithLetter(fixedSnapshotName)
+	}
+
+	return
+}
+
+func (cs *controllerServer) CreateSnapshot(ctx context.Context, req *csi.CreateSnapshotRequest) (response *csi.CreateSnapshotResponse, err error) {
+	var (
+		ems           emanageClient
+		efaasSnapshot *efaasapi.Snapshots
+		ecfsSnapshot  *emanage.Snapshot
+	)
+
+	glog.V(log.DEBUG).Infof("ecfs: Received snapshot create request - %+v", req.GetName())
+	req.Name, err = fixSnapshotName(req.GetName())
+	if err != nil {
+		err = errors.WrapPrefix(err, fmt.Sprintf("Failed to fix snapshot name: %v", req.GetName()), 0)
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
 	snapshot, cacheHit := snapshotCache.Get(req.GetName())
 	if cacheHit {
 		glog.V(log.DEBUG).Infof("ecfs: Received repeat request to create snapshot %v", req.GetName())
 
-		ecfsSnapshot, err = ems.GetClient().Snapshots.GetById(snapshot.ID)
+		if IsEFAAS() {
+			efaasSnapshot, err = efaasGetSnapshotById(snapshot.ID)
+		} else {
+			ecfsSnapshot, err = ems.GetClient().GetSnapshotByStrId(snapshot.ID)
+		}
 		if err != nil {
 			if isErrorDoesNotExist(err) {
 				return nil, status.Error(codes.Aborted, "Snapshot creation is already in progress")
@@ -270,7 +300,11 @@ func (cs *controllerServer) CreateSnapshot(ctx context.Context, req *csi.CreateS
 			return nil, status.Error(codes.Internal, err.Error())
 		}
 
-		response, err = getCreateSnapshotResponse(ecfsSnapshot, req)
+		if IsEFAAS() {
+			response, err = efaasGetCreateSnapshotResponse(efaasSnapshot, req)
+		} else {
+			response, err = getCreateSnapshotResponse(ecfsSnapshot, req)
+		}
 		if err != nil {
 			err = errors.Wrap(err, 0)
 			return nil, status.Error(codes.Internal, err.Error())
@@ -284,18 +318,30 @@ func (cs *controllerServer) CreateSnapshot(ctx context.Context, req *csi.CreateS
 	volumeId := volumeHandleType(req.GetSourceVolumeId())
 	glog.V(log.DETAILED_INFO).Infof("ecfs: Creating snapshot %v on volume %v", req.GetName(), volumeId)
 	glog.V(log.DEBUG).Infof("ecfs: CreateSnapshot details. req: %+v", *req)
-	ecfsSnapshot, err = createSnapshot(ems.GetClient(), req.GetName(), volumeId, req.GetParameters())
+	if IsEFAAS() {
+		efaasSnapshot, err = efaasCreateSnapshot(req.GetName(), volumeId, req.GetParameters())
+	} else {
+		ecfsSnapshot, err = createSnapshot(ems.GetClient(), req.GetName(), volumeId, req.GetParameters())
+	}
 	if err != nil {
 		if isErrorAlreadyExists(err) {
 			// Fetching snapshot by name to prevent a race between snapshot creation and snapshot id update in cache
 			// Assumption - snapshot name is unique in K8s cluster
 			var e error
-			ecfsSnapshot, e = ems.GetClient().GetSnapshotByName(req.GetName())
+			if IsEFAAS() {
+				efaasSnapshot, e = efaasGetSnapshotByName(req.GetName())
+			} else {
+				ecfsSnapshot, e = ems.GetClient().GetSnapshotByName(req.GetName())
+			}
 			if e != nil {
 				e = errors.WrapPrefix(e,
 					fmt.Sprintf("Failed to create snapshot for volume %v with name %v", volumeId, req.GetName()), 0)
 			}
-			response, err = getCreateSnapshotResponse(ecfsSnapshot, req)
+			if IsEFAAS() {
+				response, err = efaasGetCreateSnapshotResponse(efaasSnapshot, req)
+			} else {
+				response, err = getCreateSnapshotResponse(ecfsSnapshot, req)
+			}
 			if err != nil {
 				err = errors.WrapPrefix(err, "Snapshot has been created, "+
 					"but there was a problem generating proper response", 0)
@@ -308,9 +354,19 @@ func (cs *controllerServer) CreateSnapshot(ctx context.Context, req *csi.CreateS
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	snapshotCache.Set(req.GetName(), ecfsSnapshot.ID, true)
+	var snapshotId string
+	if IsEFAAS() {
+		snapshotId = efaasSnapshot.Id
+	} else {
+		snapshotId = strconv.Itoa(ecfsSnapshot.ID)
+	}
+	snapshotCache.Set(req.GetName(), snapshotId, true)
 
-	response, err = getCreateSnapshotResponse(ecfsSnapshot, req)
+	if IsEFAAS() {
+		response, err = efaasGetCreateSnapshotResponse(efaasSnapshot, req)
+	} else {
+		response, err = getCreateSnapshotResponse(ecfsSnapshot, req)
+	}
 	if err != nil {
 		err = errors.WrapPrefix(err, fmt.Sprintf("Snapshot %v created successfully, but generating response "+
 			"has failed", req.Name), 0)
@@ -325,7 +381,11 @@ func (cs *controllerServer) DeleteSnapshot(ctx context.Context, req *csi.DeleteS
 	glog.V(log.HIGH_LEVEL_INFO).Infof("ecfs: Deleting snapshot %v", req.GetSnapshotId())
 	glog.V(log.DEBUG).Infof("ecfs: DeleteSnapshot - enter. req: %+v", *req)
 	var ems emanageClient
-	err = deleteSnapshot(ems.GetClient(), req.GetSnapshotId())
+	if IsEFAAS() {
+		err = efaasDeleteSnapshot(req.GetSnapshotId())
+	} else {
+		err = deleteSnapshot(ems.GetClient(), req.GetSnapshotId())
+	}
 	if err != nil {
 		err = errors.WrapPrefix(err, fmt.Sprintf("Failed to delete snapshot by id %v", req.GetSnapshotId()), 0)
 		return nil, status.Error(codes.Internal, err.Error())
@@ -364,6 +424,9 @@ func (cs *controllerServer) ListSnapshots(ctx context.Context, req *csi.ListSnap
 	glog.V(log.INFO).Infof("ecfs: Listing snapshots %v", description)
 	glog.V(log.VERBOSE_DEBUG).Infof("ecfs: ListSnapshots - enter. req: %+v", *req)
 
+	if IsEFAAS() {
+		panic("Listing snapshots on eFaaS is NOT IMPLEMENTED") // TODO: FIXME
+	}
 	var ems emanageClient
 	ecfsSnapshots, nextToken, err := listSnapshots(ems.GetClient(), req.GetSnapshotId(), req.GetSourceVolumeId(),
 		req.GetMaxEntries(), req.GetStartingToken())

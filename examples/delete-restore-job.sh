@@ -9,9 +9,6 @@ source ${MYPATH}/../deploy/functions.sh
 : ${PVC_MANIFEST:="${MYPATH}/pvc-restore-snap.yaml"}
 : ${NAMESPACE:="default"}
 
-echo "Deleting the snapshot"
-assert_cmd kubectl delete --wait -f ${SNAP_MANIFEST} --namespace ${NAMESPACE}
-
 echo "Deleting the main job"
 assert_cmd kubectl delete --wait -f ${JOB_MANIFEST} --namespace ${NAMESPACE}
 
@@ -28,3 +25,7 @@ assert_cmd kubectl delete --wait -f ${PVC_MANIFEST} --namespace ${NAMESPACE}
 
 echo "Job delete completed"
 exec_cmd kubectl get pv,pvc,volumesnapshot,volumesnapshotcontent,job --namespace ${NAMESPACE}
+
+echo "Deleting the snapshot"
+assert_cmd kubectl delete --wait -f ${SNAP_MANIFEST} --namespace ${NAMESPACE}
+

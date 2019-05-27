@@ -28,7 +28,6 @@ const (
 	k8sServiceEmanageVipSuffix = "-emanage-svc"
 
 	// eFaaS
-	efaasSecretsName      = "csi-efaas"
 	efaasSecretsKeySaJson = "sa-json"
 )
 
@@ -52,16 +51,14 @@ func GetPluginSettings() (configMap map[string]string, secrets map[string][]byte
 	}
 
 	glog.V(log.DETAILED_INFO).Infof("ecfs: Loading configuration from secrets '%v'", secretsName)
-	if IsEFAAS() {
-		secrets, err = co.GetSecret(Namespace(), efaasSecretsName)
-	} else {
-		secrets, err = co.GetSecret(Namespace(), secretsName)
-	}
+	secrets, err = co.GetSecret(Namespace(), secretsName)
 	if err != nil {
 		err = errors.WrapPrefix(err, "Failed to get secrets", 0)
 	}
 
-	glog.V(log.VERBOSE_DEBUG).Infof("ecfs: Provisioner settings - config map: %+v", configMap)
+	if !IsEFAAS() {
+		glog.V(log.VERBOSE_DEBUG).Infof("ecfs: Provisioner settings - config map: %+v", configMap)
+	}
 
 	//TODO: convert secrets map[string][]byte to type Secrets, and add String() with masked password
 	glog.V(log.VERBOSE_DEBUG).Infof("ecfs: Provisioner settings - secrets: %+v", secrets)
