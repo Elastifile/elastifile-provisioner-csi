@@ -84,7 +84,7 @@ func efaasCreateEmptyVolume(volOptions *volumeOptions) (volumeId volumeHandleTyp
 
 	filesystem := efaasapi.DataContainerAdd{
 		Name:        string(volumeId),
-		HardQuota:   int64(10 * size.GiB),
+		HardQuota:   volOptions.Capacity,
 		QuotaType:   efaas.QuotaTypeFixed,
 		Description: fmt.Sprintf("Filesystem %v", volumeId),
 		Accessors:   accessors,
