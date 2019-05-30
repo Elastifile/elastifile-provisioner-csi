@@ -107,7 +107,7 @@ func NewEfaasConf(jsonData []byte) (efaasConf *efaasapi.Configuration, err error
 	}
 
 	efaasConf = efaasapi.NewConfiguration()
-	efaasConf.BasePath = BaseURL
+	efaasConf.BasePath = EfaasApiUrl()
 	efaasConf.AccessToken = client.GoogleIdToken
 	efaasConf.Debug = true
 	efaasConf.DebugFile = "/tmp/api-debug.log"

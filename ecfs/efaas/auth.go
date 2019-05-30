@@ -21,11 +21,8 @@ import (
 
 const (
 	envProjectNumber = "CSI_GCP_PROJECT_NUMBER"
+	envEfaasUrl      = "EFAAS_URL"
 	GoogleAuthURL    = "https://www.googleapis.com/oauth2/v4/token"
-)
-
-var (
-	BaseURL = "https://bronze-eagle.gcp.elastifile.com/api/v2"
 )
 
 type googleIdTokenResp struct {
@@ -182,4 +179,19 @@ func ProjectNumber() string {
 			envProjectNumber))
 	}
 	return projectNumber
+}
+
+// efaasBaseUrl returns the base eFaaS URL, e.g. https://bronze-eagle.gcp.elastifile.com
+func efaasBaseUrl() string {
+	projectNumber := os.Getenv(envEfaasUrl)
+	if projectNumber == "" {
+		panic(fmt.Sprintf("GCP project number not specified - expected to be present in '%v' environment variable",
+			envProjectNumber))
+	}
+	return projectNumber
+}
+
+// EfaasApiUrl returns the base URL for accessing eFaaS APIs, e.g. https://bronze-eagle.gcp.elastifile.com/api/v2
+func EfaasApiUrl() string {
+	return efaasBaseUrl() + "/api/v2"
 }
