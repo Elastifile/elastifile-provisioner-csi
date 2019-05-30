@@ -9,6 +9,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/url"
+	"os"
 	"strings"
 	"time"
 
@@ -18,16 +19,13 @@ import (
 	"golang.org/x/oauth2/google"
 )
 
-var (
-	BaseURL    = "https://bronze-eagle.gcp.elastifile.com/api/v2"
-	RegionsURL = "https://bronze-eagle.gcp.elastifile.com/api/v2/regions"
-	//ProjectId    = "276859139519" // 934
-	ProjectId    = "602010805072"                                                                   // golden-eagle-consumer-10
-	InstancesURL = "https://bronze-eagle.gcp.elastifile.com/api/v2/projects/276859139519/instances" // 934 = 276859139519
+const (
+	envProjectNumber = "CSI_GCP_PROJECT_NUMBER"
+	GoogleAuthURL    = "https://www.googleapis.com/oauth2/v4/token"
 )
 
-const (
-	GoogleAuthURL = "https://www.googleapis.com/oauth2/v4/token"
+var (
+	BaseURL = "https://bronze-eagle.gcp.elastifile.com/api/v2"
 )
 
 type googleIdTokenResp struct {
@@ -176,21 +174,12 @@ func GetEfaasToken(data []byte) (googleIdToken string, err error) {
 	return
 }
 
-// Deprecated
-func demo1(data []byte) (res []byte, err error) {
-	client, err := GetEfaasClient(data)
-	if err != nil {
-		err = errors.WrapPrefix(err, fmt.Sprintf("Failed to get eFaaS client"), 0)
-		return
+func ProjectNumber() string {
+	// TODO: Check if the value can be obtained programmatically, e.g. https://github.com/googleapis/google-cloud-ruby/issues/1416
+	projectNumber := os.Getenv(envProjectNumber)
+	if projectNumber == "" {
+		panic(fmt.Sprintf("GCP project number not specified - expected to be present in '%v' environment variable",
+			envProjectNumber))
 	}
-
-	res, err = apiCallGet(client, InstancesURL)
-	if err != nil {
-		err = errors.WrapPrefix(err, fmt.Sprintf("Failed to get eFaaS client"), 0)
-		return
-	}
-
-	glog.Infof("AAAAA RESULT: %v", string(res))
-
-	return
+	return projectNumber
 }
