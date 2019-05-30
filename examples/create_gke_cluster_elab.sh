@@ -3,17 +3,20 @@
 # Usage:
 # GCP_PROJECT_ID=399 create_gke_cluster.sh
 
-: ${K8S_VERSION:="1.13.5-gke.10"}
+DEFAULT_GCP_REGION=$(gcloud config get-value compute/region) # e.g. europe-west1
+DEFAULT_GCP_ZONE=$(gcloud config get-value compute/zone) # europe-west1-b
+
+: ${GCP_PROJECT_ID:="934"}
+: ${K8S_VERSION:="1.13.6-gke.0"}
 # Alpha versions can be found at https://cloud.google.com/kubernetes-engine/docs/release-notes
 
 : ${GKE_CLUSTER_NAME:="cluster-1"}
-: ${GCP_REGION:="us-east1"}
-: ${GCP_ZONE:="us-east1-b"}
+: ${GCP_REGION:="${DEFAULT_GCP_REGION}"}
+: ${GCP_ZONE:="${DEFAULT_GCP_ZONE}"}
 
-: ${GCP_PROJECT_NAME:="golden-eagle-dev-consumer10"}
-: ${GKE_VPC:="default"}
-: ${GCP_NETWORK:="projects/${GCP_PROJECT_NAME}/global/networks/${GKE_VPC}"}
-: ${GCP_SUBNETWORK:="projects/${GCP_PROJECT_NAME}/regions/${GCP_REGION}/subnetworks/${GKE_VPC}"}
+: ${GCP_PROJECT_NAME:="elastifile-gce-lab-c"${GCP_PROJECT_ID}}
+: ${GCP_NETWORK:="projects/${GCP_PROJECT_NAME}/global/networks/vpc-c${GCP_PROJECT_ID}"}
+: ${GCP_SUBNETWORK:="projects/${GCP_PROJECT_NAME}/regions/${GCP_REGION}/subnetworks/vpc-c${GCP_PROJECT_ID}-subnet"}
 
 : ${GKE_CLUSTER_USER:="admin"}
 : ${GKE_NODE_VM:="custom-1-1536"}
