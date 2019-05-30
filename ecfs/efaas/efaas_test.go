@@ -4,6 +4,7 @@ import (
 	"crypto/tls"
 	"fmt"
 	"net/http"
+	"os"
 	"size"
 	"testing"
 
@@ -19,12 +20,19 @@ const (
 	testSnapId    = "12316016938850064433"
 	testSnapName  = "n03a0a05-8098-11e9-83ed-42010a8e0050"
 	testShareName = "e"
+	//testProjectNumber = "276859139519" // c934
+	testProjectNumber = "602010805072" // golden-eagle-dev-consumer10
 )
 
 func testEfaasConf() (efaasConf *efaasapi.Configuration) {
 	efaasConf, err := NewEfaasConf(testJsonData)
 	if err != nil {
 		panic(fmt.Sprintf("Failed to create NewEfaasConf %v", err.Error()))
+	}
+
+	err = os.Setenv(envProjectNumber, testProjectNumber)
+	if err != nil {
+		panic(fmt.Sprintf("Failed to set env %v to %v. err: %v", envProjectNumber, testProjectNumber, err.Error()))
 	}
 
 	return efaasConf
@@ -36,6 +44,7 @@ func TestDirectAPI_apiCallGet(t *testing.T) {
 		t.Fatal(fmt.Sprintf("AAAAA %v", err.Error()))
 	}
 
+	InstancesURL := "https://bronze-eagle.gcp.elastifile.com/api/v2/projects/" + ProjectNumber() + "/instances"
 	res, err := apiCallGet(client, InstancesURL)
 	if err != nil {
 		t.Fatal(fmt.Sprintf("AAAAA %v", err.Error()))

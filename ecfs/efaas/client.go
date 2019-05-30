@@ -157,9 +157,10 @@ func CheckApiCall(err error, resp *efaasapi.APIResponse, op *efaasapi.Operation)
 
 func GetOperation(efaasConf *efaasapi.Configuration, id string) (operation *efaasapi.Operation, err error) {
 	api := efaasapi.ProjectsprojectoperationApi{Configuration: efaasConf}
-	op, resp, err := api.GetOperation(id, ProjectId)
+	op, resp, err := api.GetOperation(id, ProjectNumber())
 	if err != nil {
-		err = errors.WrapPrefix(err, fmt.Sprintf("Failed to get operation by id %v project %v", id, ProjectId), 0)
+		err = errors.WrapPrefix(err, fmt.Sprintf("Failed to get operation by id %v project %v",
+			id, ProjectNumber()), 0)
 		return
 	}
 
@@ -263,7 +264,7 @@ func GetFilesystemByName(efaasConf *efaasapi.Configuration, instanceName string,
 func CreateInstance(efaasConf *efaasapi.Configuration, instanceName string, instance efaasapi.Instances) (err error) {
 	instancesAPI := efaasapi.ProjectsprojectinstancesApi{Configuration: efaasConf}
 
-	op, resp, err := instancesAPI.CreateInstance(ProjectId, instance, "")
+	op, resp, err := instancesAPI.CreateInstance(ProjectNumber(), instance, "")
 	err = CheckApiCall(err, resp, op)
 	if err != nil {
 		err = errors.WrapPrefix(err, fmt.Sprintf("Failed to create instance %v", instanceName), 0)
@@ -328,7 +329,7 @@ func CreateDefaultInstance(efaasConf *efaasapi.Configuration, instanceName strin
 
 func GetInstance(efaasConf *efaasapi.Configuration, instanceName string) (inst *efaasapi.Instances, err error) {
 	instancesAPI := efaasapi.ProjectsprojectinstancesApi{Configuration: efaasConf}
-	inst, resp, err := instancesAPI.GetInstance(instanceName, ProjectId)
+	inst, resp, err := instancesAPI.GetInstance(instanceName, ProjectNumber())
 	err = CheckApiCall(err, resp, nil)
 	if err != nil {
 		err = errors.WrapPrefix(err, fmt.Sprintf("GetInstance %v failed", instanceName), 0)
@@ -372,7 +373,7 @@ func UpdateFilesystemQuotaById(efaasConf *efaasapi.Configuration, instanceName s
 	}
 
 	glog.V(log.INFO).Infof("Updating filesystem: %#v with %#v", fsId, payload)
-	op, resp, err := instancesAPI.UpdateFilesystemQuota(instanceName, fsId, ProjectId, payload)
+	op, resp, err := instancesAPI.UpdateFilesystemQuota(instanceName, fsId, ProjectNumber(), payload)
 	err = CheckApiCall(err, resp, nil)
 	if err != nil {
 		err = errors.WrapPrefix(err, fmt.Sprintf("Failed updating filesystem %v quota %#v", fsId, payload), 0)
@@ -414,7 +415,7 @@ func AddFilesystem(efaasConf *efaasapi.Configuration, instanceName string, files
 	}
 
 	glog.V(log.HIGH_LEVEL_INFO).Infof("Adding filesystem: %#v: %#v", filesystem.Name, filesystem)
-	op, resp, err := instancesAPI.AddFilesystem(inst.Name, ProjectId, filesystem)
+	op, resp, err := instancesAPI.AddFilesystem(inst.Name, ProjectNumber(), filesystem)
 	err = CheckApiCall(err, resp, op)
 	if err != nil {
 		err = errors.WrapPrefix(err, fmt.Sprintf("Failed to add filesystem %v - %#v", filesystem.Name, filesystem), 0)
@@ -446,7 +447,7 @@ func DeleteFilesystem(efaasConf *efaasapi.Configuration, instanceName string, fs
 
 	glog.V(log.HIGH_LEVEL_INFO).Infof("Deleting filesystem: %v", fsName)
 
-	op, resp, err := instancesAPI.DeleteFilesystem(inst.Name, fs.Id, ProjectId)
+	op, resp, err := instancesAPI.DeleteFilesystem(inst.Name, fs.Id, ProjectNumber())
 	err = CheckApiCall(err, resp, op)
 	if err != nil {
 		err = errors.WrapPrefix(err, fmt.Sprintf("Failed to delete filesystem %v", fsName), 0)
@@ -485,7 +486,7 @@ func ListInstanceSnapshots(efaasConf *efaasapi.Configuration, instanceName strin
 	glog.V(log.DEBUG).Infof("Listing all snapshots")
 
 	snapshotsAPI := efaasapi.ProjectsprojectsnapshotsApi{Configuration: efaasConf}
-	snapshots, resp, err := snapshotsAPI.ListInstanceSnapshots(ProjectId, instanceName, "")
+	snapshots, resp, err := snapshotsAPI.ListInstanceSnapshots(ProjectNumber(), instanceName, "")
 	err = CheckApiCall(err, resp, nil)
 	if err != nil {
 		err = errors.WrapPrefix(err, fmt.Sprintf("Failed to list instance snapshots"), 0)
@@ -516,7 +517,7 @@ func GetSnapshotByName(efaasConf *efaasapi.Configuration, instanceName string, s
 func GetSnapshotById(efaasConf *efaasapi.Configuration, snapId string) (snapshot *efaasapi.Snapshots, err error) {
 	glog.V(log.DEBUG).Infof("Getting snapshot by Id %v", snapId)
 	snapshotsAPI := efaasapi.ProjectsprojectsnapshotsApi{Configuration: efaasConf}
-	snapshot, resp, err := snapshotsAPI.GetSnapshot(ProjectId, snapId)
+	snapshot, resp, err := snapshotsAPI.GetSnapshot(ProjectNumber(), snapId)
 	err = CheckApiCall(err, resp, nil)
 	if err != nil {
 		err = errors.WrapPrefix(err, fmt.Sprintf("Failed to get snapshots byt Id %v", snapId), 0)
@@ -535,7 +536,7 @@ func ListSnapshotsByFsName(efaasConf *efaasapi.Configuration, instanceName strin
 
 	glog.V(log.DEBUG).Infof("Listing snapshots for filesystem %v", fsName)
 	snapshotsAPI := efaasapi.ProjectsprojectsnapshotsApi{Configuration: efaasConf}
-	snapshots, resp, err := snapshotsAPI.ListSnapshots(ProjectId, fs.Id, instanceName)
+	snapshots, resp, err := snapshotsAPI.ListSnapshots(ProjectNumber(), fs.Id, instanceName)
 	err = CheckApiCall(err, resp, nil)
 	if err != nil {
 		err = errors.WrapPrefix(err, fmt.Sprintf("Failed to list snapshots for filesystem %v", fsName), 0)
@@ -554,7 +555,7 @@ func CreateSnapshot(efaasConf *efaasapi.Configuration, instanceName string, fsNa
 
 	instancesAPI := efaasapi.ProjectsprojectinstancesApi{Configuration: efaasConf}
 	requestId := "" // Used for idempotency
-	op, resp, err := instancesAPI.FilesystemManualCreateSnapshot(instanceName, fs.Id, ProjectId, snapshot, requestId)
+	op, resp, err := instancesAPI.FilesystemManualCreateSnapshot(instanceName, fs.Id, ProjectNumber(), snapshot, requestId)
 	err = CheckApiCall(err, resp, op)
 	if err != nil {
 		err = errors.WrapPrefix(err, fmt.Sprintf("Failed to create snapshot %v on filesystem %v", snapshot.Name, fsName), 0)
@@ -580,7 +581,7 @@ func DeleteSnapshot(efaasConf *efaasapi.Configuration, instanceName string, fsNa
 
 	snapshotsAPI := efaasapi.ProjectsprojectsnapshotsApi{Configuration: efaasConf}
 	requestId := "" // Used for idempotency
-	op, resp, err := snapshotsAPI.DeleteSnapshot(ProjectId, snap.Id, requestId)
+	op, resp, err := snapshotsAPI.DeleteSnapshot(ProjectNumber(), snap.Id, requestId)
 	err = CheckApiCall(err, resp, op)
 	if err != nil {
 		err = errors.WrapPrefix(err, fmt.Sprintf("Failed to delete snapshot %v (%v) from filesystem %v",
@@ -613,7 +614,7 @@ func CreateShareWithFs(efaasConf *efaasapi.Configuration, instanceName string, f
 
 	snapshotsAPI := efaasapi.ProjectsprojectsnapshotsApi{Configuration: efaasConf}
 	requestId := "" // Used for idempotency
-	op, resp, err := snapshotsAPI.CreateShare(ProjectId, snap.Id, payload, requestId)
+	op, resp, err := snapshotsAPI.CreateShare(ProjectNumber(), snap.Id, payload, requestId)
 	err = CheckApiCall(err, resp, op)
 	if err != nil {
 		err = errors.WrapPrefix(err, fmt.Sprintf("Failed to create share on snapshot %v (%v)", snapName, snap.Id), 0)
@@ -644,7 +645,7 @@ func CreateShare(efaasConf *efaasapi.Configuration, instanceName string, snapNam
 
 	snapshotsAPI := efaasapi.ProjectsprojectsnapshotsApi{Configuration: efaasConf}
 	requestId := "" // Used for idempotency
-	op, resp, err := snapshotsAPI.CreateShare(ProjectId, snap.Id, payload, requestId)
+	op, resp, err := snapshotsAPI.CreateShare(ProjectNumber(), snap.Id, payload, requestId)
 	err = CheckApiCall(err, resp, op)
 	if err != nil {
 		err = errors.WrapPrefix(err, fmt.Sprintf("Failed to create share on snapshot %v (%v)", snapName, snap.Id), 0)
@@ -671,7 +672,7 @@ func DeleteShare(efaasConf *efaasapi.Configuration, instanceName string, fsName 
 
 	snapshotsAPI := efaasapi.ProjectsprojectsnapshotsApi{Configuration: efaasConf}
 	requestId := "" // Used for idempotency
-	op, resp, err := snapshotsAPI.DeleteShare(ProjectId, snap.Id, requestId)
+	op, resp, err := snapshotsAPI.DeleteShare(ProjectNumber(), snap.Id, requestId)
 	err = CheckApiCall(err, resp, op)
 	if err != nil {
 		err = errors.WrapPrefix(err, fmt.Sprintf("Failed to delete share on snapshot %v (%v)", snapName, snap.Id), 0)
