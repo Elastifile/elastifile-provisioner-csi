@@ -62,6 +62,29 @@ func efaasGetInstanceName() string {
 	return os.Getenv(envEfaasInstance)
 }
 
+// updateDefaultFsQuota works around v1 API default "auto" quota taking up all the capacity, preventing add'l filesystems' creation
+func updateDefaultFsQuota(delta int64) (err error) {
+	defaultFsName := efaasGetInstanceName()
+	efaasConf := newEfaasConf()
+
+	fs, err := efaas.GetFilesystemByName(efaasConf, efaasGetInstanceName(), defaultFsName)
+	if err != nil {
+		if isErrorDoesNotExist(err) {
+			glog.Warningf("Default filesystem not found - unable to update its quota")
+			return nil
+		}
+		return errors.WrapPrefix(err, "Failed to update quota", 0)
+	}
+
+	quota := fs.HardQuota + delta
+	err = efaas.UpdateFilesystemQuotaById(efaasConf, efaasGetInstanceName(), fs.Id, size.Size(quota))
+	if err != nil {
+		return errors.WrapPrefix(err, fmt.Sprintf("Failed to update default filesystem quota to %v", quota), 0)
+	}
+
+	return
+}
+
 func efaasCreateEmptyVolume(volOptions *volumeOptions) (volumeId volumeHandleType, err error) {
 	efaasConf := newEfaasConf()
 	glog.V(log.DETAILED_INFO).Infof("ecfs: Creating Volume - settings: %+v", volOptions)
@@ -97,15 +120,34 @@ func efaasCreateEmptyVolume(volOptions *volumeOptions) (volumeId volumeHandleTyp
 		if isErrorAlreadyExists(err) {
 			glog.V(log.DEBUG).Infof("ecfs: Volume %v was already created - assuming it was created "+
 				"during previous, failed, attempt", volumeId)
-			var e error
-			_, e = efaas.GetFilesystemByName(efaasConf, efaasGetInstanceName(), string(volumeId))
+			_, e := efaas.GetFilesystemByName(efaasConf, efaasGetInstanceName(), string(volumeId))
 			if e != nil {
 				logSecondaryError(err, e)
 				return
 			}
+			err = nil // This error is acceptable
 		} else {
-			err = errors.Wrap(err, 0)
-			return "", errors.Wrap(err, 0)
+			quotaError := "Quota exceeded"
+			if strings.Contains(err.Error(), quotaError) {
+				// Resize default filesystem
+				e := updateDefaultFsQuota(-1 * volOptions.Capacity)
+				if e != nil {
+					logSecondaryError(err, e)
+					return
+				}
+
+				// Retry AddFilesystem
+				e = efaas.AddFilesystem(efaasConf, efaasGetInstanceName(), filesystem)
+				if e != nil {
+					logSecondaryError(err, e)
+					return
+				}
+
+				err = nil // This error has been worked around
+			} else {
+				err = errors.Wrap(err, 0)
+				return "", errors.Wrap(err, 0)
+			}
 		}
 	}
 	//volOptions.DataContainer = fs

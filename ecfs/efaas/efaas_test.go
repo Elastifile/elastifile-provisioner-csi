@@ -23,18 +23,24 @@ const (
 	testShareName = "e"
 	//testProjectNumber = "276859139519" // c934
 	//testProjectNumber = "602010805072" // golden-eagle-dev-consumer10
-	testProjectNumber = "507926947502" // elastifile-show
+	testProjectNumber    = "507926947502" // elastifile-show
+	testEfaasEnvironment = "https://bronze-eagle.gcp.elastifile.com"
 )
 
 func testEfaasConf() (efaasConf *efaasapi.Configuration) {
-	efaasConf, err := NewEfaasConf(testJsonData)
-	if err != nil {
-		panic(fmt.Sprintf("Failed to create NewEfaasConf %v", err.Error()))
-	}
-
-	err = os.Setenv(envProjectNumber, testProjectNumber)
+	err := os.Setenv(envProjectNumber, testProjectNumber)
 	if err != nil {
 		panic(fmt.Sprintf("Failed to set env %v to %v. err: %v", envProjectNumber, testProjectNumber, err.Error()))
+	}
+
+	err = os.Setenv(envEfaasUrl, testEfaasEnvironment)
+	if err != nil {
+		panic(fmt.Sprintf("Failed to set env %v to %v. err: %v", envEfaasUrl, testProjectNumber, err.Error()))
+	}
+
+	efaasConf, err = NewEfaasConf(testJsonData)
+	if err != nil {
+		panic(fmt.Sprintf("Failed to create NewEfaasConf %v", err.Error()))
 	}
 
 	return efaasConf
@@ -46,7 +52,7 @@ func TestDirectAPI_apiCallGet(t *testing.T) {
 		t.Fatal(fmt.Sprintf("AAAAA %v", err.Error()))
 	}
 
-	InstancesURL := "https://bronze-eagle.gcp.elastifile.com/api/v2/projects/" + ProjectNumber() + "/instances"
+	InstancesURL := testEfaasEnvironment + "/api/v2/projects/" + ProjectNumber() + "/instances"
 	res, err := apiCallGet(client, InstancesURL)
 	if err != nil {
 		t.Fatal(fmt.Sprintf("AAAAA %v", err.Error()))
@@ -80,7 +86,7 @@ func TestOpenAPI_CallAPI(t *testing.T) {
 	}
 	apiConf.AddDefaultHeader("Authorization", fmt.Sprintf("Bearer %v", client.GoogleIdToken))
 
-	res, err := apiConf.APIClient.CallAPI("https://bronze-eagle.gcp.elastifile.com/api/v1/regions", "GET",
+	res, err := apiConf.APIClient.CallAPI(testEfaasEnvironment+"/api/v1/regions", "GET",
 		nil, apiConf.DefaultHeader, nil, nil, "", nil)
 	if err != nil {
 		t.Fatal(fmt.Sprintf("AAAAA %v", err.Error()))
