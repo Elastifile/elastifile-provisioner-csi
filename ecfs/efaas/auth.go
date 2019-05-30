@@ -185,8 +185,8 @@ func ProjectNumber() string {
 func efaasBaseUrl() string {
 	projectNumber := os.Getenv(envEfaasUrl)
 	if projectNumber == "" {
-		panic(fmt.Sprintf("GCP project number not specified - expected to be present in '%v' environment variable",
-			envProjectNumber))
+		panic(fmt.Sprintf("eFaaS URL not specified - expected to be present in '%v' environment variable",
+			envEfaasUrl))
 	}
 	return projectNumber
 }
