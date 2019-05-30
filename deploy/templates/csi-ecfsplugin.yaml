@@ -71,6 +71,8 @@ spec:
               value: "${EKFS}"
             - name: CSI_EFAAS_INSTANCE
               value: "${CSI_EFAAS_INSTANCE}"
+            - name: EFAAS_URL
+              value: "${EFAAS_URL}"
             - name: CSI_GCP_PROJECT_NUMBER
               value: "${CSI_GCP_PROJECT_NUMBER}"
           volumeMounts:

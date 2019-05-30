@@ -27,14 +27,16 @@ var testJsonData = []byte(`
 	`)
 
 const (
-	testInstName = "jean-instance1"
+	//testInstName = "jean-instance1"
+	testInstName = "demo-instance1"
 	//testFsName    = "fs1"
 	testFsName    = "pvc-fc25d8c4-8003-11e9-ab7c-42010a8e006c"
 	testSnapId    = "12316016938850064433"
 	testSnapName  = "n03a0a05-8098-11e9-83ed-42010a8e0050"
 	testShareName = "e"
 	//testProjectNumber = "276859139519" // c934
-	testProjectNumber = "602010805072" // golden-eagle-dev-consumer10
+	//testProjectNumber = "602010805072" // golden-eagle-dev-consumer10
+	testProjectNumber = "507926947502" // elastifile-show
 )
 
 func testEfaasConf() (efaasConf *efaasapi.Configuration) {
@@ -73,7 +75,7 @@ func TestOpenAPI_CallAPI(t *testing.T) {
 	}
 
 	apiConf := efaasapi.NewConfiguration()
-	apiConf.BasePath = BaseURL
+	apiConf.BasePath = EfaasApiUrl()
 	apiConf.AccessToken = client.GoogleIdToken
 	apiConf.Debug = true
 	apiConf.DebugFile = "/tmp/api-debug.log"
