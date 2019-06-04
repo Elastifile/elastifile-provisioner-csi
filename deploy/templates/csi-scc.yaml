@@ -1,0 +1,30 @@
+kind: SecurityContextConstraints
+apiVersion: v1
+metadata:
+  name: csi-ecfsplugin-admin
+allowHostDirVolumePlugin: true
+allowHostIPC: true
+allowHostNetwork: true
+allowPrivilegeEscalation: true
+allowPrivilegedContainer: true
+allowedCapabilities:
+- '*'
+defaultAddCapabilities: null
+fsGroup:
+  type: RunAsAny
+groups:
+- system:authenticated
+readOnlyRootFilesystem: false
+requiredDropCapabilities: null
+runAsUser:
+  type: RunAsAny
+seLinuxContext:
+  type: RunAsAny
+supplementalGroups:
+  type: RunAsAny
+users:
+- system:serviceaccount:${NAMESPACE}:csi-driver-registrar
+- system:serviceaccount:${NAMESPACE}:csi-attacher
+- system:serviceaccount:${NAMESPACE}:csi-provisioner
+- system:serviceaccount:${NAMESPACE}:csi-snapshotter
+

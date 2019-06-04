@@ -40,25 +40,25 @@ if [[ ! -d "${DEPLOYMENT_BASE}" ]]; then
     exit 1
 fi
 
-exec_cmd which kubectl
-assert $? "kubectl not found"
+exec_cmd which oc
+assert $? "oc not found"
 
 exec_cmd which envsubst
 assert $? "envsubst not found"
 
 log_info "Checking permissions"
-exec_cmd kubectl auth can-i create clusterrolebinding
+exec_cmd oc auth can-i create clusterrolebinding
 assert $? "ERROR: Current user/sa doesn't have enough permissions to create clusterrolebinding"
 
 if [[ -n "${K8S_USER}" ]]; then
     log_info "Assigning cluster role cluster-admin to ${K8S_USER}"
     # On repeat runs clusterrolebinding already exists and it's ok for it to fail with AlreadyExists
-    exec_cmd kubectl create clusterrolebinding cluster-admin-binding --clusterrole cluster-admin --user ${K8S_USER} ${DRY_RUN_FLAG} > /dev/null 2>&1
+    exec_cmd oc create clusterrolebinding cluster-admin-binding --clusterrole cluster-admin --user ${K8S_USER} ${DRY_RUN_FLAG} > /dev/null 2>&1
 else
     log_info \$K8S_USER not specified - assuming the script is running under service account with cluster-admin role
 fi
 
-OBJECTS=(templates/configmap templates/secret templates/csi-attacher-rbac templates/csi-provisioner-rbac templates/csi-nodeplugin-rbac templates/csi-snapshotter-rbac templates/csi-snapshotter csi-ecfsplugin-attacher csi-ecfsplugin-provisioner templates/storageclass templates/csi-ecfsplugin snapshotclass)
+OBJECTS=(templates/configmap templates/secret templates/csi-attacher-rbac templates/csi-provisioner-rbac templates/csi-nodeplugin-rbac templates/csi-snapshotter-rbac templates/csi-scc templates/csi-snapshotter csi-ecfsplugin-attacher csi-ecfsplugin-provisioner templates/storageclass templates/csi-ecfsplugin snapshotclass)
 
 pushd ${DEPLOYMENT_BASE}
 assert_cmd ./create_crd.sh
@@ -67,11 +67,11 @@ popd
 for OBJ in ${OBJECTS[@]}; do
     if [[ "${OBJ}" == *"templates"* ]]; then
         log_info "Creating ${OBJ} from template"
-        PLUGIN_TAG=${PLUGIN_TAG} NAMESPACE=${NAMESPACE} MGMT_ADDR=${MGMT_ADDR} MGMT_USER=${MGMT_USER} MGMT_PASS=${MGMT_PASS} NFS_ADDR=${NFS_ADDR} EKFS=${EKFS} envsubst < "${DEPLOYMENT_BASE}/${OBJ}.yaml" | kubectl create -f - --namespace ${NAMESPACE} ${DRY_RUN_FLAG}
+        PLUGIN_TAG=${PLUGIN_TAG} NAMESPACE=${NAMESPACE} MGMT_ADDR=${MGMT_ADDR} MGMT_USER=${MGMT_USER} MGMT_PASS=${MGMT_PASS} NFS_ADDR=${NFS_ADDR} EKFS=${EKFS} envsubst < "${DEPLOYMENT_BASE}/${OBJ}.yaml" | oc create -f - --namespace ${NAMESPACE} ${DRY_RUN_FLAG}
         assert $? "Failed to create ${OBJ} from template"
     else
         log_info "Creating ${OBJ}"
-	    exec_cmd kubectl create -f "${DEPLOYMENT_BASE}/${OBJ}.yaml" --namespace ${NAMESPACE} ${DRY_RUN_FLAG}
+	    exec_cmd oc create -f "${DEPLOYMENT_BASE}/${OBJ}.yaml" --namespace ${NAMESPACE} ${DRY_RUN_FLAG}
 	    EXIT_CODE=$?
         if [[ ${EXIT_CODE} != 0 && ${OBJ} == "snapshotclass" ]]; then
             # Workaround for the race between VolumeSnapshotClass CRD creation in external-snapshotter and its use in snapshotclass.yaml
@@ -79,11 +79,11 @@ for OBJ in ${OBJECTS[@]}; do
             MAX_RETRIES=15
             for ((attempt = 2; attempt < MAX_RETRIES+2; attempt++)); do
                 echo -n .
-                kubectl get crd ${CRD} > /dev/null 2>&1
+                oc get crd ${CRD} > /dev/null 2>&1
                 if [[ $? == 0 ]]; then
                     echo
                     log_info "Resolved the above failure - found CRD ${CRD} on attempt #${attempt}"
-                    exec_cmd kubectl create -f "${DEPLOYMENT_BASE}/${OBJ}.yaml" --namespace ${NAMESPACE} ${DRY_RUN_FLAG}
+                    exec_cmd oc create -f "${DEPLOYMENT_BASE}/${OBJ}.yaml" --namespace ${NAMESPACE} ${DRY_RUN_FLAG}
                     break
                 fi
                 sleep 1

@@ -14,7 +14,7 @@ fi
 pushd ${deployment_base}
 assert $? "Path not found: ${deployment_base}"
 
-objects=(csi-ecfsplugin-attacher csi-ecfsplugin-provisioner templates/csi-ecfsplugin templates/csi-snapshotter-rbac templates/csi-snapshotter snapshotclass templates/storageclass templates/csi-attacher-rbac templates/csi-provisioner-rbac templates/csi-nodeplugin-rbac templates/configmap templates/secret)
+objects=(csi-ecfsplugin-attacher csi-ecfsplugin-provisioner templates/csi-ecfsplugin templates/csi-snapshotter-rbac templates/csi-snapshotter snapshotclass templates/storageclass templates/csi-attacher-rbac templates/csi-provisioner-rbac templates/csi-nodeplugin-rbac templates/configmap templates/secret templates/csi-scc)
 
 for obj in ${objects[@]}; do
     log_info "Deleting ${obj}"
