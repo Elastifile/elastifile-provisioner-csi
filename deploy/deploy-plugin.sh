@@ -58,7 +58,7 @@ else
     log_info \$K8S_USER not specified - assuming the script is running under service account with cluster-admin role
 fi
 
-OBJECTS=(templates/configmap templates/secret templates/csi-attacher-rbac templates/csi-provisioner-rbac templates/csi-nodeplugin-rbac templates/csi-snapshotter-rbac templates/csi-scc templates/csi-snapshotter csi-ecfsplugin-attacher csi-ecfsplugin-provisioner templates/storageclass templates/csi-ecfsplugin snapshotclass)
+OBJECTS=(templates/configmap templates/secret templates/csi-attacher-rbac templates/csi-provisioner-rbac templates/csi-nodeplugin-rbac templates/csi-scc csi-ecfsplugin-attacher csi-ecfsplugin-provisioner templates/storageclass templates/csi-ecfsplugin)
 
 pushd ${DEPLOYMENT_BASE}
 assert_cmd ./create_crd.sh
@@ -71,25 +71,6 @@ for OBJ in ${OBJECTS[@]}; do
         assert $? "Failed to create ${OBJ} from template"
     else
         log_info "Creating ${OBJ}"
-	    exec_cmd oc create -f "${DEPLOYMENT_BASE}/${OBJ}.yaml" --namespace ${NAMESPACE} ${DRY_RUN_FLAG}
-	    EXIT_CODE=$?
-        if [[ ${EXIT_CODE} != 0 && ${OBJ} == "snapshotclass" ]]; then
-            # Workaround for the race between VolumeSnapshotClass CRD creation in external-snapshotter and its use in snapshotclass.yaml
-            CRD="volumesnapshotclasses.snapshot.storage.k8s.io"
-            MAX_RETRIES=15
-            for ((attempt = 2; attempt < MAX_RETRIES+2; attempt++)); do
-                echo -n .
-                oc get crd ${CRD} > /dev/null 2>&1
-                if [[ $? == 0 ]]; then
-                    echo
-                    log_info "Resolved the above failure - found CRD ${CRD} on attempt #${attempt}"
-                    exec_cmd oc create -f "${DEPLOYMENT_BASE}/${OBJ}.yaml" --namespace ${NAMESPACE} ${DRY_RUN_FLAG}
-                    break
-                fi
-                sleep 1
-            done
-        else
-            assert ${EXIT_CODE} "Command execution failed"
-        fi
+	    assert_cmd oc create -f "${DEPLOYMENT_BASE}/${OBJ}.yaml" --namespace ${NAMESPACE} ${DRY_RUN_FLAG}
     fi
 done

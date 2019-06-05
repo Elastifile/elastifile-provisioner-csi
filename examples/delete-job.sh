@@ -22,4 +22,3 @@ echo "Deleting pvc"
 assert_cmd kubectl delete --wait -f ${PVC_MANIFEST} --namespace ${NAMESPACE}
 
 echo "Delete completed"
-exec_cmd kubectl get pv,pvc,volumesnapshot,volumesnapshotcontent,job --namespace ${NAMESPACE}
