@@ -17,6 +17,8 @@ import (
 	"github.com/go-errors/errors"
 	"github.com/golang/glog"
 	"golang.org/x/oauth2/google"
+
+	"csi-provisioner-elastifile/ecfs/log"
 )
 
 const (
@@ -38,7 +40,7 @@ func GetGoogleIdToken(token string) (id string, err error) {
 	client := &http.Client{}
 
 	encodedValues := values.Encode()
-	glog.V(1).Infof("Using encoded values %v", encodedValues)
+	glog.V(log.VERBOSE_DEBUG).Infof("Using encoded values %v", encodedValues)
 	req, err := http.NewRequest("POST", GoogleAuthURL, strings.NewReader(encodedValues))
 	if err != nil {
 		err = errors.WrapPrefix(err, fmt.Sprintf("Failed to create request to %+v", GoogleAuthURL), 0)
@@ -70,7 +72,7 @@ func GetGoogleIdToken(token string) (id string, err error) {
 		return
 	}
 
-	glog.V(1).Infof("Google body: %v", string(body))
+	glog.V(log.VERBOSE_DEBUG).Infof("Google body: %v", string(body))
 	return tokenResp.IdToken, nil
 }
 
