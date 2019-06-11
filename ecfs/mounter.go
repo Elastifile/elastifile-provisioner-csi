@@ -35,6 +35,7 @@ func mountNfs(args ...string) error {
 	if err != nil {
 		return errors.WrapPrefix(err, fmt.Sprintf("Mount failed. Output: %v", string(out)), 0)
 	}
+	glog.V(log.DEBUG).Infof("Command output: %v", string(out))
 	return nil
 }
 
