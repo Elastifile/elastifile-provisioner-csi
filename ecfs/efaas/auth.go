@@ -101,12 +101,11 @@ func GetEfaasClaims(data []byte, scope string) (claims jwt.MapClaims, err error)
 		// Issued At
 		"iat": timestamp.Unix(),
 
-		// Token expiration expires after one hour
+		// Token expiration time
 		"exp": timestamp.Add(tokenExpiration).Unix(),
 
 		// iss (Issuer) is the service account email
-
-		"iss": jwtConf.Email, // "efaas-csi@elastifile-gce-lab-c934.iam.gserviceaccount.com"
+		"iss": jwtConf.Email, // "service-account-name@project-name.iam.gserviceaccount.com"
 
 		// target_audience is the URL of the target service
 		"target_audience": "563209362155-dmktm1rt2snprao3te1a5gf0tk9l39i8.apps.googleusercontent.com", // eFaaS
