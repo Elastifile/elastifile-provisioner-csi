@@ -11,8 +11,7 @@ spec:
           volumeMounts:
             - name: volume1
               mountPath: /mnt
-          command: ["dd"]
-          args: ["if=/dev/zero", "of=/mnt/demofile", "bs=1M", "count=1000"]
+          command: ["dd", "if=/dev/zero", "of=/mnt/demofile", "bs=1M", "count=1000"]
       volumes:
         - name: volume1
           persistentVolumeClaim:
