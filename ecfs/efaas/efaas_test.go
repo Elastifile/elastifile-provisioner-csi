@@ -3,6 +3,7 @@ package efaas
 import (
 	"crypto/tls"
 	"fmt"
+	"io/ioutil"
 	"net/http"
 	"os"
 	"size"
@@ -11,21 +12,27 @@ import (
 	efaasapi "csi-provisioner-elastifile/ecfs/efaas-api"
 )
 
-var testJsonData = []byte(``)
-
 const (
-	//testInstName = "jean-instance1"
-	testInstName = "demo-instance1"
-	//testFsName    = "fs1"
-	testFsName    = "pvc-fc25d8c4-8003-11e9-ab7c-42010a8e006c"
-	testSnapId    = "12316016938850064433"
-	testSnapName  = "n03a0a05-8098-11e9-83ed-42010a8e0050"
-	testShareName = "e"
-	//testProjectNumber = "276859139519" // c934
+	testInstName      = "demo-instance1"
+	testFsName        = "fs1"
+	testSnapId        = "12316016938850064433"
+	testSnapName      = "snap1"
+	testShareName     = "e"
+	testProjectNumber = "276859139519" // c934
 	//testProjectNumber = "602010805072" // golden-eagle-dev-consumer10
-	testProjectNumber    = "507926947502" // elastifile-show
-	testEfaasEnvironment = "https://bronze-eagle.gcp.elastifile.com"
+	//testProjectNumber    = "507926947502" // elastifile-show
+	testEfaasEnvironment = "https://silver-eagle.gcp.elastifile.com"
+	//testEfaasEnvironment = "https://bronze-eagle.gcp.elastifile.com"
+	testServiceAccountKeyFile = "/tmp/sa-key.json"
 )
+
+func testSaKey() (data []byte) {
+	data, err := ioutil.ReadFile(testServiceAccountKeyFile)
+	if err != nil {
+		panic(fmt.Sprintf("Failed to read service account key file %v - %v", testServiceAccountKeyFile, err.Error()))
+	}
+	return data
+}
 
 func testEfaasConf() (efaasConf *efaasapi.Configuration) {
 	err := os.Setenv(envProjectNumber, testProjectNumber)
@@ -38,7 +45,7 @@ func testEfaasConf() (efaasConf *efaasapi.Configuration) {
 		panic(fmt.Sprintf("Failed to set env %v to %v. err: %v", envEfaasUrl, testProjectNumber, err.Error()))
 	}
 
-	efaasConf, err = NewEfaasConf(testJsonData)
+	efaasConf, err = NewEfaasConf(testSaKey())
 	if err != nil {
 		panic(fmt.Sprintf("Failed to create NewEfaasConf %v", err.Error()))
 	}
@@ -47,24 +54,24 @@ func testEfaasConf() (efaasConf *efaasapi.Configuration) {
 }
 
 func TestDirectAPI_apiCallGet(t *testing.T) {
-	client, err := GetEfaasClient(testJsonData)
+	client, err := GetEfaasClient(testSaKey())
 	if err != nil {
-		t.Fatal(fmt.Sprintf("AAAAA %v", err.Error()))
+		t.Fatal(fmt.Sprintf("Failed to get eFaaS client - %v", err.Error()))
 	}
 
 	InstancesURL := testEfaasEnvironment + "/api/v2/projects/" + ProjectNumber() + "/instances"
 	res, err := apiCallGet(client, InstancesURL)
 	if err != nil {
-		t.Fatal(fmt.Sprintf("AAAAA %v", err.Error()))
+		t.Fatal(fmt.Sprintf("apiCallGet failed - %v", err.Error()))
 	}
 
 	t.Logf("RES: %v", string(res))
 }
 
 func TestOpenAPI_CallAPI(t *testing.T) {
-	client, err := GetEfaasClient(testJsonData)
+	client, err := GetEfaasClient(testSaKey())
 	if err != nil {
-		t.Fatal(fmt.Sprintf("AAAAA %v", err.Error()))
+		t.Fatal(fmt.Sprintf("Failed to get eFaaS client - %v", err.Error()))
 	}
 
 	apiConf := efaasapi.NewConfiguration()
@@ -89,7 +96,7 @@ func TestOpenAPI_CallAPI(t *testing.T) {
 	res, err := apiConf.APIClient.CallAPI(testEfaasEnvironment+"/api/v1/regions", "GET",
 		nil, apiConf.DefaultHeader, nil, nil, "", nil)
 	if err != nil {
-		t.Fatal(fmt.Sprintf("AAAAA %v", err.Error()))
+		t.Fatal(fmt.Sprintf("Failed to call API - %v", err.Error()))
 	}
 	t.Logf("RES: %+v", res)
 }
