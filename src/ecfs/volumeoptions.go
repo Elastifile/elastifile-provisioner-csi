@@ -22,7 +22,7 @@ import (
 	"github.com/container-storage-interface/spec/lib/go/csi"
 	"github.com/golang/glog"
 
-	"csi-provisioner-elastifile/ecfs/log"
+	"ecfs/log"
 	"github.com/elastifile/emanage-go/src/emanage-client"
 	"github.com/elastifile/errors"
 	"optional"

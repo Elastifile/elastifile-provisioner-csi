@@ -11,8 +11,8 @@ import (
 	"github.com/go-errors/errors"
 	"github.com/golang/glog"
 
-	efaasapi "csi-provisioner-elastifile/ecfs/efaas-api"
-	"csi-provisioner-elastifile/ecfs/log"
+	efaasapi "ecfs/efaas-api"
+	"ecfs/log"
 )
 
 type EfaasClient struct {

@@ -8,8 +8,8 @@ import (
 	"github.com/elastifile/errors"
 	"github.com/golang/glog"
 
-	"csi-provisioner-elastifile/ecfs/co"
-	"csi-provisioner-elastifile/ecfs/log"
+	"ecfs/co"
+	"ecfs/log"
 )
 
 const (

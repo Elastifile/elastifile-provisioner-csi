@@ -13,7 +13,7 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
-	"csi-provisioner-elastifile/ecfs/log"
+	"ecfs/log"
 	"github.com/elastifile/emanage-go/src/emanage-client"
 	"github.com/elastifile/errors"
 )

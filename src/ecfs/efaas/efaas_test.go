@@ -9,7 +9,7 @@ import (
 	"size"
 	"testing"
 
-	efaasapi "csi-provisioner-elastifile/ecfs/efaas-api"
+	efaasapi "ecfs/efaas-api"
 )
 
 const (

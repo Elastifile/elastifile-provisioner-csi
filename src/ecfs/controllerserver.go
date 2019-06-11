@@ -28,8 +28,8 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
-	efaasapi "csi-provisioner-elastifile/ecfs/efaas-api"
-	"csi-provisioner-elastifile/ecfs/log"
+	efaasapi "ecfs/efaas-api"
+	"ecfs/log"
 	"github.com/elastifile/emanage-go/src/emanage-client"
 	"github.com/elastifile/errors"
 )

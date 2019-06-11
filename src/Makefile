@@ -20,10 +20,10 @@ PLUGIN_IMAGE_NAME = elastifileio/ecfs-provisioner-csi
 PLUGIN_TAG ?= dev
 
 TEMP_DIR = _output
-PLUGIN_DOCKER_DIR = images/plugin
+PLUGIN_DOCKER_DIR = $(CURDIR)/images/plugin
 PLUGIN_BINARY = ecfsplugin
 
-PROJECT_ROOT = $(shell dirname $(shell dirname $(value CURDIR)))
+PROJECT_ROOT = $(shell dirname $(CURDIR))
 GOPATH = "$(PROJECT_ROOT):$(CURDIR)/vendor"
 
 $(info Setting GOPATH to $(GOPATH))

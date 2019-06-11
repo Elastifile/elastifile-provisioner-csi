@@ -6,7 +6,7 @@ import (
 
 	"github.com/go-errors/errors"
 
-	"csi-provisioner-elastifile/ecfs/co"
+	"ecfs/co"
 )
 
 func fakeEmsConfig() (err error) {

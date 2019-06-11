@@ -23,9 +23,9 @@ import (
 
 	"github.com/golang/glog"
 
-	"csi-provisioner-elastifile/ecfs/efaas"
-	efaasapi "csi-provisioner-elastifile/ecfs/efaas-api"
-	"csi-provisioner-elastifile/ecfs/log"
+	"ecfs/efaas"
+	efaasapi "ecfs/efaas-api"
+	"ecfs/log"
 	"github.com/elastifile/emanage-go/src/emanage-client"
 	"github.com/elastifile/errors"
 )

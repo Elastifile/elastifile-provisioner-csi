@@ -14,9 +14,9 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
-	"csi-provisioner-elastifile/ecfs/efaas"
-	efaasapi "csi-provisioner-elastifile/ecfs/efaas-api"
-	"csi-provisioner-elastifile/ecfs/log"
+	"ecfs/efaas"
+	efaasapi "ecfs/efaas-api"
+	"ecfs/log"
 	"size"
 )
 

@@ -29,7 +29,7 @@ import (
 	"google.golang.org/grpc/status"
 	"k8s.io/kubernetes/pkg/util/mount"
 
-	"csi-provisioner-elastifile/ecfs/log"
+	"ecfs/log"
 )
 
 func execCommand(command string, args ...string) ([]byte, error) {

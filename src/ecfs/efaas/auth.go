@@ -18,7 +18,7 @@ import (
 	"github.com/golang/glog"
 	"golang.org/x/oauth2/google"
 
-	"csi-provisioner-elastifile/ecfs/log"
+	"ecfs/log"
 )
 
 const (
