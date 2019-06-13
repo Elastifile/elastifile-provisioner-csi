@@ -1,5 +1,9 @@
 package main
 
+/*
+This file handles the config map storing values used in testing instrumentation
+*/
+
 import (
 	"fmt"
 	"strconv"
@@ -21,7 +25,7 @@ func logDebugValue(key string, value interface{}) {
 	glog.V(log.VERBOSE_DEBUG).Infof("ecfs: Using debug value %v=%v", key, value)
 }
 
-// getDebugValueInt returns string value corresponding to the key in debugConfigMapName, and the default value otherwise
+// getDebugValue returns string value corresponding to the key in debugConfigMapName, and the default value otherwise
 // If nil is specified, zero value is returned
 func getDebugValue(key string, defaultValue *string) string {
 	value, err := co.GetConfigMapValue(Namespace(), debugConfigMapName, key)
