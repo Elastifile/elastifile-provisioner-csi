@@ -6,9 +6,9 @@ import (
 	"io/ioutil"
 	"net/http"
 	"os"
-	"size"
 	"testing"
 
+    "github.com/go-errors/errors"
 	efaasapi "ecfs/efaas-api"
 )
 
@@ -104,7 +104,7 @@ func TestOpenAPI_CallAPI(t *testing.T) {
 func TestOpenAPI_CreateInstance(t *testing.T) {
 	efaasConf := testEfaasConf()
 
-	err := CreateDefaultInstance(efaasConf, testInstName)
+	err := createDefaultInstance(efaasConf, testInstName)
 	if err != nil {
 		t.Fatal("CreateDefaultInstance failed", "err", err)
 	}
@@ -368,4 +368,49 @@ func TestOpenAPI_DeleteShare(t *testing.T) {
 	if err == nil {
 		t.Fatal(fmt.Sprintf("Received snapshot share when it was supposed to have been deleted: %#v", *share))
 	}
+}
+
+func createDefaultInstance(efaasConf *efaasapi.Configuration, instanceName string) (err error) {
+	snapshot := efaasapi.SnapshotSchedule{
+		Enable:    false,
+		Schedule:  "Monthly",
+		Retention: 2.0,
+	}
+
+	accessor1 := efaasapi.AccessorItems{
+		SourceRange:  "all",
+		AccessRights: "readWrite",
+	}
+
+	accessors := efaasapi.Accessors{
+		Items: []efaasapi.AccessorItems{accessor1},
+	}
+
+	filesystem := efaasapi.DataContainer{
+		Name:        "dc1",                          // Filesystem name
+		Description: fmt.Sprintf("Filesystem desc"), // Filesystem description
+		QuotaType:   QuotaTypeFixed,                 // Supported values are: auto and fixed. Use auto if you have one filesystem, the size of the filesystem will be the same as the instance size. Use fixed if you have more than one filesystem, and set the filesystem size through filesystemQuota.
+		HardQuota:   10 * 1024 * 1024 * 1024,        // Set the size of a filesystem if filesystemQuotaType is set to fixed. If it is set to auto, this value is ignored and quota is the instance total size.
+		Snapshots:   snapshot,                       // Snapshot object
+		Accessors:   accessors,                      // Defines the access rights to the File System. This is a listof access rights configured by the client for the file system.
+	}
+
+	instance := efaasapi.Instances{
+		Name:                     instanceName,
+		Description:              "eFaaS instance description",
+		ServiceClass:             "capacity-optimized",
+		Region:                   "us-east1",
+		Zone:                     "us-east1-b",
+		ProvisionedCapacityUnits: 3,
+		Network:                  "default",
+		Filesystems:              []efaasapi.DataContainer{filesystem},
+	}
+
+	err = CreateInstance(efaasConf, instanceName, instance)
+	if err != nil {
+		err = errors.Wrap(err, 0)
+		return
+	}
+
+	return
 }
