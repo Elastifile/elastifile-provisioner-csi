@@ -9,9 +9,9 @@ import (
 )
 
 type CachedVolume struct {
-	ID      string
-	IsReady bool
-	//IsCopying          bool
+	ID                 string
+	Error              error
+	IsReady            bool
 	persistentResource PersistentResource
 }
 
@@ -42,7 +42,7 @@ func (c *VolumeCache) Get(volumeName string) (cachedVolume *CachedVolume, cacheH
 	return
 }
 
-func (c *VolumeCache) Set(volumeName string, isReady bool) (err error) {
+func (c *VolumeCache) Set(volumeName string, isReady bool, operationFailure error) (err error) {
 	if *c == nil {
 		*c = make(VolumeCache)
 	}
@@ -53,6 +53,7 @@ func (c *VolumeCache) Set(volumeName string, isReady bool) (err error) {
 
 	(*c)[volumeName] = &CachedVolume{
 		ID:      volumeName,
+		Error:   operationFailure,
 		IsReady: isReady,
 	}
 

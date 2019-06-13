@@ -48,6 +48,21 @@ func getCreateVolumeResponse(volumeId volumeHandleType, volOptions *volumeOption
 	}
 }
 
+// generateAndRegisterVolumeCreationError logs and caches volume creation error
+// The functions returns values suitable for being returned directly from CreateVolume
+func registerVolumeCreationError(name string, originalError error, grpcErrorCode codes.Code) (response *csi.CreateVolumeResponse, err error) {
+	originalError = errors.WrapPrefix(originalError, fmt.Sprintf("Failed to create volume %v", name), 0)
+
+	err = volumeCache.Set(name, false, originalError)
+	if err != nil {
+		err = errors.WrapPrefix(err, "Failed to set volume cache entry", 0)
+		logSecondaryError(originalError, err)
+	}
+
+	glog.Errorf(originalError.Error())
+	return nil, status.Error(grpcErrorCode, originalError.Error())
+}
+
 func (cs *controllerServer) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest) (response *csi.CreateVolumeResponse, err error) {
 	glog.V(log.HIGH_LEVEL_INFO).Infof("ecfs: Creating volume: %v", req.GetName())
 	glog.V(log.DEBUG).Infof("ecfs: Received CreateVolumeRequest: %+v", *req)
@@ -76,7 +91,14 @@ func (cs *controllerServer) CreateVolume(ctx context.Context, req *csi.CreateVol
 			glog.Errorf(err.Error())
 			return nil, status.Error(codes.Internal, err.Error())
 		}
-	} else {
+	} else { // Volume is found in the cache
+		err = volume.Error
+		if err != nil {
+			glog.Errorf("Returning cached volume creation error - %v", err.Error())
+			e := volumeCache.Remove(volume.ID)
+			logSecondaryError(err, e)
+			return nil, status.Error(codes.Internal, err.Error())
+		}
 		if !volume.IsReady {
 			glog.V(log.DETAILED_INFO).Infof("ecfs: Received repeat request to create volume %v, "+
 				"but the volume is not ready yet", req.GetName())
@@ -101,9 +123,7 @@ func (cs *controllerServer) CreateVolume(ctx context.Context, req *csi.CreateVol
 			volumeId, err = createEmptyVolume(ems.GetClient(), volOptions)
 		}
 		if err != nil {
-			err = errors.WrapPrefix(err, fmt.Sprintf("Failed to create volume %v", req.GetName()), 0)
-			glog.Errorf(err.Error())
-			return nil, status.Error(codes.Internal, err.Error())
+			return registerVolumeCreationError(req.GetName(), err, codes.Internal)
 		}
 	} else { // Create a pre-populated volume
 		source := req.GetVolumeContentSource()
@@ -121,8 +141,7 @@ func (cs *controllerServer) CreateVolume(ctx context.Context, req *csi.CreateVol
 			if err != nil {
 				err = errors.WrapPrefix(err, fmt.Sprintf("Failed to clone volume %v to %v",
 					srcVolume.GetVolumeId(), req.GetName()), 0)
-				glog.Errorf(err.Error())
-				return nil, status.Error(codes.Internal, err.Error())
+				return registerVolumeCreationError(req.GetName(), err, codes.Internal)
 			}
 		case *csi.VolumeContentSource_Snapshot: // Restore from snapshot
 			snapshot := source.GetSnapshot()
@@ -136,17 +155,15 @@ func (cs *controllerServer) CreateVolume(ctx context.Context, req *csi.CreateVol
 			if err != nil {
 				err = errors.WrapPrefix(err, fmt.Sprintf("Failed to create volume %v from snapshot %v",
 					req.GetName(), snapshot.GetSnapshotId()), 0)
-				glog.Errorf(err.Error())
-				return nil, status.Error(codes.Internal, err.Error())
+				return registerVolumeCreationError(req.GetName(), err, codes.Internal)
 			}
 		default:
 			err = errors.Errorf("Unsupported volume source type: %v (%v)", sourceType, source)
-			glog.Errorf(err.Error())
-			return nil, status.Error(codes.InvalidArgument, err.Error())
+			return registerVolumeCreationError(req.GetName(), err, codes.InvalidArgument)
 		}
 	}
 
-	err = volumeCache.Set(req.GetName(), true)
+	err = volumeCache.Set(req.GetName(), true, nil)
 	if err != nil {
 		err = errors.Errorf("ecfs: Failed to update cache entry for volume %v (%v), "+
 			"but the volume was successfully created", req.GetName(), volumeId)
