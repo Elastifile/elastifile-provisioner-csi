@@ -14,9 +14,9 @@ import (
 
 const (
 	testInstName      = "demo-instance1"
-	testFsName        = "fs1"
+	testFsName        = "test-fs"
 	testSnapId        = "12316016938850064433"
-	testSnapName      = "snap1"
+	testSnapName      = "test-snap1"
 	testShareName     = "e"
 	testProjectNumber = "276859139519" // c934
 	//testProjectNumber = "602010805072" // golden-eagle-dev-consumer10
@@ -54,6 +54,7 @@ func testEfaasConf() (efaasConf *efaasapi.Configuration) {
 }
 
 func TestDirectAPI_apiCallGet(t *testing.T) {
+	_ = testEfaasConf()
 	client, err := GetEfaasClient(testSaKey())
 	if err != nil {
 		t.Fatal(fmt.Sprintf("Failed to get eFaaS client - %v", err.Error()))
@@ -69,6 +70,7 @@ func TestDirectAPI_apiCallGet(t *testing.T) {
 }
 
 func TestOpenAPI_CallAPI(t *testing.T) {
+	_ = testEfaasConf()
 	client, err := GetEfaasClient(testSaKey())
 	if err != nil {
 		t.Fatal(fmt.Sprintf("Failed to get eFaaS client - %v", err.Error()))
@@ -93,7 +95,7 @@ func TestOpenAPI_CallAPI(t *testing.T) {
 	}
 	apiConf.AddDefaultHeader("Authorization", fmt.Sprintf("Bearer %v", client.GoogleIdToken))
 
-	res, err := apiConf.APIClient.CallAPI(testEfaasEnvironment+"/api/v1/regions", "GET",
+	res, err := apiConf.APIClient.CallAPI(testEfaasEnvironment+"/api/v2/regions", "GET",
 		nil, apiConf.DefaultHeader, nil, nil, "", nil)
 	if err != nil {
 		t.Fatal(fmt.Sprintf("Failed to call API - %v", err.Error()))
