@@ -16,9 +16,9 @@
 
 # EFAAS related variables
 : ${CSI_EFAAS_INSTANCE:=""} # Optional. If set, it means the plugin is expected to run against eFaaS
-: ${EFAAS_URL:=""} # Required if CSI_EFAAS_INSTANCE is set. URL of the eFaaS setup, e.g. https://bronze-eagle.gcp.elastifile.com
+: ${EFAAS_URL:=""} # Required if CSI_EFAAS_INSTANCE is set. URL of the eFaaS setup, e.g. https://cloud-file-service-gcp.elastifile.com
 : ${CSI_GCP_PROJECT_NUMBER:=""} # Required if CSI_EFAAS_INSTANCE is set. Can be obtained using `gcloud projects describe <project name> --format='value(projectNumber)'`
-: ${CSI_EFAAS_SA_KEY:=""} # Required if CSI_EFAAS_INSTANCE is set. Base64 encoded service account key file's contents (in JSON format) can be acquired from https://console.developers.google.com/apis/credentials
+: ${CSI_EFAAS_SA_KEY_FILE:="/tmp/sa-key.json"} # Required if CSI_EFAAS_INSTANCE is set. Service account key file in JSON format. Can be acquired from https://console.developers.google.com/apis/credentials
 
 # In order to set one of the above values, run this script prefixed by the variable assignment. For example:
 # PLUGIN_TAG=v0.1.0 ./deploy-plugin.sh
@@ -60,16 +60,23 @@ assert $? "kubectl not found"
 exec_cmd which envsubst
 assert $? "envsubst not found"
 
+exec_cmd which base64
+assert $? "base64 not found"
+
 log_info "Checking permissions"
 exec_cmd kubectl auth can-i create clusterrolebinding
 assert $? "ERROR: Current user/sa doesn't have enough permissions to create clusterrolebinding"
 
 if [[ -n "${K8S_USER}" ]]; then
     log_info "Assigning cluster role cluster-admin to ${K8S_USER}"
-    # On repeat runs clusterrolebinding already exists and it's ok for it to fail with AlreadyExists
+    # On repeat runs the clusterrolebinding already exists and it's ok for it to fail with AlreadyExists
     exec_cmd kubectl create clusterrolebinding cluster-admin-binding --clusterrole cluster-admin --user ${K8S_USER} ${DRY_RUN_FLAG} > /dev/null 2>&1
 else
     log_info \$K8S_USER not specified - assuming the script is running under service account with cluster-admin role
+fi
+
+if [[ -n "${CSI_EFAAS_SA_KEY_FILE}" ]]; then
+    CSI_EFAAS_SA_KEY=$(base64 -w 1000000 ${CSI_EFAAS_SA_KEY_FILE})
 fi
 
 OBJECTS=(templates/configmap templates/secret templates/csi-attacher-rbac templates/csi-provisioner-rbac templates/csi-nodeplugin-rbac templates/csi-snapshotter-rbac csi-ecfsplugin-attacher csi-ecfsplugin-provisioner templates/csi-snapshotter templates/storageclass templates/csi-ecfsplugin snapshotclass)
