@@ -8,8 +8,9 @@ import (
 	"os"
 	"testing"
 
-    "github.com/go-errors/errors"
 	efaasapi "ecfs/efaas-api"
+	"github.com/go-errors/errors"
+	"size"
 )
 
 const (
