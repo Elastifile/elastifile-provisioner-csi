@@ -2,7 +2,7 @@
 
 ## Deployment requirements
 
-Requires Kubernetes 1.11+
+Requires Kubernetes 1.13+
 
 Your Kubernetes cluster must allow privileged pods (i.e. `--allow-privileged` flag must be set to true for both the API server and the kubelet). Moreover, as stated in the [mount propagation docs](https://kubernetes.io/docs/concepts/storage/volumes/#mount-propagation), the Docker daemon of the cluster nodes must allow shared mounts.
 
@@ -16,7 +16,7 @@ Deployment scripts and YAML manifests are located under [deploy](../deploy) dire
 
 ### Deploy plugin
 ```bash
-PLUGIN_TAG=v0.5.0 NAMESPACE=elastifile-csi-ns MGMT_ADDR=10.10.10.10 MGMT_USER=admin MGMT_PASS=Y2hhbmdlbWU= NFS_ADDR=10.255.255.1 K8S_USER=user@example.com ./deploy-plugin.sh
+PLUGIN_TAG=v0.6.0 NAMESPACE=elastifile-csi-ns MGMT_ADDR=10.10.10.10 MGMT_USER=admin MGMT_PASS=Y2hhbmdlbWU= NFS_ADDR=10.255.255.1 K8S_USER=user@example.com ./deploy-plugin.sh
 ```
 
 These values may be set by the user:
@@ -33,7 +33,7 @@ Some the above variables are optional:
 * K8S_USER default behavior is to use your gcloud credentials if 'gcloud' binary is available, $USER otherwise
 
 ### Volume defaults
-If you're interested in tweaking volume creation defaults, please edit [storagelass.yaml](../deploy/storageclass.yaml) to suit you needs.
+If you're interested in tweaking volume creation defaults, please edit [storagelass.yaml](../deploy/storageclass.yaml) to suit your needs.
 
 Each value under `parameters` that is expected to be modified by the user, e.g. `userMapping`, has a comment explaining its meaning and - where applicable - the values it takes.
 
@@ -46,29 +46,33 @@ Each value under `parameters` that is expected to be modified by the user, e.g. 
 
 After successfully completing the steps above, you should see output similar to this:
 ```bash
-$ kubectl get pod,storageclass
+$ kubectl get pod,storageclass,volumesnapshotclass
 NAME                               READY   STATUS    RESTARTS   AGE
 pod/csi-ecfsplugin-attacher-0      1/1     Running   0          37s
 pod/csi-ecfsplugin-provisioner-0   1/1     Running   0          35s
 pod/csi-ecfsplugin-rvzz2           2/2     Running   0          31s
 pod/csi-ecfsplugin-wkbhz           2/2     Running   0          31s
 pod/csi-ecfsplugin-wkpxx           2/2     Running   0          31s
+pod/csi-snapshotter-0              1/1     Running   0          30s
 
 NAME                                             PROVISIONER            AGE
 storageclass.storage.k8s.io/elastifile           csi-ecfsplugin         32s
 storageclass.storage.k8s.io/standard (default)   kubernetes.io/gce-pd   3h
+
+NAME                                                             AGE
+volumesnapshotclass.snapshot.storage.k8s.io/csi-ecfs-snapclass   38s
 ```
 
-You can deploy a demo pod from `examples/` to test the deployment further.
-The recommended manifests are
-* `pod-with-volume.yaml` - creates a pvc and a pod, which mounts the resulting volume on /mnt
-* `pod-with-io.yaml` - similar to `pod-with-volume.yaml`, but also starts `dd` to generate some traffic, which can be observed via stats of ECFS management console
+You can deploy a demo job from `examples/` to test the deployment further.
+The recommended scripts are
+* `create-job.sh` - creates a pvc and a job that consumes the volume and creates a file
+* `create-restore-job.sh` - takes a snapshot of the above volume, creates a pvc from the snapshot, reads an existing file and writes to another one
 
 ### Notes on volume deletion
 
 Upon PVC deletion, ECFS Data Container is going to be deleted.
 
-In case there's data in the Data Container, it will be kept intact to prevent accidental data loss. 
+In case there's data or a snapshot associated with the Data Container, it will be kept intact to prevent accidental data loss. 
 
 ## Further reading
 
