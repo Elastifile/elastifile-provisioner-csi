@@ -8,8 +8,9 @@ Elastifile ECFS provisioner plugin implements an interface between CSI enabled C
 
 The plugin allows dynamically provisioning ECFS volumes, creating volume snapshots, creating volumes from volume snapshots, and attaching them to workloads.
 
-Current implementation of ECFS CSI plugin was tested in Kubernetes environment (requires Kubernetes 1.11+).
+Current implementation of ECFS CSI plugin was tested in Kubernetes environment (requires Kubernetes 1.13+).
 
-* For details about configuring and deploying the plugin, see [docs/deploy.md](docs/deploy.md).
+* For details about configuring and deploying the plugin with EMS, see [docs/deploy-ems.md](docs/deploy-ems.md).
+* For details about configuring and deploying the plugin with eFaaS, see [docs/deploy-efaas.md](docs/deploy-efaas.md).
 * For example use of the plugin, e.g. creating a volume or a snapshot, see [docs/examples.md](docs/examples.md)
 * For development information, see [docs/develop.md](docs/develop.md)
