@@ -19,8 +19,8 @@
 PLUGIN_IMAGE_NAME = elastifileio/ecfs-provisioner-csi
 PLUGIN_TAG ?= dev
 
-TEMP_DIR = _output
-PLUGIN_DOCKER_DIR = $(CURDIR)/images/plugin
+TEMP_DIR = $(CURDIR)/../_output
+PLUGIN_DOCKER_DIR = $(CURDIR)/../images/plugin
 PLUGIN_BINARY = ecfsplugin
 
 PROJECT_ROOT = $(shell dirname $(CURDIR))
@@ -30,11 +30,11 @@ $(info Setting GOPATH to $(GOPATH))
 $(info ECFS image settings: $(PLUGIN_IMAGE_NAME) tag $(PLUGIN_TAG))
 
 DEPLOYRUNNER_IMAGE_NAME = elastifileio/ecfs-provisioner-csi-deployrunner
-DEPLOYRUNNER_DOCKER_DIR = images/deployrunner
+DEPLOYRUNNER_DOCKER_DIR = $(CURDIR)/../images/deployrunner
 DEPLOYRUNNER_COPY_DIR = $(DEPLOYRUNNER_DOCKER_DIR)/deploy
 
 GKEDEPLOY_IMAGE_NAME = elastifileio/ecfs-provisioner-csi-gke-deploy
-GKEDEPLOY_DOCKER_DIR = images/gke-deploy
+GKEDEPLOY_DOCKER_DIR = $(CURDIR)/../images/gke-deploy
 GKEDEPLOY_COPY_DIR = $(GKEDEPLOY_DOCKER_DIR)/deploy
 
 # Compile, create image and push it
