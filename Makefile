@@ -19,22 +19,23 @@
 PLUGIN_IMAGE_NAME = elastifileio/ecfs-provisioner-csi
 PLUGIN_TAG ?= dev
 
-TEMP_DIR = $(CURDIR)/../_output
-PLUGIN_DOCKER_DIR = $(CURDIR)/../images/plugin
+PROJECT_ROOT=$(CURDIR)
+TEMP_DIR = $(PROJECT_ROOT)/_output
+PLUGIN_DOCKER_DIR = $(PROJECT_ROOT)/images/plugin
 PLUGIN_BINARY = ecfsplugin
 
-PROJECT_ROOT = $(shell dirname $(CURDIR))
-GOPATH = "$(PROJECT_ROOT):$(CURDIR)/vendor"
+VENDOR_DIR="$(PROJECT_ROOT)/src/vendor"
+GOPATH = "$(PROJECT_ROOT):$(VENDOR_DIR)"
 
 $(info Setting GOPATH to $(GOPATH))
 $(info ECFS image settings: $(PLUGIN_IMAGE_NAME) tag $(PLUGIN_TAG))
 
 DEPLOYRUNNER_IMAGE_NAME = elastifileio/ecfs-provisioner-csi-deployrunner
-DEPLOYRUNNER_DOCKER_DIR = $(CURDIR)/../images/deployrunner
+DEPLOYRUNNER_DOCKER_DIR = $(PROJECT_ROOT)/images/deployrunner
 DEPLOYRUNNER_COPY_DIR = $(DEPLOYRUNNER_DOCKER_DIR)/deploy
 
 GKEDEPLOY_IMAGE_NAME = elastifileio/ecfs-provisioner-csi-gke-deploy
-GKEDEPLOY_DOCKER_DIR = $(CURDIR)/../images/gke-deploy
+GKEDEPLOY_DOCKER_DIR = $(PROJECT_ROOT)/images/gke-deploy
 GKEDEPLOY_COPY_DIR = $(GKEDEPLOY_DOCKER_DIR)/deploy
 
 # Compile, create image and push it
@@ -42,8 +43,8 @@ all: image push
 
 # Compile the plugin binary
 binary:
-	if [ ! -d ./vendor ]; then dep ensure; fi
-	GOPATH=$(GOPATH) CGO_ENABLED=0 GOOS=linux go build -a -ldflags '-extldflags "-static"' -o  $(TEMP_DIR)/$(PLUGIN_BINARY) ./ecfs
+	if [ ! -d $(VENDOR_DIR) ]; then pushd $(VENDOR_DIR)/..; dep ensure; popd; fi
+	GOPATH=$(GOPATH) CGO_ENABLED=0 GOOS=linux go build -a -ldflags '-extldflags "-static"' -o  $(TEMP_DIR)/$(PLUGIN_BINARY) $(PROJECT_ROOT)/src/ecfs
 
 # Create docker image
 image: binary
