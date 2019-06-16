@@ -36,7 +36,7 @@ func TestCacheVolumeGet(t *testing.T) {
 	AssertEqual(t, val, emptyVolume)
 	AssertEqual(t, hit, false)
 
-	err := volumeCache.Set(testVolName, volReady)
+	err := volumeCache.Set(testVolName, volReady, nil)
 	AssertEqual(t, err, nil)
 
 	val, hit = volumeCache.Get(testVolName)
@@ -46,7 +46,7 @@ func TestCacheVolumeGet(t *testing.T) {
 }
 
 func TestCacheVolumeSet(t *testing.T) {
-	err := volumeCache.Set(testVolName, volReady)
+	err := volumeCache.Set(testVolName, volReady, nil)
 	AssertEqual(t, err, nil)
 
 	val, hit := volumeCache.Get(testVolName)
@@ -54,7 +54,7 @@ func TestCacheVolumeSet(t *testing.T) {
 	AssertEqual(t, val.IsReady, volReady)
 	AssertEqual(t, hit, true)
 
-	err = volumeCache.Set(testVolName, volReady)
+	err = volumeCache.Set(testVolName, volReady, nil)
 	AssertEqual(t, err, nil)
 
 	val, hit = volumeCache.Get(testVolName)
@@ -62,7 +62,7 @@ func TestCacheVolumeSet(t *testing.T) {
 	AssertEqual(t, val.IsReady, volReady)
 	AssertEqual(t, hit, true)
 
-	err = volumeCache.Set(testVolName, volNotReady) // Reset Exists to false
+	err = volumeCache.Set(testVolName, volNotReady, nil) // Reset Exists to false
 	AssertEqual(t, err, nil)
 
 	val, hit = volumeCache.Get(testVolName)
@@ -83,7 +83,7 @@ func TestCacheVolumeRemove(t *testing.T) {
 	AssertEqual(t, hit, false)
 
 	// Remove existing volume
-	err = volumeCache.Set(testVolName, volReady)
+	err = volumeCache.Set(testVolName, volReady, nil)
 	AssertEqual(t, err, nil)
 	err = volumeCache.Remove(testVolName)
 	AssertEqual(t, err, nil)
@@ -104,8 +104,8 @@ func TestCacheVolumeRemove(t *testing.T) {
 
 const (
 	testSnapName string = "testsnapname"
-	testSnapId   int    = 1
-	testSnapId2  int    = 2
+	testSnapId   string    = "111"
+	testSnapId2  string    = "222"
 	snapReady           = true
 	snapNotReady        = false
 )
