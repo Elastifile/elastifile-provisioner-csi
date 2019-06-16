@@ -46,15 +46,16 @@ func (c *VolumeCache) Set(volumeName string, isReady bool, operationFailure erro
 	if *c == nil {
 		*c = make(VolumeCache)
 	}
-	err = (*c)[volumeName].persistentResource.KeepAlive()
-	if err != nil {
-		return errors.WrapPrefix(err, fmt.Sprintf("Failed to keep ownership of volume %v", volumeName), 0)
-	}
 
 	(*c)[volumeName] = &CachedVolume{
 		ID:      volumeName,
 		Error:   operationFailure,
 		IsReady: isReady,
+	}
+
+	err = (*c)[volumeName].persistentResource.KeepAlive()
+	if err != nil {
+		return errors.WrapPrefix(err, fmt.Sprintf("Failed to keep ownership of volume %v", volumeName), 0)
 	}
 
 	return
