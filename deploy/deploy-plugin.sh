@@ -81,10 +81,6 @@ fi
 
 OBJECTS=(templates/configmap templates/secret templates/csi-attacher-rbac templates/csi-provisioner-rbac templates/csi-nodeplugin-rbac templates/csi-snapshotter-rbac csi-ecfsplugin-attacher csi-ecfsplugin-provisioner templates/csi-snapshotter templates/storageclass templates/csi-ecfsplugin snapshotclass)
 
-pushd ${DEPLOYMENT_BASE}
-exec_cmd ./create_crd.sh
-popd
-
 exec_cmd kubectl get namespace ${NAMESPACE} > /dev/null 2>&1
 if [[ $? != 0 ]]; then
     assert_cmd kubectl create namespace ${NAMESPACE}
