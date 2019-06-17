@@ -21,7 +21,6 @@ for obj in ${objects[@]}; do
 	exec_cmd kubectl delete -f "./$obj.yaml --namespace ${NAMESPACE}"
 done
 
-exec_cmd ./delete_crd.sh
 popd
 
 # Delete CRDs crated by external-snapshotter
