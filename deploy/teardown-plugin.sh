@@ -2,7 +2,7 @@
 
 MYPATH=$(dirname $0)
 
-: ${NAMESPACE:="default"} # K8s namespace to use for CSI plugin deployment
+: ${NAMESPACE:="elastifile-csi"} # K8s namespace to use for CSI plugin deployment
 
 source ${MYPATH}/functions.sh
 

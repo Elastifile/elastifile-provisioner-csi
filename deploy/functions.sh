@@ -4,8 +4,8 @@ function logme {
     local msg=$*
     echo $(date '+%Y-%m-%d %H:%M:%S') $msg
     local topic="script"
-    if [ -n "${MYNAME}" ]; then
-        topic=${MYNAME}
+    if [[ -n "${MYNAME}" ]]; then
+        topic="${MYNAME}"
     fi
     logger -t ${topic} "$msg"
 }
@@ -39,7 +39,7 @@ function assert {
     local error=$1
     shift
     local desc="$*"
-    if [ "$error" -ne 0 ]; then
+    if [[ "$error" != 0 ]]; then
         log_error "$desc"
         exit ${error}
     fi
@@ -49,4 +49,3 @@ function assert_cmd {
     exec_cmd $@
     assert $? "Command failed with exit code $?: $@"
 }
-

@@ -3,7 +3,7 @@
 : ${POD_ID:=1}
 : ${LABEL:=csi-ecfsplugin}
 : ${CONTAINER_NAME:=csi-ecfsplugin}
-: ${NAMESPACE:="default"}
+: ${NAMESPACE:="elastifile-csi"}
 
 POD_NAME=$(kubectl get pods -l app=${LABEL} -o=name --namespace ${NAMESPACE} | head -n ${POD_ID} | tail -n 1)
 
