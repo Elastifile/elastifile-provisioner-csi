@@ -5,7 +5,7 @@
 
 # Generic deployment variables
 : ${PLUGIN_TAG:="dev"} # Docker image tag
-: ${NAMESPACE:="default"} # K8s namespace to use for CSI plugin deployment
+: ${NAMESPACE:="elastifile-csi"} # K8s namespace to use for CSI plugin deployment
 
 # EMS related variables
 : ${MGMT_ADDR:="UNDEFINED"} # Management address
@@ -84,6 +84,11 @@ OBJECTS=(templates/configmap templates/secret templates/csi-attacher-rbac templa
 pushd ${DEPLOYMENT_BASE}
 exec_cmd ./create_crd.sh
 popd
+
+exec_cmd kubectl get namespace ${NAMESPACE} > /dev/null 2>&1
+if [[ $? != 0 ]]; then
+    assert_cmd kubectl create namespace ${NAMESPACE}
+fi
 
 for OBJ in ${OBJECTS[@]}; do
     if [[ "${OBJ}" == *"templates"* ]]; then
