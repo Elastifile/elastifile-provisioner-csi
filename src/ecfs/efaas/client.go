@@ -136,13 +136,13 @@ func CheckApiCall(err error, resp *efaasapi.APIResponse, op *efaasapi.Operation)
 		}
 	}
 
-	if resp != nil {
-		if resp.StatusCode >= http.StatusAccepted {
+	if resp != nil && resp.Response != nil {
+		if resp.Response.StatusCode >= http.StatusAccepted {
 			if summary == "" {
 				summary = "API call failed" // Generic error
 			}
 			summary = fmt.Sprintf("%v - HTTP code %v (%v). Details: %v",
-				summary, resp.StatusCode, resp.Status, string(resp.Payload))
+				summary, resp.Response.StatusCode, resp.Response.Status, string(resp.Payload))
 		}
 	}
 
