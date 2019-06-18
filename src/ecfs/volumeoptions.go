@@ -38,13 +38,14 @@ type volumeOptions struct {
 	NfsAddress string
 
 	Capacity          int64
-	UserMapping       emanage.UserMappingType
+	UserMapping       emanage.UserMappingType // no_mapping/remap_root/remap_all
 	UserMappingUid    int
 	UserMappingGid    int
 	ExportPermissions int
 	ExportUid         optional.Int
 	ExportGid         optional.Int
-	Access            string
+	Access            string // read_write/read_only/list_only/no_access
+	ClientRules       string // [{"sourceRange":  "all", "accessRights": "readWrite"}]
 }
 
 func extractOptionString(paramName StorageClassCustomParameter, options map[string]string) (value string, err error) {
@@ -68,8 +69,10 @@ const (
 	Permissions       StorageClassCustomParameter = "permissions"
 	DefaultVolumeSize StorageClassCustomParameter = "defaultVolumeSize"
 	Access            StorageClassCustomParameter = "access"
+	ClientRules       StorageClassCustomParameter = "clientRules"
 )
 
+// newVolumeOptions translates CreateVolumeRequest parameters to volumeOptions
 func newVolumeOptions(req *csi.CreateVolumeRequest) (*volumeOptions, error) {
 	var (
 		volParams = req.GetParameters()
@@ -161,6 +164,15 @@ func newVolumeOptions(req *csi.CreateVolumeRequest) (*volumeOptions, error) {
 		paramStr = string(emanage.ExportAccessRW)
 	}
 	opts.Access = paramStr
+
+	// ClientRules
+	if paramStr, err = extractOptionString(ClientRules, volParams); err != nil {
+		return nil, errors.Wrap(err, 0)
+	}
+	if paramStr == "" { // Default value
+		paramStr = `[{"sourceRange":  "all", "accessRights": "readWrite"}]`
+	}
+	opts.ClientRules = paramStr
 
 	glog.V(log.DEBUG).Infof("ecfs: Current volume options: %+v", opts)
 	return opts, nil
