@@ -83,7 +83,6 @@ func TestOpenAPI_CallAPI(t *testing.T) {
 	apiConf.Debug = true
 	apiConf.DebugFile = "/tmp/api-debug.log"
 
-	// Insecure transport
 	defaultTransport := http.DefaultTransport.(*http.Transport)
 	apiConf.Transport = &http.Transport{
 		Proxy:                 defaultTransport.Proxy,
@@ -92,7 +91,7 @@ func TestOpenAPI_CallAPI(t *testing.T) {
 		IdleConnTimeout:       defaultTransport.IdleConnTimeout,
 		ExpectContinueTimeout: defaultTransport.ExpectContinueTimeout,
 		TLSHandshakeTimeout:   defaultTransport.TLSHandshakeTimeout,
-		TLSClientConfig:       &tls.Config{InsecureSkipVerify: true}, // TODO: FIXME before deploying to production
+		TLSClientConfig:       &tls.Config{InsecureSkipVerify: false},
 	}
 	apiConf.AddDefaultHeader("Authorization", fmt.Sprintf("Bearer %v", client.GoogleIdToken))
 

@@ -1,7 +1,6 @@
 package efaas
 
 import (
-	"crypto/tls"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -30,26 +29,6 @@ const (
 	QuotaTypeFixed = "fixed"
 	QuotaTypeAuto  = "auto"
 )
-
-func GetHttpClient() (client *http.Client, err error) {
-	defaultTransport := http.DefaultTransport.(*http.Transport)
-
-	// Create new Transport that ignores self-signed SSL
-	httpTransportWithSelfSignedTLS := &http.Transport{
-		Proxy:                 defaultTransport.Proxy,
-		DialContext:           defaultTransport.DialContext,
-		MaxIdleConns:          defaultTransport.MaxIdleConns,
-		IdleConnTimeout:       defaultTransport.IdleConnTimeout,
-		ExpectContinueTimeout: defaultTransport.ExpectContinueTimeout,
-		TLSHandshakeTimeout:   defaultTransport.TLSHandshakeTimeout,
-		TLSClientConfig:       &tls.Config{InsecureSkipVerify: true},
-	}
-
-	// TODO: IMPORTANT: Do not deploy in production while InsecureSkipVerify is in use
-	client = &http.Client{Transport: httpTransportWithSelfSignedTLS}
-
-	return client, nil
-}
 
 // Deprecated
 func apiCallGet(client *EfaasClient, reqURL string) (body []byte, err error) {
@@ -80,12 +59,6 @@ func apiCallGet(client *EfaasClient, reqURL string) (body []byte, err error) {
 }
 
 func GetEfaasClient(data []byte) (client *EfaasClient, err error) {
-	httpClient, err := GetHttpClient()
-	if err != nil {
-		err = errors.WrapPrefix(err, fmt.Sprintf("Failed to get HTTP client"), 0)
-		return
-	}
-
 	token, err := GetEfaasToken(data)
 	if err != nil {
 		err = errors.WrapPrefix(err, fmt.Sprintf("Failed to get eFaaS client"), 0)
@@ -93,7 +66,7 @@ func GetEfaasClient(data []byte) (client *EfaasClient, err error) {
 	}
 
 	client = &EfaasClient{
-		Client:        httpClient,
+		Client:        &http.Client{},
 		GoogleIdToken: token,
 	}
 	return
@@ -111,18 +84,7 @@ func NewEfaasConf(jsonData []byte) (efaasConf *efaasapi.Configuration, err error
 	efaasConf.AccessToken = client.GoogleIdToken
 	efaasConf.Debug = true
 	efaasConf.DebugFile = "/tmp/api-debug.log"
-
-	// Insecure transport
-	defaultTransport := http.DefaultTransport.(*http.Transport)
-	efaasConf.Transport = &http.Transport{
-		Proxy:                 defaultTransport.Proxy,
-		DialContext:           defaultTransport.DialContext,
-		MaxIdleConns:          defaultTransport.MaxIdleConns,
-		IdleConnTimeout:       defaultTransport.IdleConnTimeout,
-		ExpectContinueTimeout: defaultTransport.ExpectContinueTimeout,
-		TLSHandshakeTimeout:   defaultTransport.TLSHandshakeTimeout,
-		TLSClientConfig:       &tls.Config{InsecureSkipVerify: true}, // TODO: FIXME before deploying to production
-	}
+	efaasConf.Transport = http.DefaultTransport.(*http.Transport)
 	efaasConf.AddDefaultHeader("Authorization", fmt.Sprintf("Bearer %v", client.GoogleIdToken))
 	return
 }
