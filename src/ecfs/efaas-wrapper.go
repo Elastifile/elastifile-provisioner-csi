@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 	"strconv"
@@ -96,13 +97,12 @@ func efaasCreateEmptyVolume(volOptions *volumeOptions) (volumeId volumeHandleTyp
 		Retention: 2.0,
 	}
 
-	accessor1 := efaasapi.AccessorItems{
-		SourceRange:  "all",
-		AccessRights: "readWrite",
-	}
+	var accessorItems []efaasapi.AccessorItems
 
-	accessors := efaasapi.Accessors{
-		Items: []efaasapi.AccessorItems{accessor1},
+	err = json.Unmarshal([]byte(volOptions.ClientRules), &accessorItems) // Has to be JSON due to AccessorItems only having json tags
+	if err != nil {
+		err = errors.WrapPrefix(err, fmt.Sprintf("Failed to unmarshal client rules JSON: %v", volOptions.ClientRules), 0)
+		return
 	}
 
 	filesystem := efaasapi.DataContainerAdd{
@@ -110,7 +110,7 @@ func efaasCreateEmptyVolume(volOptions *volumeOptions) (volumeId volumeHandleTyp
 		HardQuota:   volOptions.Capacity,
 		QuotaType:   efaas.QuotaTypeFixed,
 		Description: fmt.Sprintf("Filesystem %v", volumeId),
-		Accessors:   accessors,
+		Accessors:   efaasapi.Accessors{Items:accessorItems},
 		Snapshot:    snapshot,
 	}
 

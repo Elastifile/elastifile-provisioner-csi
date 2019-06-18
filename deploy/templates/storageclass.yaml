@@ -4,9 +4,10 @@ metadata:
   name: elastifile
 provisioner: csi-ecfsplugin
 reclaimPolicy: Delete 
-parameters:
-  # Note - only string values are accepted in parameters
-  
+parameters: # Note - only string values are accepted in parameters
+
+  # === EMS options ===
+
   # User mapping mode. Supported values: no_mapping, remap_root, remap_all
   userMapping: "no_mapping"
   # User Id for User Mapping
@@ -21,8 +22,27 @@ parameters:
   permissions: "777"
   # Default volume size
   defaultVolumeSize: "100GiB"
+
   # Volume access. Supported values: read_write, read_only, list_only, no_access
   access: "read_write"
+
+  # === eFaaS options ===
+
+  # List of client access rules as a JSON string - "[{sourceRange, accessRights}, ...]"
+  # Where
+  #   sourceRange is network in CIDR format or "all" (all internal networks)
+  #   accessRights can be one of readeWrite/readOnly
+  # Example:
+  #   clientRules: '[{"sourceRange":"all","accessRights":"readOnly"},{"sourceRange":"172.0.0.0/24","accessRights":"readWrite"}]'
+  clientRules: |
+    [
+      {
+        "sourceRange": "all",
+        "accessRights": "readWrite"
+      }
+    ]
+
+  # === Common options ===
 
   # The config map and secrets are expected to contain ECFS cluster details (IP addresses and user credentials)
   configurationNamespace: ${NAMESPACE}
