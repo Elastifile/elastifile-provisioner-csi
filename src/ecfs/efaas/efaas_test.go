@@ -401,10 +401,10 @@ func createDefaultInstance(efaasConf *efaasapi.Configuration, instanceName strin
 	instance := efaasapi.Instances{
 		Name:                     instanceName,
 		Description:              "eFaaS instance description",
-		ServiceClass:             "capacity-optimized",
+		ServiceClass:             "tiny-testing", // capacity-optimized
 		Region:                   "us-east1",
 		Zone:                     "us-east1-b",
-		ProvisionedCapacityUnits: 3,
+		ProvisionedCapacityUnits: 1,
 		Network:                  "default",
 		Filesystems:              []efaasapi.DataContainer{filesystem},
 	}
