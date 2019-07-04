@@ -60,9 +60,6 @@ assert $? "kubectl not found"
 exec_cmd which envsubst
 assert $? "envsubst not found"
 
-exec_cmd which base64
-assert $? "base64 not found"
-
 log_info "Checking permissions"
 exec_cmd kubectl auth can-i create clusterrolebinding
 assert $? "ERROR: Current user/sa doesn't have enough permissions to create clusterrolebinding"
@@ -75,8 +72,19 @@ else
     log_info \$K8S_USER not specified - assuming the script is running under service account with cluster-admin role
 fi
 
-if [[ -n "${CSI_EFAAS_SA_KEY_FILE}" ]]; then
-    CSI_EFAAS_SA_KEY=$(base64 -w 1000000 ${CSI_EFAAS_SA_KEY_FILE})
+if [[ -n "${CSI_EFAAS_INSTANCE}" ]]; then
+    if [[ -n "${CSI_EFAAS_SA_KEY_FILE}" ]]; then
+        exec_cmd which base64
+        assert $? "base64 not found"
+
+        if [[ ! -f "${CSI_EFAAS_SA_KEY_FILE}" ]]; then
+            log_error "Service account key file ${CSI_EFAAS_SA_KEY_FILE} not found and is required when working with eFaaS"
+            log_info "Note: Service account key file can be obtained from https://console.developers.google.com/apis/credentials"
+            exit 2
+        fi
+
+        CSI_EFAAS_SA_KEY=$(base64 -w 1000000 ${CSI_EFAAS_SA_KEY_FILE})
+    fi
 fi
 
 OBJECTS=(templates/configmap templates/secret templates/csi-attacher-rbac templates/csi-provisioner-rbac templates/csi-nodeplugin-rbac templates/csi-snapshotter-rbac csi-ecfsplugin-attacher csi-ecfsplugin-provisioner templates/csi-snapshotter templates/storageclass templates/csi-ecfsplugin snapshotclass)
