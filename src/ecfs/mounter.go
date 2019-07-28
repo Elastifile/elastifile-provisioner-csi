@@ -23,9 +23,8 @@ import (
 
 	"github.com/golang/glog"
 
-	"ecfs/efaas"
-	efaasapi "ecfs/efaas-api"
 	"ecfs/log"
+	"github.com/elastifile/efaasclient/efaasapi"
 	"github.com/elastifile/emanage-go/src/emanage-client"
 	"github.com/elastifile/errors"
 )
@@ -65,8 +64,8 @@ func getNfsExportEcfs(volId volumeHandleType) (nfsExport string, err error) {
 }
 
 func getNfsExportEfaas(volId volumeHandleType) (nfsExport string, err error) {
-	efaasConf := newEfaasConf()
-	fs, err := efaas.GetFilesystemByName(efaasConf, efaasGetInstanceName(), string(volId))
+	client := newEfaasClient()
+	fs, err := client.GetFilesystemByName(efaasGetInstanceName(), string(volId))
 	if err != nil {
 		err = errors.WrapPrefix(err, fmt.Sprintf("Failed to get eFaaS filesystem %v", volId), 0)
 		return
@@ -174,8 +173,8 @@ func mountEfaasSnapshot(mountPoint string, snapName string) error {
 	}
 
 	glog.V(log.DETAILED_INFO).Infof("ecfs: Mounting snapshot %v on %v", snapName, mountPoint)
-	efaasConf := newEfaasConf()
-	share, err := efaas.GetShare(efaasConf, efaasGetInstanceName(), snapName)
+	client := newEfaasClient()
+	share, err := client.GetShare(efaasGetInstanceName(), snapName)
 	if err != nil {
 		return errors.WrapPrefix(err, fmt.Sprintf("Failed to get share for snapshot %v", snapName), 0)
 	}
@@ -183,7 +182,7 @@ func mountEfaasSnapshot(mountPoint string, snapName string) error {
 	exportPath := share.NfsMountPoint
 	if isWorkaround("'default' in export path") {
 		var fs efaasapi.DataContainer
-		fs, err = efaas.GetFilesystemBySnapshotName(efaasConf, efaasGetInstanceName(), snapName)
+		fs, err = client.GetFilesystemBySnapshotName(efaasGetInstanceName(), snapName)
 		if err != nil {
 			return errors.WrapPrefix(err, fmt.Sprintf("Failed to get filesystem by snapshot name %v", snapName), 0)
 		}

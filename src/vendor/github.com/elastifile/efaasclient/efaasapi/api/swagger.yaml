@@ -1,0 +1,2255 @@
+---
+swagger: "2.0"
+info:
+  description: "Elastifile Filesystem as a Service API"
+  version: "2.0"
+  title: "Elastifile FaaS API"
+basePath: "/api/v2"
+tags:
+- name: "projects/<project>/service-class"
+  description: "Service Class related operations"
+- name: "projects/<project>/instances"
+  description: "Instances related operations"
+- name: "projects/<project>/operation"
+  description: "Operations related "
+- name: "regions"
+  description: "Region related operation"
+- name: "projects"
+  description: "Projects related operations"
+- name: "projects/<project>/events"
+  description: "Events related operations"
+- name: "projects/<project>/snapshots"
+  description: "Snapshots related operations"
+consumes:
+- "application/json"
+produces:
+- "application/json"
+security:
+- cloud-console-partner-local: []
+- cloud-console-partner: []
+- cloud-console-partner-autopush: []
+- google-id: []
+paths:
+  /projects:
+    get:
+      tags:
+      - "projects"
+      summary: "List projects"
+      operationId: "list_projects"
+      parameters: []
+      responses:
+        200:
+          description: "Success"
+          schema:
+            type: "array"
+            items:
+              $ref: "#/definitions/Projects"
+    post:
+      tags:
+      - "projects"
+      summary: "Register project for use with the service"
+      operationId: "register_project"
+      parameters:
+      - in: "body"
+        name: "payload"
+        required: true
+        schema:
+          $ref: "#/definitions/Projects"
+        x-exportParamName: "Payload"
+      responses:
+        200:
+          description: "Success"
+          schema:
+            $ref: "#/definitions/Projects"
+  /projects/{project}:
+    get:
+      tags:
+      - "projects"
+      summary: "Get project resource"
+      operationId: "get_project"
+      parameters:
+      - name: "project"
+        in: "path"
+        description: "The project numeric id"
+        required: true
+        type: "string"
+        x-exportParamName: "Project"
+      responses:
+        200:
+          description: "Success"
+          schema:
+            $ref: "#/definitions/Projects"
+        404:
+          description: "Project not found"
+  /projects/{project}/addUsers:
+    post:
+      tags:
+      - "projects"
+      summary: "Add users to project"
+      operationId: "project_add_users"
+      parameters:
+      - name: "project"
+        in: "path"
+        description: "The project numeric id"
+        required: true
+        type: "string"
+        x-exportParamName: "Project"
+      - in: "body"
+        name: "payload"
+        required: true
+        schema:
+          $ref: "#/definitions/Users"
+        x-exportParamName: "Payload"
+      responses:
+        200:
+          description: "Success"
+          schema:
+            $ref: "#/definitions/Projects"
+  /projects/{project}/events:
+    get:
+      tags:
+      - "projects/<project>/events"
+      operationId: "List Events"
+      parameters:
+      - name: "project"
+        in: "path"
+        required: true
+        type: "string"
+        x-exportParamName: "Project"
+      responses:
+        200:
+          description: "Success"
+          schema:
+            type: "array"
+            items:
+              $ref: "#/definitions/Events"
+  /projects/{project}/events/count:
+    get:
+      tags:
+      - "projects/<project>/events"
+      operationId: "Count Events"
+      parameters:
+      - name: "project"
+        in: "path"
+        required: true
+        type: "string"
+        x-exportParamName: "Project"
+      responses:
+        200:
+          description: "Success"
+          schema:
+            $ref: "#/definitions/EventsCount"
+  /projects/{project}/events/{id}:
+    get:
+      tags:
+      - "projects/<project>/events"
+      operationId: "Get Event"
+      parameters:
+      - name: "id"
+        in: "path"
+        description: "The event identifier"
+        required: true
+        type: "string"
+        x-exportParamName: "Id"
+      - name: "project"
+        in: "path"
+        required: true
+        type: "string"
+        x-exportParamName: "Project"
+      responses:
+        200:
+          description: "Success"
+          schema:
+            $ref: "#/definitions/Events"
+        404:
+          description: "Event not found"
+  /projects/{project}/events/{id}/ack:
+    put:
+      tags:
+      - "projects/<project>/events"
+      operationId: "Ack Event"
+      parameters:
+      - name: "id"
+        in: "path"
+        description: "The event identifier"
+        required: true
+        type: "string"
+        x-exportParamName: "Id"
+      - name: "project"
+        in: "path"
+        required: true
+        type: "string"
+        x-exportParamName: "Project"
+      responses:
+        200:
+          description: "Success"
+          schema:
+            $ref: "#/definitions/Events"
+        404:
+          description: "Event not found"
+  /projects/{project}/events/{id}/unack:
+    put:
+      tags:
+      - "projects/<project>/events"
+      operationId: "UnAck Event"
+      parameters:
+      - name: "id"
+        in: "path"
+        description: "The event identifier"
+        required: true
+        type: "string"
+        x-exportParamName: "Id"
+      - name: "project"
+        in: "path"
+        required: true
+        type: "string"
+        x-exportParamName: "Project"
+      responses:
+        200:
+          description: "Success"
+          schema:
+            $ref: "#/definitions/Events"
+        404:
+          description: "Event not found"
+  /projects/{project}/instances:
+    get:
+      tags:
+      - "projects/<project>/instances"
+      summary: "Return list of instances"
+      operationId: "list_instances"
+      parameters:
+      - name: "project"
+        in: "path"
+        required: true
+        type: "string"
+        x-exportParamName: "Project"
+      responses:
+        200:
+          description: "Success"
+          schema:
+            type: "array"
+            items:
+              $ref: "#/definitions/Instances"
+    post:
+      tags:
+      - "projects/<project>/instances"
+      summary: "Create an instances"
+      operationId: "Create instance"
+      parameters:
+      - name: "project"
+        in: "path"
+        required: true
+        type: "string"
+        x-exportParamName: "Project"
+      - in: "body"
+        name: "payload"
+        required: true
+        schema:
+          $ref: "#/definitions/Instances"
+        x-exportParamName: "Payload"
+      - name: "requestId"
+        in: "query"
+        description: "An optional request ID to identify requests. Specify a unique\
+          \ request ID so that if you must retry your request, the server will know\
+          \ to ignore the request if it has already been completed.\nFor example,\
+          \ consider a situation where you make an initial request and the request\
+          \ times out. If you make the request again with the same request ID, the\
+          \ server can check if original operation with the same request ID was received,\
+          \ and if so, will ignore the second request. This prevents clients from\
+          \ accidentally creating duplicate commitments. \nThe request ID must be\
+          \ a valid UUID with the exception that zero UUID is not supported (00000000-0000-0000-0000-000000000000)."
+        required: false
+        type: "string"
+        x-exportParamName: "RequestId"
+        x-optionalDataType: "String"
+      responses:
+        200:
+          description: "Success"
+          schema:
+            $ref: "#/definitions/Operation"
+  /projects/{project}/instances/{name}:
+    get:
+      tags:
+      - "projects/<project>/instances"
+      summary: "Get an instance"
+      operationId: "get_instance"
+      parameters:
+      - name: "name"
+        in: "path"
+        description: "Instance name"
+        required: true
+        type: "string"
+        x-exportParamName: "Name"
+      - name: "project"
+        in: "path"
+        required: true
+        type: "string"
+        x-exportParamName: "Project"
+      responses:
+        200:
+          description: "Success"
+          schema:
+            $ref: "#/definitions/Instances"
+        404:
+          description: "Instance not found"
+    delete:
+      tags:
+      - "projects/<project>/instances"
+      summary: "Deletes the specified Instance resource"
+      operationId: "delete_instance_item"
+      parameters:
+      - name: "name"
+        in: "path"
+        description: "Instance name"
+        required: true
+        type: "string"
+        x-exportParamName: "Name"
+      - name: "project"
+        in: "path"
+        required: true
+        type: "string"
+        x-exportParamName: "Project"
+      - name: "force"
+        in: "query"
+        description: "[Experimental] Force operation, even if resource is not in ready\
+          \ state, possible values: true/false, on/off. Default false."
+        required: false
+        type: "string"
+        x-exportParamName: "Force"
+        x-optionalDataType: "String"
+      - name: "requestId"
+        in: "query"
+        description: "An optional request ID to identify requests. Specify a unique\
+          \ request ID so that if you must retry your request, the server will know\
+          \ to ignore the request if it has already been completed.\nFor example,\
+          \ consider a situation where you make an initial request and the request\
+          \ times out. If you make the request again with the same request ID, the\
+          \ server can check if original operation with the same request ID was received,\
+          \ and if so, will ignore the second request. This prevents clients from\
+          \ accidentally creating duplicate commitments. \nThe request ID must be\
+          \ a valid UUID with the exception that zero UUID is not supported (00000000-0000-0000-0000-000000000000)."
+        required: false
+        type: "string"
+        x-exportParamName: "RequestId"
+        x-optionalDataType: "String"
+      responses:
+        200:
+          description: "Success"
+          schema:
+            $ref: "#/definitions/Operation"
+  /projects/{project}/instances/{name}/filesystem:
+    post:
+      tags:
+      - "projects/<project>/instances"
+      summary: "Add filesystem"
+      operationId: "Add filesystem"
+      parameters:
+      - name: "name"
+        in: "path"
+        description: "Resource name"
+        required: true
+        type: "string"
+        x-exportParamName: "Name"
+      - name: "project"
+        in: "path"
+        required: true
+        type: "string"
+        x-exportParamName: "Project"
+      - in: "body"
+        name: "payload"
+        required: true
+        schema:
+          $ref: "#/definitions/data_container_add"
+        x-exportParamName: "Payload"
+      responses:
+        200:
+          description: "Success"
+          schema:
+            $ref: "#/definitions/Operation"
+  /projects/{project}/instances/{name}/filesystem/{filesystem_id}:
+    delete:
+      tags:
+      - "projects/<project>/instances"
+      summary: "Delete filesystem"
+      operationId: "Delete filesystem"
+      parameters:
+      - name: "name"
+        in: "path"
+        description: "Resource name"
+        required: true
+        type: "string"
+        x-exportParamName: "Name"
+      - name: "filesystem_id"
+        in: "path"
+        description: "Filesystem id"
+        required: true
+        type: "string"
+        x-exportParamName: "FilesystemId"
+      - name: "project"
+        in: "path"
+        required: true
+        type: "string"
+        x-exportParamName: "Project"
+      responses:
+        200:
+          description: "Success"
+          schema:
+            $ref: "#/definitions/Operation"
+  /projects/{project}/instances/{name}/filesystem/{filesystem_id}/setAccessors:
+    post:
+      tags:
+      - "projects/<project>/instances"
+      summary: "Filesystem set accessors"
+      operationId: "Set accessors to filesystem"
+      parameters:
+      - name: "name"
+        in: "path"
+        description: "Resource name"
+        required: true
+        type: "string"
+        x-exportParamName: "Name"
+      - name: "filesystem_id"
+        in: "path"
+        description: "Filesystem id"
+        required: true
+        type: "string"
+        x-exportParamName: "FilesystemId"
+      - name: "project"
+        in: "path"
+        required: true
+        type: "string"
+        x-exportParamName: "Project"
+      - in: "body"
+        name: "payload"
+        required: true
+        schema:
+          $ref: "#/definitions/accessors"
+        x-exportParamName: "Payload"
+      responses:
+        200:
+          description: "Success"
+          schema:
+            $ref: "#/definitions/Operation"
+  /projects/{project}/instances/{name}/filesystem/{filesystem_id}/setDescription:
+    post:
+      tags:
+      - "projects/<project>/instances"
+      summary: "Update filesystem description"
+      operationId: "Set filesystem description"
+      parameters:
+      - name: "name"
+        in: "path"
+        description: "Resource name"
+        required: true
+        type: "string"
+        x-exportParamName: "Name"
+      - name: "filesystem_id"
+        in: "path"
+        description: "Filesystem id"
+        required: true
+        type: "string"
+        x-exportParamName: "FilesystemId"
+      - name: "project"
+        in: "path"
+        required: true
+        type: "string"
+        x-exportParamName: "Project"
+      - in: "body"
+        name: "payload"
+        required: true
+        schema:
+          $ref: "#/definitions/updateDesciption"
+        x-exportParamName: "Payload"
+      responses:
+        200:
+          description: "Success"
+          schema:
+            $ref: "#/definitions/Operation"
+  /projects/{project}/instances/{name}/filesystem/{filesystem_id}/setQuota:
+    post:
+      tags:
+      - "projects/<project>/instances"
+      summary: "Filesystem quota update"
+      operationId: "Update filesystem quota"
+      parameters:
+      - name: "name"
+        in: "path"
+        description: "Resource name"
+        required: true
+        type: "string"
+        x-exportParamName: "Name"
+      - name: "filesystem_id"
+        in: "path"
+        description: "Filesystem id"
+        required: true
+        type: "string"
+        x-exportParamName: "FilesystemId"
+      - name: "project"
+        in: "path"
+        required: true
+        type: "string"
+        x-exportParamName: "Project"
+      - in: "body"
+        name: "payload"
+        required: true
+        schema:
+          $ref: "#/definitions/updateQuota"
+        x-exportParamName: "Payload"
+      responses:
+        200:
+          description: "Success"
+          schema:
+            $ref: "#/definitions/Operation"
+  /projects/{project}/instances/{name}/filesystem/{filesystem_id}/setScheduling:
+    post:
+      tags:
+      - "projects/<project>/instances"
+      summary: "Filesystem set snapshot scheduling"
+      operationId: "Set filesystem snapshot scheduling"
+      parameters:
+      - name: "name"
+        in: "path"
+        description: "Resource name"
+        required: true
+        type: "string"
+        x-exportParamName: "Name"
+      - name: "filesystem_id"
+        in: "path"
+        description: "Filesystem id"
+        required: true
+        type: "string"
+        x-exportParamName: "FilesystemId"
+      - name: "project"
+        in: "path"
+        required: true
+        type: "string"
+        x-exportParamName: "Project"
+      - in: "body"
+        name: "payload"
+        required: true
+        schema:
+          $ref: "#/definitions/snapshot_schedule"
+        x-exportParamName: "Payload"
+      responses:
+        200:
+          description: "Success"
+          schema:
+            $ref: "#/definitions/Operation"
+  /projects/{project}/instances/{name}/filesystem/{filesystem_id}/snapshots:
+    post:
+      tags:
+      - "projects/<project>/instances"
+      summary: "Create manual snapshot"
+      operationId: "Filesystem manual create snapshot"
+      parameters:
+      - name: "name"
+        in: "path"
+        description: "Resource name"
+        required: true
+        type: "string"
+        x-exportParamName: "Name"
+      - name: "filesystem_id"
+        in: "path"
+        description: "Filesystem id"
+        required: true
+        type: "string"
+        x-exportParamName: "FilesystemId"
+      - name: "project"
+        in: "path"
+        required: true
+        type: "string"
+        x-exportParamName: "Project"
+      - in: "body"
+        name: "payload"
+        required: true
+        schema:
+          $ref: "#/definitions/Snapshot"
+        x-exportParamName: "Payload"
+      - name: "requestId"
+        in: "query"
+        description: "An optional request ID to identify requests. Specify a unique\
+          \ request ID so that if you must retry your request, the server will know\
+          \ to ignore the request if it has already been completed.\nFor example,\
+          \ consider a situation where you make an initial request and the request\
+          \ times out. If you make the request again with the same request ID, the\
+          \ server can check if original operation with the same request ID was received,\
+          \ and if so, will ignore the second request. This prevents clients from\
+          \ accidentally creating duplicate commitments. \nThe request ID must be\
+          \ a valid UUID with the exception that zero UUID is not supported (00000000-0000-0000-0000-000000000000)."
+        required: false
+        type: "string"
+        x-exportParamName: "RequestId"
+        x-optionalDataType: "String"
+      responses:
+        200:
+          description: "Success"
+          schema:
+            $ref: "#/definitions/Operation"
+  /projects/{project}/instances/{name}/getConstraints:
+    get:
+      tags:
+      - "projects/<project>/instances"
+      summary: "Get resource capacity constraints"
+      operationId: "get_instance_constraints"
+      parameters:
+      - name: "name"
+        in: "path"
+        description: "Resource name"
+        required: true
+        type: "string"
+        x-exportParamName: "Name"
+      - name: "project"
+        in: "path"
+        required: true
+        type: "string"
+        x-exportParamName: "Project"
+      responses:
+        200:
+          description: "Success"
+          schema:
+            $ref: "#/definitions/capacityUnits"
+        400:
+          description: "Failed to get instance constraints"
+        404:
+          description: "Instance not found"
+  /projects/{project}/instances/{name}/setCapacity:
+    post:
+      tags:
+      - "projects/<project>/instances"
+      summary: "Sets capacity to instance"
+      operationId: "post_instance_set_capacity"
+      parameters:
+      - name: "name"
+        in: "path"
+        description: "Resource name"
+        required: true
+        type: "string"
+        x-exportParamName: "Name"
+      - name: "project"
+        in: "path"
+        required: true
+        type: "string"
+        x-exportParamName: "Project"
+      - in: "body"
+        name: "payload"
+        required: true
+        schema:
+          $ref: "#/definitions/setCapacity"
+        x-exportParamName: "Payload"
+      responses:
+        200:
+          description: "Success"
+          schema:
+            $ref: "#/definitions/Operation"
+  /projects/{project}/instances/{name}/statistics:
+    get:
+      tags:
+      - "projects/<project>/instances"
+      summary: "Get resource statistics"
+      operationId: "get_instance_statistics"
+      parameters:
+      - name: "name"
+        in: "path"
+        description: "Resource name"
+        required: true
+        type: "string"
+        x-exportParamName: "Name"
+      - name: "project"
+        in: "path"
+        required: true
+        type: "string"
+        x-exportParamName: "Project"
+      responses:
+        200:
+          description: "Success"
+          schema:
+            $ref: "#/definitions/statistics"
+        400:
+          description: "Failed to get instance statistics"
+        404:
+          description: "Instance not found"
+  /projects/{project}/operation:
+    get:
+      tags:
+      - "projects/<project>/operation"
+      summary: "Return list of operations"
+      operationId: "list_operations"
+      parameters:
+      - name: "project"
+        in: "path"
+        required: true
+        type: "string"
+        x-exportParamName: "Project"
+      responses:
+        200:
+          description: "Success"
+          schema:
+            type: "array"
+            items:
+              $ref: "#/definitions/Operation"
+  /projects/{project}/operation/{resourceId}:
+    get:
+      tags:
+      - "projects/<project>/operation"
+      summary: "Return operation resource"
+      operationId: "get_operation"
+      parameters:
+      - name: "resourceId"
+        in: "path"
+        description: "Operation resource id"
+        required: true
+        type: "string"
+        x-exportParamName: "ResourceId"
+      - name: "project"
+        in: "path"
+        required: true
+        type: "string"
+        x-exportParamName: "Project"
+      responses:
+        200:
+          description: "Success"
+          schema:
+            $ref: "#/definitions/Operation"
+  /projects/{project}/removeUsers:
+    post:
+      tags:
+      - "projects"
+      summary: "Remove users from project"
+      operationId: "project_remove_users"
+      parameters:
+      - name: "project"
+        in: "path"
+        description: "The project numeric id"
+        required: true
+        type: "string"
+        x-exportParamName: "Project"
+      - in: "body"
+        name: "payload"
+        required: true
+        schema:
+          $ref: "#/definitions/Users"
+        x-exportParamName: "Payload"
+      responses:
+        200:
+          description: "Success"
+          schema:
+            $ref: "#/definitions/Projects"
+  /projects/{project}/service-class:
+    get:
+      tags:
+      - "projects/<project>/service-class"
+      summary: "Return list of service classes"
+      operationId: "list_service_class"
+      parameters:
+      - name: "project"
+        in: "path"
+        required: true
+        type: "string"
+        x-exportParamName: "Project"
+      - name: "filter"
+        in: "query"
+        description: "A filter expression that filters resources listed in the response.\
+          \ The expression must specify the field name, a comparison operator, and\
+          \ the value that you want to use for filtering. The value must be a string,\
+          \ a number, or a boolean. The comparison operator must be either =, !=,\
+          \ >, or <.\n For example, if you are filtering Service Class you can include\
+          \ only Service Classes with node type equal to medium by specifying nodeType\
+          \ = medium.\n To filter nested fields use regions.name = us-central1 to\
+          \ include Service Class available in us-central1 region.\n To filter on\
+          \ multiple expressions, provide each separate expression within parentheses.\
+          \ For example, (regions.name = us-central1) (nodeType = medium)"
+        required: false
+        type: "string"
+        x-exportParamName: "Filter"
+        x-optionalDataType: "String"
+      responses:
+        200:
+          description: "Success"
+          schema:
+            type: "array"
+            items:
+              $ref: "#/definitions/ServiceClass"
+  /projects/{project}/service-class/{name}:
+    get:
+      tags:
+      - "projects/<project>/service-class"
+      summary: "Get service class"
+      operationId: "get_service_class"
+      parameters:
+      - name: "name"
+        in: "path"
+        description: "Service class name"
+        required: true
+        type: "string"
+        x-exportParamName: "Name"
+      - name: "project"
+        in: "path"
+        required: true
+        type: "string"
+        x-exportParamName: "Project"
+      responses:
+        200:
+          description: "Success"
+          schema:
+            $ref: "#/definitions/ServiceClass"
+        404:
+          description: "Service Class not found"
+  /projects/{project}/snapshots:
+    get:
+      tags:
+      - "projects/<project>/snapshots"
+      summary: "Return list of instances snapshots for the specified project"
+      operationId: "list_snapshots"
+      parameters:
+      - name: "project"
+        in: "path"
+        required: true
+        type: "string"
+        x-exportParamName: "Project"
+      - name: "filesystem"
+        in: "query"
+        description: "Filesystem id"
+        required: false
+        type: "string"
+        x-exportParamName: "Filesystem"
+        x-optionalDataType: "String"
+      - name: "instance"
+        in: "query"
+        description: "The name of the resource, provided by the client when initially\
+          \ creating the resource. The resource name must be 1-63 characters long,\
+          \ and comply with RFC1035"
+        required: false
+        type: "string"
+        x-exportParamName: "Instance"
+        x-optionalDataType: "String"
+      responses:
+        200:
+          description: "Success"
+          schema:
+            type: "array"
+            items:
+              $ref: "#/definitions/Snapshots"
+  /projects/{project}/snapshots/instances/{instance}:
+    get:
+      tags:
+      - "projects/<project>/snapshots"
+      summary: "Return list of instance snapshots"
+      operationId: "list_instance_snapshots"
+      parameters:
+      - name: "project"
+        in: "path"
+        required: true
+        type: "string"
+        x-exportParamName: "Project"
+      - name: "instance"
+        in: "path"
+        required: true
+        type: "string"
+        x-exportParamName: "Instance"
+      - name: "requestId"
+        in: "query"
+        description: "An optional request ID to identify requests. Specify a unique\
+          \ request ID so that if you must retry your request, the server will know\
+          \ to ignore the request if it has already been completed.\nFor example,\
+          \ consider a situation where you make an initial request and the request\
+          \ times out. If you make the request again with the same request ID, the\
+          \ server can check if original operation with the same request ID was received,\
+          \ and if so, will ignore the second request. This prevents clients from\
+          \ accidentally creating duplicate commitments. \nThe request ID must be\
+          \ a valid UUID with the exception that zero UUID is not supported (00000000-0000-0000-0000-000000000000)."
+        required: false
+        type: "string"
+        x-exportParamName: "RequestId"
+        x-optionalDataType: "String"
+      responses:
+        200:
+          description: "Success"
+          schema:
+            type: "array"
+            items:
+              $ref: "#/definitions/Snapshots"
+  /projects/{project}/snapshots/{resourceId}:
+    get:
+      tags:
+      - "projects/<project>/snapshots"
+      summary: "Returns a specified snapshot"
+      operationId: "get_snapshot"
+      parameters:
+      - name: "project"
+        in: "path"
+        required: true
+        type: "string"
+        x-exportParamName: "Project"
+      - name: "resourceId"
+        in: "path"
+        required: true
+        type: "string"
+        x-exportParamName: "ResourceId"
+      responses:
+        200:
+          description: "Success"
+          schema:
+            $ref: "#/definitions/Snapshots"
+    delete:
+      tags:
+      - "projects/<project>/snapshots"
+      summary: "Deletes the specified snapshot"
+      description: "Deleting a snapshot removes its data permanently and is irreversible"
+      operationId: "delete_snapshot"
+      parameters:
+      - name: "project"
+        in: "path"
+        required: true
+        type: "string"
+        x-exportParamName: "Project"
+      - name: "resourceId"
+        in: "path"
+        required: true
+        type: "string"
+        x-exportParamName: "ResourceId"
+      - name: "requestId"
+        in: "query"
+        description: "An optional request ID to identify requests. Specify a unique\
+          \ request ID so that if you must retry your request, the server will know\
+          \ to ignore the request if it has already been completed.\nFor example,\
+          \ consider a situation where you make an initial request and the request\
+          \ times out. If you make the request again with the same request ID, the\
+          \ server can check if original operation with the same request ID was received,\
+          \ and if so, will ignore the second request. This prevents clients from\
+          \ accidentally creating duplicate commitments. \nThe request ID must be\
+          \ a valid UUID with the exception that zero UUID is not supported (00000000-0000-0000-0000-000000000000)."
+        required: false
+        type: "string"
+        x-exportParamName: "RequestId"
+        x-optionalDataType: "String"
+      responses:
+        200:
+          description: "Success"
+          schema:
+            $ref: "#/definitions/Operation"
+  /projects/{project}/snapshots/{resourceId}/share:
+    post:
+      tags:
+      - "projects/<project>/snapshots"
+      summary: "Create share for the specified snapshot resource"
+      operationId: "create_share"
+      parameters:
+      - name: "project"
+        in: "path"
+        required: true
+        type: "string"
+        x-exportParamName: "Project"
+      - name: "resourceId"
+        in: "path"
+        required: true
+        type: "string"
+        x-exportParamName: "ResourceId"
+      - in: "body"
+        name: "payload"
+        required: true
+        schema:
+          $ref: "#/definitions/SnapshotShareCreate"
+        x-exportParamName: "Payload"
+      - name: "requestId"
+        in: "query"
+        description: "An optional request ID to identify requests. Specify a unique\
+          \ request ID so that if you must retry your request, the server will know\
+          \ to ignore the request if it has already been completed.\nFor example,\
+          \ consider a situation where you make an initial request and the request\
+          \ times out. If you make the request again with the same request ID, the\
+          \ server can check if original operation with the same request ID was received,\
+          \ and if so, will ignore the second request. This prevents clients from\
+          \ accidentally creating duplicate commitments. \nThe request ID must be\
+          \ a valid UUID with the exception that zero UUID is not supported (00000000-0000-0000-0000-000000000000)."
+        required: false
+        type: "string"
+        x-exportParamName: "RequestId"
+        x-optionalDataType: "String"
+      responses:
+        200:
+          description: "Success"
+          schema:
+            $ref: "#/definitions/Operation"
+    delete:
+      tags:
+      - "projects/<project>/snapshots"
+      summary: "Delete share for the specified snapshot resource"
+      operationId: "delete_share"
+      parameters:
+      - name: "project"
+        in: "path"
+        required: true
+        type: "string"
+        x-exportParamName: "Project"
+      - name: "resourceId"
+        in: "path"
+        required: true
+        type: "string"
+        x-exportParamName: "ResourceId"
+      - name: "requestId"
+        in: "query"
+        description: "An optional request ID to identify requests. Specify a unique\
+          \ request ID so that if you must retry your request, the server will know\
+          \ to ignore the request if it has already been completed.\nFor example,\
+          \ consider a situation where you make an initial request and the request\
+          \ times out. If you make the request again with the same request ID, the\
+          \ server can check if original operation with the same request ID was received,\
+          \ and if so, will ignore the second request. This prevents clients from\
+          \ accidentally creating duplicate commitments. \nThe request ID must be\
+          \ a valid UUID with the exception that zero UUID is not supported (00000000-0000-0000-0000-000000000000)."
+        required: false
+        type: "string"
+        x-exportParamName: "RequestId"
+        x-optionalDataType: "String"
+      responses:
+        200:
+          description: "Success"
+          schema:
+            $ref: "#/definitions/Operation"
+  /regions:
+    get:
+      tags:
+      - "regions"
+      summary: "Retrieves the list of region resources available for service"
+      operationId: "list_regions"
+      parameters:
+      - name: "filter"
+        in: "query"
+        description: "A filter expression that filters resources listed in the response.\
+          \ The expression must specify the field name, a comparison operator, and\
+          \ the value that you want to use for filtering. The value must be a string,\
+          \ a number, or a boolean. The comparison operator must be either =, !=,\
+          \ >, or <.\n For example, if you are filtering Service Class you can include\
+          \ only Service Classes with node type equal to medium by specifying nodeType\
+          \ = medium.\n To filter nested fields use regions.name = us-central1 to\
+          \ include Service Class available in us-central1 region.\n To filter on\
+          \ multiple expressions, provide each separate expression within parentheses.\
+          \ For example, (regions.name = us-central1) (nodeType = medium)"
+        required: false
+        type: "string"
+        x-exportParamName: "Filter"
+        x-optionalDataType: "String"
+      responses:
+        200:
+          description: "Success"
+          schema:
+            type: "array"
+            items:
+              $ref: "#/definitions/region"
+securityDefinitions:
+  cloud-console-partner-local:
+    type: "oauth2"
+    authorizationUrl: ""
+    flow: "implicit"
+    x-google-issuer: "cloud-console-partner-local@metropolis-demo.iam.gserviceaccount.com"
+    x-google-jwks_uri: "https://www.googleapis.com/robot/v1/metadata/x509/cloud-console-partner-local@metropolis-demo.iam.gserviceaccount.com"
+  cloud-console-partner:
+    type: "oauth2"
+    authorizationUrl: ""
+    flow: "implicit"
+    x-google-issuer: "cloud-console-partner@system.gserviceaccount.com"
+    x-google-jwks_uri: "https://www.googleapis.com/robot/v1/metadata/x509/cloud-console-partner@system.gserviceaccount.com"
+  cloud-console-partner-autopush:
+    type: "oauth2"
+    authorizationUrl: ""
+    flow: "implicit"
+    x-google-issuer: "cloud-console-partner-autopush@system.gserviceaccount.com"
+    x-google-jwks_uri: "https://www.googleapis.com/robot/v1/metadata/x509/cloud-console-partner@system.gserviceaccount.com"
+  google-id:
+    type: "oauth2"
+    authorizationUrl: ""
+    flow: "implicit"
+    x-google-issuer: "accounts.google.com"
+    x-google-jwks_uri: "https://www.googleapis.com/oauth2/v3/certs"
+    x-google-audiences: "344419276940-omb583ia3ft7hmase1kvmlmsic7ebeqk.apps.googleusercontent.com,563209362155-dmktm1rt2snprao3te1a5gf0tk9l39i8.apps.googleusercontent.com,981557660273-llqqkkbqotms0du0ehvjh84a565n1qin.apps.googleusercontent.com,72633378913-4ds74m61vu7erqeuk02ativs0sasrpts.apps.googleusercontent.com,198572333586-0t0utk4m4nboo9a810hgcab197duhpag.apps.googleusercontent.com"
+definitions:
+  ServiceClass:
+    type: "object"
+    required:
+    - "description"
+    - "name"
+    - "nodeType"
+    - "storageBackend"
+    properties:
+      id:
+        type: "string"
+        description: "[Output Only] The unique identifier for the resource. This identifier\
+          \ is defined by the server."
+      name:
+        type: "string"
+        description: "[Output Only] Name of the resource."
+      description:
+        type: "string"
+        description: "[Output Only] A textual description of the resource."
+      longDescription:
+        type: "string"
+        description: ""
+      regions:
+        type: "array"
+        description: "ServiceClass supported regions"
+        items:
+          $ref: "#/definitions/region"
+      storageBackend:
+        type: "string"
+        example: "SSD-PD"
+        description: "Storage backend device type"
+        default: "SSD-PD"
+        enum:
+        - "SSD-PD"
+        - "STD-PD"
+        - "SSD-LOCAL"
+      capacityUnits:
+        $ref: "#/definitions/capacityUnits"
+      serviceProtection:
+        $ref: "#/definitions/serviceProtection"
+      nodeType:
+        type: "string"
+        example: "small"
+        description: ""
+        default: "medium"
+        enum:
+        - "small"
+        - "medium"
+        - "large"
+      clearTier:
+        $ref: "#/definitions/clearTier"
+      storagePrice:
+        $ref: "#/definitions/storagePrice"
+      displayOrder:
+        type: "integer"
+        description: ""
+      deprecated:
+        $ref: "#/definitions/deprecated"
+    example:
+      longDescription: "longDescription"
+      storageBackend: "SSD-PD"
+      regions:
+      - name: "name"
+        location: "location"
+        id: "id"
+        zones:
+        - "zones"
+        - "zones"
+      - name: "name"
+        location: "location"
+        id: "id"
+        zones:
+        - "zones"
+        - "zones"
+      storagePrice:
+        filesystemStoragePrice: 5.962133916683182377482808078639209270477294921875
+        SnapshotsStoragePrice: 5.63737665663332876420099637471139430999755859375
+        estimates: "{}"
+      deprecated:
+        state: "DEPRECATED"
+        replacement: "replacement"
+      displayOrder: 2
+      description: "description"
+      capacityUnits:
+        min: 6
+        max: 1
+        unitSize: 0
+      nodeType: "small"
+      clearTier:
+        extension: 6
+        balance: 1
+      serviceProtection:
+        protectionMode: "single"
+        replicationLevel: 0
+      name: "name"
+      id: "id"
+  region:
+    type: "object"
+    required:
+    - "location"
+    - "name"
+    properties:
+      id:
+        type: "string"
+        description: "[Output Only] The unique identifier for the resource. This identifier\
+          \ is defined by the server."
+        readOnly: true
+      name:
+        type: "string"
+        description: "[Output Only] Name of the resource."
+      location:
+        type: "string"
+        description: "Geographical location in which the region resides in."
+      zones:
+        type: "array"
+        description: "[Output Only] A list of zones available in this region"
+        items:
+          type: "string"
+    example:
+      name: "name"
+      location: "location"
+      id: "id"
+      zones:
+      - "zones"
+      - "zones"
+  capacityUnits:
+    type: "object"
+    required:
+    - "unitSize"
+    properties:
+      unitSize:
+        type: "integer"
+        description: "Increment steps of capacity units, currently a size of a node\
+          \ in bytes."
+      min:
+        type: "integer"
+        description: "Minimum capacity units supported by this class (min # of nodes)"
+      max:
+        type: "integer"
+        description: "Maximum capacity units supported by this class (max # of nodes)"
+    example:
+      min: 6
+      max: 1
+      unitSize: 0
+  serviceProtection:
+    type: "object"
+    properties:
+      protectionMode:
+        type: "string"
+        example: "single"
+        description: "Defines the Availability Zones support"
+        default: "single"
+        enum:
+        - "single"
+        - "multi"
+      replicationLevel:
+        type: "integer"
+        description: "Number of data copies"
+    example:
+      protectionMode: "single"
+      replicationLevel: 0
+  clearTier:
+    type: "object"
+    required:
+    - "balance"
+    - "extension"
+    properties:
+      extension:
+        type: "integer"
+        description: "Modi/Adi need to provide'"
+      balance:
+        type: "integer"
+        description: "Modi/Adi need to provide'"
+    example:
+      extension: 6
+      balance: 1
+  storagePrice:
+    type: "object"
+    required:
+    - "SnapshotsStoragePrice"
+    - "filesystemStoragePrice"
+    properties:
+      filesystemStoragePrice:
+        type: "number"
+        description: "Price per GB of the primary file system ($/GB/Mo)"
+      SnapshotsStoragePrice:
+        type: "number"
+        description: "Price per GB of ClearTier (Object) storage $/GB/Mo"
+      estimates:
+        type: "object"
+        readOnly: true
+        properties: {}
+    example:
+      filesystemStoragePrice: 5.962133916683182377482808078639209270477294921875
+      SnapshotsStoragePrice: 5.63737665663332876420099637471139430999755859375
+      estimates: "{}"
+  deprecated:
+    type: "object"
+    properties:
+      state:
+        type: "string"
+        example: "DEPRECATED"
+        description: "Service Class state, DEPRECATED, OBSOLETE or DELETED, Deprecated\
+          \ indicate that service class was replaced by a newer one, but can be used\
+          \ for new/existing instances. Obsolete indicate in use by existing instances\
+          \ but will fail for new instances. Deleted indicate can not be used by either\
+          \ existing nor new created instances."
+        enum:
+        - "DEPRECATED"
+        - "OBSOLETE"
+        - "DELETED"
+        - "ACTIVE"
+      replacement:
+        type: "string"
+        description: "New service class that is in use instead"
+    example:
+      state: "DEPRECATED"
+      replacement: "replacement"
+  Instances:
+    type: "object"
+    required:
+    - "name"
+    - "network"
+    - "provisionedCapacityUnits"
+    - "serviceClass"
+    properties:
+      id:
+        type: "string"
+        description: "[Output Only] The unique identifier for the resource. This identifier\
+          \ is defined by the server."
+        readOnly: true
+      name:
+        type: "string"
+        description: "The name of the resource, provided by the client when initially\
+          \ creating the resource. The resource name must be 1-63 characters long,\
+          \ and comply with RFC1035"
+      description:
+        type: "string"
+        description: "[Output Only] A textual description of the resource."
+        maxLength: 2000
+      serviceClass:
+        type: "string"
+        description: "ServiceClass name"
+      serviceClassId:
+        type: "string"
+        description: "ServiceClass resource unique id"
+        readOnly: true
+      serviceClassDescription:
+        type: "string"
+        description: "ServiceClass descriptive name"
+        readOnly: true
+      provisionedCapacityUnits:
+        type: "number"
+        description: "The number of storage capacity units provisioned"
+      capacityUnitType:
+        type: "string"
+        example: "Steps"
+        description: "The unit used for capacity, possible values are: Steps, Bytes.\n\
+          \ Default value is Steps."
+        default: "Steps"
+        enum:
+        - "Steps"
+        - "Bytes"
+      allocatedCapacity:
+        type: "integer"
+        format: "int64"
+        description: "The allocated capacity in bytes"
+        readOnly: true
+      region:
+        type: "string"
+        description: "Region name for this request, required if serviceClass.serviceProtection.protectionMode\
+          \ is set to 'multi'."
+      zone:
+        type: "string"
+        description: "Zone name for this request, required if serviceClass.serviceProtection.protectionMode\
+          \ is set to 'single'."
+      network:
+        type: "string"
+        description: "Name of your VPC network connected with service producer network."
+      networkProject:
+        type: "string"
+        description: "The host project id if using a shared VPC network."
+      filesystems:
+        type: "array"
+        items:
+          description: "Filesystem object"
+          $ref: "#/definitions/data_container"
+      status:
+        type: "string"
+        description: "[Output Only] The status of the operation, which can be one\
+          \ of the following: PENDING, RUNNING, or DONE."
+        readOnly: true
+      statusMessage:
+        type: "string"
+        description: "[Output Only] An optional textual description of the current\
+          \ status of the operation."
+        readOnly: true
+      creationTimestamp:
+        type: "string"
+        description: "[Output Only] Creation timestamp in RFC3339 text format."
+        readOnly: true
+      updateTimestamp:
+        type: "string"
+        description: "[Output Only] Update timestamp in RFC3339 text format."
+        readOnly: true
+      utilization:
+        description: "instance utilization metrics"
+        readOnly: true
+        $ref: "#/definitions/utilization"
+      serviceHealth:
+        description: "instance health metrics"
+        readOnly: true
+        $ref: "#/definitions/serviceHealth"
+    example:
+      allocatedCapacity: 6
+      serviceClass: "serviceClass"
+      serviceHealth:
+        description: "description"
+        state: "state"
+      description: "description"
+      provisionedCapacityUnits: 0.80082819046101150206595775671303272247314453125
+      utilization:
+        snapshots: 5
+        fileSystem: 5
+      filesystems:
+      - snapshots:
+          schedule: "Daily"
+          enable: false
+          retention: 589.735291934445513106766156852245330810546875
+        quotaType: "auto"
+        accessors:
+          fingerprint: "fingerprint"
+          items:
+          - sourceRange: "sourceRange"
+            accessRights: "readOnly"
+          - sourceRange: "sourceRange"
+            accessRights: "readOnly"
+        exports:
+        - path: "path"
+          name: "name"
+          nfsMountPoint: "nfsMountPoint"
+          id: "id"
+        - path: "path"
+          name: "name"
+          nfsMountPoint: "nfsMountPoint"
+          id: "id"
+        name: "name"
+        creationTimestamp: "creationTimestamp"
+        description: "description"
+        utilization:
+          snapshots: 5
+          fileSystem: 5
+        id: "id"
+        hardQuota: 1
+        updateTimestamp: "updateTimestamp"
+      - snapshots:
+          schedule: "Daily"
+          enable: false
+          retention: 589.735291934445513106766156852245330810546875
+        quotaType: "auto"
+        accessors:
+          fingerprint: "fingerprint"
+          items:
+          - sourceRange: "sourceRange"
+            accessRights: "readOnly"
+          - sourceRange: "sourceRange"
+            accessRights: "readOnly"
+        exports:
+        - path: "path"
+          name: "name"
+          nfsMountPoint: "nfsMountPoint"
+          id: "id"
+        - path: "path"
+          name: "name"
+          nfsMountPoint: "nfsMountPoint"
+          id: "id"
+        name: "name"
+        creationTimestamp: "creationTimestamp"
+        description: "description"
+        utilization:
+          snapshots: 5
+          fileSystem: 5
+        id: "id"
+        hardQuota: 1
+        updateTimestamp: "updateTimestamp"
+      statusMessage: "statusMessage"
+      updateTimestamp: "updateTimestamp"
+      network: "network"
+      networkProject: "networkProject"
+      zone: "zone"
+      name: "name"
+      serviceClassDescription: "serviceClassDescription"
+      creationTimestamp: "creationTimestamp"
+      capacityUnitType: "Steps"
+      id: "id"
+      region: "region"
+      serviceClassId: "serviceClassId"
+      status: "status"
+  data_container:
+    type: "object"
+    required:
+    - "description"
+    - "name"
+    - "quotaType"
+    properties:
+      id:
+        type: "string"
+        description: "[Output Only] The unique identifier for the resource. This identifier\
+          \ is defined by the server."
+        readOnly: true
+      name:
+        type: "string"
+        description: "Filesystem name"
+      description:
+        type: "string"
+        description: "Filesystem description"
+        default: ""
+      quotaType:
+        type: "string"
+        example: "auto"
+        description: "Supported values are: auto and fixed. Use auto if you have one\
+          \ filesystem, the size of the filesystem will be the same as the instance\
+          \ size. Use fixed if you have more than one filesystem, and set the filesystem\
+          \ size through filesystemQuota."
+        default: "auto"
+        enum:
+        - "auto"
+        - "fixed"
+      hardQuota:
+        type: "integer"
+        format: "int64"
+        description: "Set the size of a filesystem if filesystemQuotaType is set to\
+          \ fixed. If it is set to auto, this value is ignored and quota is the instance\
+          \ total size."
+        default: 0
+      utilization:
+        description: "instance utilization metrics"
+        readOnly: true
+        $ref: "#/definitions/utilization"
+      exports:
+        type: "array"
+        items:
+          description: "Exports"
+          readOnly: true
+          $ref: "#/definitions/export"
+      snapshots:
+        description: "Snapshot object"
+        $ref: "#/definitions/snapshot_schedule"
+      accessors:
+        description: "Defines the access rights to the File System. This is a list\
+          \ of access rights configured by the client for the file system."
+        $ref: "#/definitions/accessors"
+      creationTimestamp:
+        type: "string"
+        description: "[Output Only] Creation timestamp in RFC3339 text format."
+        readOnly: true
+      updateTimestamp:
+        type: "string"
+        description: "[Output Only] Update timestamp in RFC3339 text format."
+        readOnly: true
+    example:
+      snapshots:
+        schedule: "Daily"
+        enable: false
+        retention: 589.735291934445513106766156852245330810546875
+      quotaType: "auto"
+      accessors:
+        fingerprint: "fingerprint"
+        items:
+        - sourceRange: "sourceRange"
+          accessRights: "readOnly"
+        - sourceRange: "sourceRange"
+          accessRights: "readOnly"
+      exports:
+      - path: "path"
+        name: "name"
+        nfsMountPoint: "nfsMountPoint"
+        id: "id"
+      - path: "path"
+        name: "name"
+        nfsMountPoint: "nfsMountPoint"
+        id: "id"
+      name: "name"
+      creationTimestamp: "creationTimestamp"
+      description: "description"
+      utilization:
+        snapshots: 5
+        fileSystem: 5
+      id: "id"
+      hardQuota: 1
+      updateTimestamp: "updateTimestamp"
+  utilization:
+    type: "object"
+    properties:
+      fileSystem:
+        type: "integer"
+        description: "The amount of data placed into the filesystem in bytes, without\
+          \ snapshots."
+      snapshots:
+        type: "integer"
+        description: "The amount of object store bytes taken for snapshots."
+    example:
+      snapshots: 5
+      fileSystem: 5
+  export:
+    type: "object"
+    properties:
+      id:
+        type: "string"
+        description: "[Output Only] The unique identifier for the resource. This identifier\
+          \ is defined by the server."
+        readOnly: true
+      name:
+        type: "string"
+        description: "Filesystem name"
+        readOnly: true
+      path:
+        type: "string"
+        description: "Export path"
+        readOnly: true
+      nfsMountPoint:
+        type: "string"
+        description: "The NFS service mount point to use for accessing the filesystem."
+        readOnly: true
+    example:
+      path: "path"
+      name: "name"
+      nfsMountPoint: "nfsMountPoint"
+      id: "id"
+  snapshot_schedule:
+    type: "object"
+    required:
+    - "enable"
+    - "schedule"
+    properties:
+      enable:
+        type: "boolean"
+        description: "Indicates whether snapshots usage in enabled for the instance."
+        default: false
+      schedule:
+        type: "string"
+        example: "Daily"
+        description: "When snapshot.enable is set to true, this field indicates how\
+          \ often to schedule snapshot creation."
+        enum:
+        - "Daily"
+        - "Weekly"
+        - "Monthly"
+      retention:
+        type: "number"
+        description: "Snapshot retention policy. The number of days to hold the snapshot\
+          \ till automatic deletion. Default 0, meaning no retention policy defined."
+        minimum: 2
+        maximum: 2555
+    example:
+      schedule: "Daily"
+      enable: false
+      retention: 589.735291934445513106766156852245330810546875
+  accessors:
+    type: "object"
+    properties:
+      items:
+        type: "array"
+        items:
+          $ref: "#/definitions/accessor_items"
+      fingerprint:
+        type: "string"
+        description: "Specifies a fingerprint for this request, which is essentially\
+          \ a hash of the accessors contents and used for optimistic locking. The\
+          \ fingerprint is initially generated by server and changes after every request\
+          \ to modify or update accessors. You must always provide an up-to-date fingerprint\
+          \ hash in order to update or change accessors.\n To see the latest fingerprint,\
+          \ make get() request to the instance. \n\nA base64-encoded string."
+    example:
+      fingerprint: "fingerprint"
+      items:
+      - sourceRange: "sourceRange"
+        accessRights: "readOnly"
+      - sourceRange: "sourceRange"
+        accessRights: "readOnly"
+  accessor_items:
+    type: "object"
+    required:
+    - "accessRights"
+    - "sourceRange"
+    properties:
+      sourceRange:
+        type: "string"
+        description: "Source range to accept traffic from, These range must be, expressed\
+          \ in CIDR format or you also use the 'all' alias to define the range of\
+          \ internal addresses (10.0.0.0/8, 172.16.0.0/12 and 192.168.0.0/16)"
+      accessRights:
+        type: "string"
+        example: "readOnly"
+        description: "Define access rights for clients originated from the specified\
+          \ source range, supported values are: readOnly and readWrite."
+        enum:
+        - "readOnly"
+        - "readWrite"
+    example:
+      sourceRange: "sourceRange"
+      accessRights: "readOnly"
+  serviceHealth:
+    type: "object"
+    properties:
+      state:
+        type: "string"
+        description: "The instance health"
+      description:
+        type: "string"
+        description: "The instance health description"
+    example:
+      description: "description"
+      state: "state"
+  Operation:
+    type: "object"
+    properties:
+      id:
+        type: "string"
+        description: "[Output Only] The unique identifier for the resource. This identifier\
+          \ is defined by the server."
+      name:
+        type: "string"
+        description: "[Output Only] Name of the resource."
+      description:
+        type: "string"
+        description: "[Output Only] A textual description of the resource."
+      clientOperationId:
+        type: "string"
+        description: "[Output Only] The value of requestId if you provided it in the\
+          \ request. Not present otherwise."
+      operationType:
+        type: "string"
+        description: "[Output Only] The type of operation, such as insert, update,\
+          \ or delete, and so on."
+      targetLink:
+        type: "string"
+        description: "[Output Only] The URL of the resource that the operation modifies."
+      targetId:
+        type: "string"
+        description: "[Output Only] The unique target ID"
+      status:
+        type: "string"
+        example: "PENDING"
+        description: "[Output Only] The status of the operation, which can be one\
+          \ of the following: PENDING, RUNNING, or DONE."
+        enum:
+        - "PENDING"
+        - "RUNNING"
+        - "DONE"
+      statusMessage:
+        type: "string"
+        description: "[Output Only] An optional textual description of the current\
+          \ status of the operation."
+      user:
+        type: "string"
+        description: "[Output Only] User who requested the operation, for example:\
+          \ user@example.com"
+      progress:
+        type: "integer"
+        description: "[Output Only] An optional progress indicator that ranges from\
+          \ 0 to 100. There is no requirement that this be linear or support any granularity\
+          \ of operations. This should not be used to guess when the operation will\
+          \ be complete. This number should monotonically increase as the operation\
+          \ progresses."
+      insertTime:
+        type: "string"
+        description: "[Output Only] The time that this operation was requested. This\
+          \ value is in RFC3339 text format."
+      startTime:
+        type: "string"
+        description: "[Output Only] The time that this operation was started by the\
+          \ server. This value is in RFC3339 text format."
+      endTime:
+        type: "string"
+        description: "[Output Only] The time that this operation was completed. This\
+          \ value is in RFC3339 text format."
+      error:
+        description: "[Output Only] If errors are generated during processing of the\
+          \ operation, this field will be populated."
+        $ref: "#/definitions/error"
+      warnings:
+        type: "array"
+        description: "[Output Only] If warning messages are generated during processing\
+          \ of the operation, this field will be populated."
+        items:
+          $ref: "#/definitions/warnings"
+      httpErrorStatusCode:
+        type: "integer"
+        description: "[Output Only] This field contains the HTTP error status code\
+          \ that was returned. For example, a 404 means the resource was not found."
+      httpErrorMessage:
+        type: "string"
+        description: "[Output Only] This field contains the HTTP error message that\
+          \ was returned, such as NOT FOUND."
+    example:
+      targetId: "targetId"
+      httpErrorMessage: "httpErrorMessage"
+      warnings:
+      - code: "code"
+        message: "message"
+      - code: "code"
+        message: "message"
+      description: "description"
+      error:
+        errors:
+        - code: "code"
+          location: "location"
+          message: "message"
+        - code: "code"
+          location: "location"
+          message: "message"
+      statusMessage: "statusMessage"
+      insertTime: "insertTime"
+      httpErrorStatusCode: 6
+      targetLink: "targetLink"
+      name: "name"
+      progress: 0
+      operationType: "operationType"
+      startTime: "startTime"
+      id: "id"
+      endTime: "endTime"
+      clientOperationId: "clientOperationId"
+      user: "user"
+      status: "PENDING"
+  error:
+    type: "object"
+    properties:
+      errors:
+        type: "array"
+        items:
+          $ref: "#/definitions/errors"
+    example:
+      errors:
+      - code: "code"
+        location: "location"
+        message: "message"
+      - code: "code"
+        location: "location"
+        message: "message"
+  errors:
+    type: "object"
+    properties:
+      code:
+        type: "string"
+      location:
+        type: "string"
+      message:
+        type: "string"
+    example:
+      code: "code"
+      location: "location"
+      message: "message"
+  warnings:
+    type: "object"
+    properties:
+      code:
+        type: "string"
+      message:
+        type: "string"
+    example:
+      code: "code"
+      message: "message"
+  setCapacity:
+    type: "object"
+    required:
+    - "provisionedCapacityUnits"
+    properties:
+      provisionedCapacityUnits:
+        type: "number"
+        description: "The number of storage capacity units provisioned"
+      capacityUnitType:
+        type: "string"
+        example: "Steps"
+        description: "The unit used for capacity, possible values are: Steps, Bytes.\n\
+          \ Default value is Steps."
+        default: "Steps"
+        enum:
+        - "Steps"
+        - "Bytes"
+  statistics:
+    type: "object"
+    properties:
+      readThroughput:
+        type: "integer"
+        description: "Number of reads in bytes"
+        readOnly: true
+      writeThroughput:
+        type: "integer"
+        description: "Number of writes in bytes"
+        readOnly: true
+      readIOPS:
+        type: "integer"
+        description: "Number of read IOPS"
+        readOnly: true
+      writeIOPS:
+        type: "integer"
+        description: "Number of write IOPS"
+        readOnly: true
+      mdIOPS:
+        type: "integer"
+        description: "Number of metadata IOPS"
+        readOnly: true
+      readLatency:
+        type: "integer"
+        description: "Read latency in nano seconds"
+        readOnly: true
+      writeLatency:
+        type: "integer"
+        description: "Write latency in nano seconds"
+        readOnly: true
+      mdLatency:
+        type: "integer"
+        description: "Metadata latency in nano seconds"
+        readOnly: true
+    example:
+      mdIOPS: 5
+      writeThroughput: 6
+      readIOPS: 1
+      writeLatency: 7
+      mdLatency: 9
+      readThroughput: 0
+      readLatency: 2
+      writeIOPS: 5
+  updateQuota:
+    type: "object"
+    required:
+    - "hardQuota"
+    - "quotaType"
+    properties:
+      quotaType:
+        type: "string"
+        example: "auto"
+        description: "Supported values are: auto and fixed. Use auto if you have one\
+          \ filesystem, the size of the filesystem will be the same as the instance\
+          \ size. Use fixed if you have more than one filesystem, and set the filesystem\
+          \ size through filesystemQuota."
+        enum:
+        - "auto"
+        - "fixed"
+      hardQuota:
+        type: "integer"
+        format: "int64"
+        description: "Set the size of a filesystem if filesystemQuotaType is set to\
+          \ fixed. If it is set to auto, this value is ignored and quota is the instance\
+          \ total size."
+        default: 0
+  updateDesciption:
+    type: "object"
+    required:
+    - "description"
+    properties:
+      description:
+        type: "string"
+        description: "[Output Only] A textual description of the resource."
+        maxLength: 2000
+  Snapshot:
+    type: "object"
+    required:
+    - "name"
+    - "retention"
+    properties:
+      name:
+        type: "string"
+        description: "The name of the resource, provided by the client when initially\
+          \ creating the resource. The resource name must be 1-63 characters long,\
+          \ and comply with RFC1035"
+      retention:
+        type: "number"
+        description: "Snapshot retention policy. The number of days to hold the snapshot\
+          \ till automatic deletion. Default 0, meaning no retention policy defined."
+        minimum: 2
+        maximum: 2555
+    example:
+      name: "name"
+      retention: 206.4514370246962471355800516903400421142578125
+  data_container_add:
+    type: "object"
+    required:
+    - "description"
+    - "name"
+    - "quotaType"
+    properties:
+      name:
+        type: "string"
+        description: "Filesystem name"
+      description:
+        type: "string"
+        description: "Filesystem description"
+        default: ""
+      quotaType:
+        type: "string"
+        example: "auto"
+        description: "Supported values are: auto and fixed. Use auto if you have one\
+          \ filesystem, the size of the filesystem will be the same as the instance\
+          \ size. Use fixed if you have more than one filesystem, and set the filesystem\
+          \ size through filesystemQuota."
+        default: "auto"
+        enum:
+        - "auto"
+        - "fixed"
+      hardQuota:
+        type: "integer"
+        format: "int64"
+        description: "Set the size of a filesystem if filesystemQuotaType is set to\
+          \ fixed. If it is set to auto, this value is ignored and quota is the instance\
+          \ total size."
+        default: 0
+      snapshot:
+        description: "Snapshot object"
+        $ref: "#/definitions/snapshot_schedule"
+      accessors:
+        description: "Defines the access rights to the File System. This is a list\
+          \ of access rights configured by the client for the file system."
+        $ref: "#/definitions/accessors"
+  Projects:
+    type: "object"
+    required:
+    - "displayName"
+    - "id"
+    - "name"
+    properties:
+      id:
+        type: "string"
+        description: "Project numeric id, which is automatically assigned when you\
+          \ create Google cloud project."
+      name:
+        type: "string"
+        description: "Project ID, which is a unique identifier for the project."
+        minLength: 6
+        maxLength: 30
+      displayName:
+        type: "string"
+        description: "Project display name."
+        minLength: 4
+        maxLength: 30
+      allowedUsers:
+        type: "array"
+        description: "List of users allowed to access resources on the specified project."
+        items:
+          $ref: "#/definitions/AllowedUser"
+      alphaEnabled:
+        type: "boolean"
+        description: "Alpha features enabled on this project"
+        readOnly: true
+      status:
+        type: "string"
+        description: "The status of the project, which can be one of the following:\
+          \ PENDING_APPROVAL, ENABLED, or DISABLED."
+        readOnly: true
+      creationTimestamp:
+        type: "string"
+        format: "date-time"
+        description: "[Output Only] Creation timestamp in RFC3339 text format."
+        readOnly: true
+    example:
+      alphaEnabled: true
+      displayName: "displayName"
+      name: "name"
+      creationTimestamp: "2000-01-23T04:56:07.000+00:00"
+      id: "id"
+      allowedUsers:
+      - addedBy: "addedBy"
+        creationTimestamp: "2000-01-23T04:56:07.000+00:00"
+        user: "user"
+      - addedBy: "addedBy"
+        creationTimestamp: "2000-01-23T04:56:07.000+00:00"
+        user: "user"
+      status: "status"
+  AllowedUser:
+    type: "object"
+    properties:
+      user:
+        type: "string"
+        description: "User email address."
+      addedBy:
+        type: "string"
+        description: "Email address of the user added this user to project."
+        readOnly: true
+      creationTimestamp:
+        type: "string"
+        format: "date-time"
+        description: "[Output Only] Creation timestamp in RFC3339 text format."
+        readOnly: true
+    example:
+      addedBy: "addedBy"
+      creationTimestamp: "2000-01-23T04:56:07.000+00:00"
+      user: "user"
+  Users:
+    type: "object"
+    required:
+    - "users"
+    properties:
+      users:
+        type: "array"
+        description: "List of users allowed to access resources on the specified project."
+        items:
+          $ref: "#/definitions/AllowedUser"
+    example:
+      users:
+      - addedBy: "addedBy"
+        creationTimestamp: "2000-01-23T04:56:07.000+00:00"
+        user: "user"
+      - addedBy: "addedBy"
+        creationTimestamp: "2000-01-23T04:56:07.000+00:00"
+        user: "user"
+  Events:
+    type: "object"
+    required:
+    - "logName"
+    - "message"
+    - "name"
+    properties:
+      id:
+        type: "string"
+        description: "[Output Only] The unique identifier for the resource. This identifier\
+          \ is defined by the server."
+      name:
+        type: "string"
+        description: "[Output Only] Name of the resource."
+      logName:
+        type: "string"
+        description: "Name of the log"
+      message:
+        type: "string"
+        description: "Event message"
+      severity:
+        type: "string"
+        description: "The severity of the event, which can be one of the following:\
+          \ INFO, WARN, ERROR, or CRITICAL"
+      ackedBy:
+        type: "string"
+        description: "The user that acked the event"
+      instanceName:
+        type: "string"
+        description: "The instance name related to the event"
+      timestamp:
+        type: "string"
+        description: "The event timestamp"
+        readOnly: true
+      creationTimestamp:
+        type: "string"
+        description: "[Output Only] Creation timestamp in RFC3339 text format."
+        readOnly: true
+    example:
+      severity: "severity"
+      ackedBy: "ackedBy"
+      logName: "logName"
+      instanceName: "instanceName"
+      name: "name"
+      creationTimestamp: "creationTimestamp"
+      id: "id"
+      message: "message"
+      timestamp: "timestamp"
+  EventsCount:
+    type: "object"
+    properties:
+      count:
+        type: "integer"
+        description: "Number of events"
+    example:
+      count: 0
+  Snapshots:
+    type: "object"
+    required:
+    - "name"
+    - "retention"
+    properties:
+      id:
+        type: "string"
+        description: "[Output Only] The unique identifier for the snapshot. This identifier\
+          \ is defined by the server."
+        readOnly: true
+      name:
+        type: "string"
+        description: "The name of the resource, provided by the client when initially\
+          \ creating the resource. The resource name must be 1-63 characters long,\
+          \ and comply with RFC1035"
+      retention:
+        type: "number"
+        description: "Snapshot retention policy. The number of days to hold the snapshot\
+          \ till automatic deletion. Default 0, meaning no retention policy defined."
+      instanceId:
+        type: "string"
+        description: "[Output Only] The filesystem instance id that this snapshot\
+          \ was taken for."
+        readOnly: true
+      instanceName:
+        type: "string"
+        description: "[Output Only] The filesystem instance name that this snapshot\
+          \ was taken for."
+        readOnly: true
+      filesystemId:
+        type: "string"
+        description: "[Output Only] The filesystem id that this snapshot was taken\
+          \ for."
+        readOnly: true
+      filesystemName:
+        type: "string"
+        description: "[Output Only] The filesystem name that this snapshot was taken\
+          \ for."
+        readOnly: true
+      region:
+        type: "string"
+        description: "Snapshot region location."
+        readOnly: true
+      size:
+        type: "integer"
+        description: "[Output Only] Snapshot size in bytes."
+        readOnly: true
+      schedule:
+        type: "string"
+        example: "MANUALLY"
+        description: "Snapshot scheduling Daily, Weekly, Monthly or Manual."
+        readOnly: true
+        enum:
+        - "MANUALLY"
+        - "DAILY"
+        - "WEEKLY"
+        - "MONTHLY"
+      share:
+        description: "[Output Only] If exists, this object includes the snapshot share\
+          \ parameters."
+        readOnly: true
+        $ref: "#/definitions/share"
+      creationTimestamp:
+        type: "string"
+        description: "[Output Only] Creation timestamp in RFC3339 text format."
+        readOnly: true
+      deletionTime:
+        type: "string"
+        description: ""
+        readOnly: true
+      status:
+        type: "string"
+        example: "PENDING"
+        description: "[Output Only] The status of the snapshot. A snapshot can be\
+          \ used to mount a previous copy of the filesystem, only after the snapshot\
+          \ has been successfully created and the status is set to READY. Possible\
+          \ values are PENDING, READY."
+        readOnly: true
+        enum:
+        - "PENDING"
+        - "READY"
+        - "REMOVING"
+    example:
+      filesystemName: "filesystemName"
+      instanceName: "instanceName"
+      deletionTime: "deletionTime"
+      schedule: "MANUALLY"
+      instanceId: "instanceId"
+      size: 6
+      name: "name"
+      creationTimestamp: "creationTimestamp"
+      share:
+        name: "name"
+        nfsMountPoint: "nfsMountPoint"
+      id: "id"
+      region: "region"
+      retention: 0.80082819046101150206595775671303272247314453125
+      filesystemId: "filesystemId"
+      status: "PENDING"
+  share:
+    type: "object"
+    properties:
+      name:
+        type: "string"
+        description: "[Output Only] Share name"
+        readOnly: true
+      nfsMountPoint:
+        type: "string"
+        description: "[Output Only] NFS mount point to be used in mount command."
+        readOnly: true
+    example:
+      name: "name"
+      nfsMountPoint: "nfsMountPoint"
+  SnapshotShareCreate:
+    type: "object"
+    required:
+    - "shareName"
+    properties:
+      shareName:
+        type: "string"
+        description: "[Output Only] Share name"
+    example:
+      shareName: "shareName"
+responses:
+  MaskError:
+    description: "When any error occurs on mask"
+  ParseError:
+    description: "When a mask can't be parsed"

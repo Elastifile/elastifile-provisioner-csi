@@ -28,8 +28,8 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
-	efaasapi "ecfs/efaas-api"
 	"ecfs/log"
+	"github.com/elastifile/efaasclient/efaasapi"
 	"github.com/elastifile/emanage-go/src/emanage-client"
 	"github.com/elastifile/errors"
 )
@@ -289,7 +289,7 @@ func fixSnapshotName(snapshotName string) (fixedSnapshotName string, err error) 
 func (cs *controllerServer) CreateSnapshot(ctx context.Context, req *csi.CreateSnapshotRequest) (response *csi.CreateSnapshotResponse, err error) {
 	var (
 		ems           emanageClient
-		efaasSnapshot *efaasapi.Snapshots
+		efaasSnapshot efaasapi.Snapshots
 		ecfsSnapshot  *emanage.Snapshot
 	)
 
@@ -318,7 +318,7 @@ func (cs *controllerServer) CreateSnapshot(ctx context.Context, req *csi.CreateS
 		}
 
 		if IsEFAAS() {
-			response, err = efaasGetCreateSnapshotResponse(efaasSnapshot, req)
+			response, err = efaasGetCreateSnapshotResponse(&efaasSnapshot, req)
 		} else {
 			response, err = getCreateSnapshotResponse(ecfsSnapshot, req)
 		}
@@ -355,7 +355,7 @@ func (cs *controllerServer) CreateSnapshot(ctx context.Context, req *csi.CreateS
 					fmt.Sprintf("Failed to create snapshot for volume %v with name %v", volumeId, req.GetName()), 0)
 			}
 			if IsEFAAS() {
-				response, err = efaasGetCreateSnapshotResponse(efaasSnapshot, req)
+				response, err = efaasGetCreateSnapshotResponse(&efaasSnapshot, req)
 			} else {
 				response, err = getCreateSnapshotResponse(ecfsSnapshot, req)
 			}
@@ -380,7 +380,7 @@ func (cs *controllerServer) CreateSnapshot(ctx context.Context, req *csi.CreateS
 	snapshotCache.Set(req.GetName(), snapshotId, true)
 
 	if IsEFAAS() {
-		response, err = efaasGetCreateSnapshotResponse(efaasSnapshot, req)
+		response, err = efaasGetCreateSnapshotResponse(&efaasSnapshot, req)
 	} else {
 		response, err = getCreateSnapshotResponse(ecfsSnapshot, req)
 	}

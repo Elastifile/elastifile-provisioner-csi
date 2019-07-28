@@ -15,49 +15,35 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
-	"ecfs/efaas"
-	efaasapi "ecfs/efaas-api"
 	"ecfs/log"
-	"size"
+	"github.com/elastifile/efaasclient"
+	"github.com/elastifile/efaasclient/efaasapi"
+	"github.com/elastifile/efaasclient/size"
 )
-
-//type EfaasWrapper struct {
-//	*efaasapi.Configuration
-//}
 
 const (
 	efaasSnapshotClassParam_Retention = "retention"
 	efaasMaxSnapshotNameLen           = 63 // eFaaS API limit
+	efaasTimeoutShort = 5 * time.Minute
+	efaasTimeoutNormal = 15 * time.Minute
+	efaasTimeoutLong = 60 * time.Minute
 )
 
-func newEfaasConf() (efaasConf *efaasapi.Configuration) {
+func newEfaasClient() (efaasConf *efaasclient.Client) {
 	_, secret, err := GetPluginSettings()
 	if err != nil {
 		panic("Failed to get plugin settings - " + err.Error())
 	}
 
 	jsonData := secret[efaasSecretsKeySaJson]
-	efaasConf, err = efaas.NewEfaasConf(jsonData)
+
+	efaasConf, err = efaasclient.NewClient(jsonData, "")
 	if err != nil {
 		panic(fmt.Sprintf("Failed to get eFaaS client based on json %v", string(jsonData)))
 	}
 
 	return
 }
-
-//func (ew *EfaasWrapper) GetClient(jsonData []byte) *efaasapi.Configuration {
-//	if ew.Configuration == nil {
-//		glog.V(log.DETAILED_INFO).Infof("ecfs: Initializing eFaaS client")
-//		conf, err := efaas.NewEfaasConf()
-//		if err != nil {
-//			panic(fmt.Sprintf("Failed to create eFaaS client. err: %v", err))
-//		}
-//		ew.Configuration = conf
-//		glog.V(log.DEBUG).Infof("ecfs: Initialized new eFaaS client")
-//	}
-//
-//	return ew.Configuration
-//}
 
 func efaasGetInstanceName() string {
 	return os.Getenv(envEfaasInstance)
@@ -66,9 +52,9 @@ func efaasGetInstanceName() string {
 // updateDefaultFsQuota works around v1 API default "auto" quota taking up all the capacity, preventing add'l filesystems' creation
 func updateDefaultFsQuota(delta int64) (err error) {
 	defaultFsName := efaasGetInstanceName()
-	efaasConf := newEfaasConf()
+	client := newEfaasClient()
 
-	fs, err := efaas.GetFilesystemByName(efaasConf, efaasGetInstanceName(), defaultFsName)
+	fs, err := client.GetFilesystemByName(efaasGetInstanceName(), defaultFsName)
 	if err != nil {
 		if isErrorDoesNotExist(err) {
 			glog.Warningf("Default filesystem not found - unable to update its quota")
@@ -78,7 +64,7 @@ func updateDefaultFsQuota(delta int64) (err error) {
 	}
 
 	quota := fs.HardQuota + delta
-	err = efaas.UpdateFilesystemQuotaById(efaasConf, efaasGetInstanceName(), fs.Id, size.Size(quota))
+	err = client.UpdateFilesystemQuotaById(efaasGetInstanceName(), fs.Id, size.Size(quota), 5 * time.Minute)
 	if err != nil {
 		return errors.WrapPrefix(err, fmt.Sprintf("Failed to update default filesystem quota to %v", quota), 0)
 	}
@@ -87,11 +73,11 @@ func updateDefaultFsQuota(delta int64) (err error) {
 }
 
 func efaasCreateEmptyVolume(volOptions *volumeOptions) (volumeId volumeHandleType, err error) {
-	efaasConf := newEfaasConf()
+	client := newEfaasClient()
 	glog.V(log.DETAILED_INFO).Infof("ecfs: Creating Volume - settings: %+v", volOptions)
 	volumeId = volOptions.VolumeId
 
-	snapshot := efaasapi.SnapshotSchedule{
+	snapshot := &efaasapi.SnapshotSchedule{
 		Enable:    false,
 		Schedule:  "Monthly",
 		Retention: 2.0,
@@ -108,19 +94,19 @@ func efaasCreateEmptyVolume(volOptions *volumeOptions) (volumeId volumeHandleTyp
 	filesystem := efaasapi.DataContainerAdd{
 		Name:        string(volumeId),
 		HardQuota:   volOptions.Capacity,
-		QuotaType:   efaas.QuotaTypeFixed,
+		QuotaType:   efaasclient.QuotaTypeFixed,
 		Description: fmt.Sprintf("Filesystem %v", volumeId),
-		Accessors:   efaasapi.Accessors{Items:accessorItems},
+		Accessors:   &efaasapi.Accessors{Items:accessorItems},
 		Snapshot:    snapshot,
 	}
 
 	// Create Filesystem
-	err = efaas.AddFilesystem(efaasConf, efaasGetInstanceName(), filesystem)
+	err = client.AddFilesystem(efaasGetInstanceName(), filesystem, efaasTimeoutNormal)
 	if err != nil {
 		if isErrorAlreadyExists(err) {
 			glog.V(log.DEBUG).Infof("ecfs: Volume %v was already created - assuming it was created "+
 				"during previous, failed, attempt", volumeId)
-			_, e := efaas.GetFilesystemByName(efaasConf, efaasGetInstanceName(), string(volumeId))
+			_, e := client.GetFilesystemByName(efaasGetInstanceName(), string(volumeId))
 			if e != nil {
 				logSecondaryError(err, e)
 				return
@@ -137,7 +123,7 @@ func efaasCreateEmptyVolume(volOptions *volumeOptions) (volumeId volumeHandleTyp
 				}
 
 				// Retry AddFilesystem
-				e = efaas.AddFilesystem(efaasConf, efaasGetInstanceName(), filesystem)
+				e = client.AddFilesystem(efaasGetInstanceName(), filesystem, efaasTimeoutNormal)
 				if e != nil {
 					logSecondaryError(err, e)
 					return
@@ -158,8 +144,8 @@ func efaasCreateEmptyVolume(volOptions *volumeOptions) (volumeId volumeHandleTyp
 }
 
 func efaasDeleteVolume(volName volumeHandleType) (err error) {
-	efaasConf := newEfaasConf()
-	err = efaas.DeleteFilesystem(efaasConf, efaasGetInstanceName(), string(volName))
+	client := newEfaasClient()
+	err = client.DeleteFilesystem(efaasGetInstanceName(), string(volName), efaasTimeoutLong)
 	if err != nil {
 		if isErrorDoesNotExist(err) {
 			glog.V(log.DEBUG).Infof("ecfs: Filesystem %v not found - assuming already deleted", volName)
@@ -209,10 +195,10 @@ func efaasGetCreateSnapshotResponse(efaasSnapshot *efaasapi.Snapshots, req *csi.
 	return
 }
 
-func efaasGetSnapshotById(snapshotId string) (snapshot *efaasapi.Snapshots, err error) {
-	efaasConf := newEfaasConf()
+func efaasGetSnapshotById(snapshotId string) (snapshot efaasapi.Snapshots, err error) {
+	client := newEfaasClient()
 	glog.V(log.VERBOSE_DEBUG).Infof("ecfs: Getting Snapshot by ID: %v", snapshotId)
-	snapshot, err = efaas.GetSnapshotById(efaasConf, snapshotId)
+	snapshot, err = client.GetSnapshotById(snapshotId)
 	if err != nil {
 		err = errors.WrapPrefix(err, fmt.Sprintf("Failed to get eFaaS snapshot by ID %v", snapshotId), 0)
 		return
@@ -220,10 +206,10 @@ func efaasGetSnapshotById(snapshotId string) (snapshot *efaasapi.Snapshots, err 
 	return
 }
 
-func efaasGetSnapshotByName(snapshotName string) (snapshot *efaasapi.Snapshots, err error) {
-	efaasConf := newEfaasConf()
+func efaasGetSnapshotByName(snapshotName string) (snapshot efaasapi.Snapshots, err error) {
+	client := newEfaasClient()
 	glog.V(log.VERBOSE_DEBUG).Infof("ecfs: Getting Snapshot by name: %v", snapshotName)
-	snapshot, err = efaas.GetSnapshotByName(efaasConf, efaasGetInstanceName(), snapshotName)
+	snapshot, err = client.GetSnapshotByName(efaasGetInstanceName(), snapshotName)
 	if err != nil {
 		err = errors.WrapPrefix(err, fmt.Sprintf("Failed to get eFaaS snapshot by name %v", snapshotName), 0)
 		return
@@ -248,8 +234,8 @@ func efaasSnapshotRetentionFromParams(params map[string]string) (retention float
 	return float32(ret64), err
 }
 
-func efaasCreateSnapshot(name string, volumeId volumeHandleType, params map[string]string) (snapshot *efaasapi.Snapshots, err error) {
-	efaasConf := newEfaasConf()
+func efaasCreateSnapshot(name string, volumeId volumeHandleType, params map[string]string) (snapshot efaasapi.Snapshots, err error) {
+	client := newEfaasClient()
 	glog.V(log.HIGH_LEVEL_INFO).Infof("ecfs: Creating snapshot %v for volume %v", name, volumeId)
 	glog.V(log.DEBUG).Infof("ecfs: Creating snapshot %v - parameters: %v", name, params)
 
@@ -271,7 +257,7 @@ func efaasCreateSnapshot(name string, volumeId volumeHandleType, params map[stri
 		Retention: retention,
 	}
 
-	err = efaas.CreateSnapshot(efaasConf, efaasGetInstanceName(), fsName, snapCreateArgs)
+	err = client.CreateSnapshot(efaasGetInstanceName(), fsName, snapCreateArgs, efaasTimeoutShort)
 	if err != nil {
 		if !isErrorAlreadyExists(err) {
 			err = errors.WrapPrefix(err, fmt.Sprintf("Failed to create snapshot on filesystem %v - %#v",
@@ -280,7 +266,7 @@ func efaasCreateSnapshot(name string, volumeId volumeHandleType, params map[stri
 		}
 	}
 
-	snapshot, err = efaas.GetSnapshotByFsAndName(efaasConf, efaasGetInstanceName(), fsName, name)
+	snapshot, err = client.GetSnapshotByFsAndName(efaasGetInstanceName(), fsName, name)
 	if err != nil {
 		err = errors.WrapPrefix(err, fmt.Sprintf("Failed to get snapshot by name %v from filesystem %v",
 			name, fsName), 0)
@@ -292,8 +278,8 @@ func efaasCreateSnapshot(name string, volumeId volumeHandleType, params map[stri
 
 // efaasCreateShare creates share (aka export) on the specified snapshot
 func efaasCreateShare(snapName string) (share *efaasapi.Share, err error) {
-	efaasConf := newEfaasConf()
-	err = efaas.CreateShare(efaasConf, efaasGetInstanceName(), snapName, snapshotExportName)
+	client := newEfaasClient()
+	err = client.CreateShare(efaasGetInstanceName(), snapName, snapshotExportName, efaasTimeoutShort)
 	if err != nil {
 		if !isErrorAlreadyExists(err) {
 			err = errors.WrapPrefix(err, fmt.Sprintf("Failed to create share on snapshot %v", snapName), 0)
@@ -301,7 +287,7 @@ func efaasCreateShare(snapName string) (share *efaasapi.Share, err error) {
 		}
 	}
 
-	share, err = efaas.GetShare(efaasConf, efaasGetInstanceName(), snapName)
+	share, err = client.GetShare(efaasGetInstanceName(), snapName)
 	if err != nil {
 		err = errors.WrapPrefix(err, fmt.Sprintf("Failed to get recently created share %v on snapshot %v",
 			snapshotExportName, snapName), 0)
@@ -312,8 +298,8 @@ func efaasCreateShare(snapName string) (share *efaasapi.Share, err error) {
 }
 
 func efaasDeleteShare(snapName string) (err error) {
-	efaasConf := newEfaasConf()
-	err = efaas.DeleteShare(efaasConf, efaasGetInstanceName(), snapName, snapshotExportName)
+	client := newEfaasClient()
+	err = client.DeleteShare(efaasGetInstanceName(), snapName, snapshotExportName, efaasTimeoutShort)
 	if err != nil {
 		if !isErrorDoesNotExist(err) {
 			err = errors.WrapPrefix(err, fmt.Sprintf("Failed to delete share %v on snapshot %v",
@@ -437,11 +423,11 @@ func efaasCreateVolumeFromSnapshot(srcSnapName string, dstVolOptions *volumeOpti
 }
 
 func efaasDeleteSnapshot(name string) (err error) {
-	efaasConf := newEfaasConf()
+	client := newEfaasClient()
 
 	glog.V(log.INFO).Infof("ecfs: Deleting snapshot %v", name)
 
-	snapshot, err := efaas.GetSnapshotByName(efaasConf, efaasGetInstanceName(), name)
+	snapshot, err := client.GetSnapshotByName(efaasGetInstanceName(), name)
 	if err != nil {
 		if isErrorDoesNotExist(err) { // This operation has to be idempotent
 			glog.V(log.DEBUG).Infof("ecfs: Snapshot %v not found - assuming already deleted", name)
@@ -459,7 +445,7 @@ func efaasDeleteSnapshot(name string) (err error) {
 	}
 
 	// Delete snapshot
-	err = efaas.DeleteSnapshot(efaasConf, efaasGetInstanceName(), snapshot.FilesystemName, name)
+	err = client.DeleteSnapshot(efaasGetInstanceName(), snapshot.FilesystemName, name, efaasTimeoutShort)
 	if err != nil {
 		if isErrorDoesNotExist(err) { // This operation has to be idempotent
 			glog.V(log.DEBUG).Infof("ecfs: Snapshot %v not found - assuming already deleted", name)
