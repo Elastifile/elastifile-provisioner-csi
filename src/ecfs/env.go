@@ -9,11 +9,14 @@ import (
 
 const (
 	// Environment variables are set at deployment time via plugin container's manifest
-	envNamespace     = "CSI_NAMESPACE"
-	envVarK8sNodeID  = "NODE_ID"
-	envAppName       = "APP_NAME"
-	envEKFS          = "EKFS"
-	envEfaasInstance = "CSI_EFAAS_INSTANCE"
+	envNamespace         = "CSI_NAMESPACE"
+	envVarK8sNodeID      = "NODE_ID"
+	envAppName           = "APP_NAME"
+	envEKFS              = "EKFS"
+	envEfaasInstance     = "CSI_EFAAS_INSTANCE"
+	envProjectNumber     = "GCP_PROJECT_NUMBER"
+	EnvProjectNumberPrev = "CSI_GCP_PROJECT_NUMBER" // Deprecated, kept for backwards compatibility
+	envEfaasUrl          = "EFAAS_URL"
 
 	// Defaults
 	defaultNamespace = "default"

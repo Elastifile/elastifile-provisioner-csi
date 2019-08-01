@@ -173,7 +173,7 @@ func GetEfaasToken(data []byte) (googleIdToken string, err error) {
 	return
 }
 
-func ProjectNumber() string {
+func projectNumberFromEnv() string {
 	// TODO: Check if the value can be obtained programmatically, e.g. https://github.com/googleapis/google-cloud-ruby/issues/1416
 	projectNumber := os.Getenv(EnvProjectNumber)
 	if projectNumber == "" {
@@ -186,17 +186,21 @@ func ProjectNumber() string {
 	return projectNumber
 }
 
-// efaasBaseUrl returns the base eFaaS URL, e.g. https://bronze-eagle.gcp.elastifile.com
-func efaasBaseUrl() string {
-	projectNumber := os.Getenv(EnvEfaasUrl)
-	if projectNumber == "" {
+// efaasBaseUrlFromEnv returns the base eFaaS URL, e.g. https://bronze-eagle.gcp.elastifile.com
+func efaasBaseUrlFromEnv() string {
+	baseURL := os.Getenv(EnvEfaasUrl)
+	if baseURL == "" {
 		panic(fmt.Sprintf("eFaaS URL not specified - expected to be present in '%v' environment variable",
 			EnvEfaasUrl))
 	}
-	return projectNumber
+	return baseURL
 }
 
 // EfaasApiUrl returns the base URL for accessing eFaaS APIs, e.g. https://bronze-eagle.gcp.elastifile.com/api/v2
-func EfaasApiUrl() string {
-	return efaasBaseUrl() + "/api/v2"
+func EfaasApiUrl(baseUrl string) string {
+	if baseUrl == "" {
+		panic("Got empty base URL")
+	}
+
+	return baseUrl + "/api/v2"
 }

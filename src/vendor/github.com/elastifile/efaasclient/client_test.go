@@ -21,8 +21,8 @@ const (
 	testProjectNumber = "276859139519" // c934
 	//testProjectNumber = "602010805072" // golden-eagle-dev-consumer10
 	//testProjectNumber    = "507926947502" // elastifile-show
-	testEfaasEnvironment = "https://silver-eagle.gcp.elastifile.com"
-	//testEfaasEnvironment = "https://bronze-eagle.gcp.elastifile.com"
+	testEfaasURL = "https://silver-eagle.gcp.elastifile.com"
+	//testEfaasURL = "https://bronze-eagle.gcp.elastifile.com"
 	testServiceAccountKeyFile = "/tmp/sa-key.json"
 )
 
@@ -34,23 +34,41 @@ func testSaKey() (data []byte) {
 	return data
 }
 
-func testEfaasApiClient() (client *Client) {
+func testApiClientFromEnv() (client *Client) {
 	err := os.Setenv(EnvProjectNumber, testProjectNumber)
 	if err != nil {
 		panic(fmt.Sprintf("Failed to set env %v to %v. err: %v", EnvProjectNumber, testProjectNumber, err))
 	}
 
-	err = os.Setenv(EnvEfaasUrl, testEfaasEnvironment)
+	err = os.Setenv(EnvEfaasUrl, testEfaasURL)
 	if err != nil {
 		panic(fmt.Sprintf("Failed to set env %v to %v. err: %v", EnvEfaasUrl, testProjectNumber, err))
 	}
 
-	client, err = NewClient(testSaKey(), EfaasApiUrl())
+	client, err = NewClient(testSaKey(), ClientCreateOpts{})
 	if err != nil {
 		panic(fmt.Sprintf("Failed to create eFaaS API client %v", err))
 	}
 
 	return client
+}
+
+func testApiClientFromStruct() (client *Client) {
+	opts := ClientCreateOpts{
+		ProjectNumber: testProjectNumber,
+		BaseURL:       testEfaasURL,
+	}
+	client, err := NewClient(testSaKey(), opts)
+	if err != nil {
+		panic(fmt.Sprintf("Failed to create eFaaS API client %v", err))
+	}
+
+	return client
+}
+
+func testEfaasApiClient() (client *Client) {
+	//return testApiClientFromEnv()
+	return testApiClientFromStruct()
 }
 
 func TestClient_CreateInstance(t *testing.T) {
@@ -71,6 +89,20 @@ func TestClient_CreateInstance(t *testing.T) {
 		t.Fatalf("Instance name (%v) doesn't match the requested one ('%v')", inst.Name, testInstName)
 	}
 	t.Logf("Instance: %#v", inst)
+}
+
+func TestClient_ListInstances(t *testing.T) {
+	client := testEfaasApiClient()
+
+	t.Logf("Listing instances")
+	instances, err := client.ListInstances()
+	if err != nil {
+		t.Fatal("ListInstances failed", "err", err)
+	}
+
+	for _, inst := range instances {
+		t.Logf("Instance: %v (%v)", inst.Name, inst.Id)
+	}
 }
 
 func TestClient_GetInstance(t *testing.T) {

@@ -24,9 +24,9 @@ import (
 const (
 	efaasSnapshotClassParam_Retention = "retention"
 	efaasMaxSnapshotNameLen           = 63 // eFaaS API limit
-	efaasTimeoutShort = 5 * time.Minute
-	efaasTimeoutNormal = 15 * time.Minute
-	efaasTimeoutLong = 60 * time.Minute
+	efaasTimeoutShort                 = 5 * time.Minute
+	efaasTimeoutNormal                = 15 * time.Minute
+	efaasTimeoutLong                  = 60 * time.Minute
 )
 
 func newEfaasClient() (efaasConf *efaasclient.Client) {
@@ -36,8 +36,16 @@ func newEfaasClient() (efaasConf *efaasclient.Client) {
 	}
 
 	jsonData := secret[efaasSecretsKeySaJson]
+	opts := efaasclient.ClientCreateOpts{
+		ProjectNumber: os.Getenv(envProjectNumber),
+		BaseURL:       os.Getenv(envEfaasUrl),
+	}
 
-	efaasConf, err = efaasclient.NewClient(jsonData, "")
+	if opts.ProjectNumber == "" { // TODO: DELME in v1.0.0
+		opts.ProjectNumber = os.Getenv(EnvProjectNumberPrev)
+	}
+
+	efaasConf, err = efaasclient.NewClient(jsonData, opts)
 	if err != nil {
 		panic(fmt.Sprintf("Failed to get eFaaS client based on json %v", string(jsonData)))
 	}
@@ -64,7 +72,7 @@ func updateDefaultFsQuota(delta int64) (err error) {
 	}
 
 	quota := fs.HardQuota + delta
-	err = client.UpdateFilesystemQuotaById(efaasGetInstanceName(), fs.Id, size.Size(quota), 5 * time.Minute)
+	err = client.UpdateFilesystemQuotaById(efaasGetInstanceName(), fs.Id, size.Size(quota), 5*time.Minute)
 	if err != nil {
 		return errors.WrapPrefix(err, fmt.Sprintf("Failed to update default filesystem quota to %v", quota), 0)
 	}
@@ -96,7 +104,7 @@ func efaasCreateEmptyVolume(volOptions *volumeOptions) (volumeId volumeHandleTyp
 		HardQuota:   volOptions.Capacity,
 		QuotaType:   efaasclient.QuotaTypeFixed,
 		Description: fmt.Sprintf("Filesystem %v", volumeId),
-		Accessors:   &efaasapi.Accessors{Items:accessorItems},
+		Accessors:   &efaasapi.Accessors{Items: accessorItems},
 		Snapshot:    snapshot,
 	}
 

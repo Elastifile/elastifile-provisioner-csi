@@ -33,9 +33,15 @@ const (
 
 const minQuota = int64(10 * size.GiB)
 
+type ClientCreateOpts struct {
+	ProjectNumber string // Numeric GCP project Id
+	BaseURL       string // Service URL, e.g. https://cloud-file-service-gcp.elastifile.com
+}
+
 type Client struct {
 	efaasapi.APIClient
-	Context context.Context
+	context       context.Context
+	projectNumber string
 }
 
 func getEfaasConf(jsonData []byte) (efaasConf *efaasapi.Configuration, err error) {
@@ -51,24 +57,38 @@ func getEfaasConf(jsonData []byte) (efaasConf *efaasapi.Configuration, err error
 	return
 }
 
-func NewClient(saKeyJson []byte, apiBaseURL string) (client *Client, err error) {
-	conf, err := getEfaasConf(saKeyJson)
+func NewClient(saKeyJson []byte, opt ClientCreateOpts) (client *Client, err error) {
+	efaasApiConf, err := getEfaasConf(saKeyJson)
 	if err != nil {
 		err = errors.WrapPrefix(err, "Failed to get eFaaS configuration", 0)
 		return
 	}
 
-	if apiBaseURL != "" {
-		conf.BasePath = apiBaseURL
-	} else {
-		conf.BasePath = EfaasApiUrl()
+	if opt.ProjectNumber == "" {
+		opt.ProjectNumber = projectNumberFromEnv()
+	}
+	if opt.ProjectNumber == "" {
+		err = errors.Errorf("Project number not specified. "+
+			"Either pass it to NewClient or set environment variable %v", EnvProjectNumber)
+		return
 	}
 
-	apiClient := efaasapi.NewAPIClient(conf)
+	if opt.BaseURL == "" {
+		opt.BaseURL = efaasBaseUrlFromEnv()
+	}
+	if opt.BaseURL == "" {
+		err = errors.Errorf("eFaaS URL not specified. "+
+			"Either pass it to NewClient or set environment variable %v", EnvEfaasUrl)
+		return
+	}
+	efaasApiConf.BasePath = EfaasApiUrl(opt.BaseURL)
+
+	apiClient := efaasapi.NewAPIClient(efaasApiConf)
 
 	client = &Client{
-		APIClient: *apiClient,
-		Context:   context.Background(),
+		APIClient:     *apiClient,
+		context:       context.Background(),
+		projectNumber: opt.ProjectNumber,
 	}
 
 	return
@@ -106,10 +126,10 @@ func CheckApiCall(err error, resp *http.Response, op *efaasapi.Operation) error 
 }
 
 func (c *Client) GetOperation(id string) (operation efaasapi.Operation, err error) {
-	op, resp, err := c.ProjectsprojectoperationApi.GetOperation(c.Context, id, ProjectNumber())
+	op, resp, err := c.ProjectsprojectoperationApi.GetOperation(c.context, id, c.projectNumber)
 	if err != nil {
 		err = errors.WrapPrefix(err, fmt.Sprintf("Failed to get operation by id %v project %v",
-			id, ProjectNumber()), 0)
+			id, c.projectNumber), 0)
 		return
 	}
 
@@ -211,7 +231,7 @@ func (c *Client) GetFilesystemByName(instanceName string, fsName string) (filesy
 }
 
 func (c *Client) CreateInstance(instance efaasapi.Instances, timeout time.Duration) (err error) {
-	op, resp, err := c.ProjectsprojectinstancesApi.CreateInstance(c.Context, ProjectNumber(), instance, nil)
+	op, resp, err := c.ProjectsprojectinstancesApi.CreateInstance(c.context, c.projectNumber, instance, nil)
 	err = CheckApiCall(err, resp, &op)
 	if err != nil {
 		err = errors.WrapPrefix(err, fmt.Sprintf("Failed to create instance %v", instance.Name), 0)
@@ -228,11 +248,22 @@ func (c *Client) CreateInstance(instance efaasapi.Instances, timeout time.Durati
 	return
 }
 
+func (c *Client) ListInstances() (instances []efaasapi.Instances, err error) {
+	instances, resp, err := c.ProjectsprojectinstancesApi.ListInstances(c.context, c.projectNumber)
+	err = CheckApiCall(err, resp, nil)
+	if err != nil {
+		err = errors.WrapPrefix(err, fmt.Sprintf("Failed to list instances for project %v", c.projectNumber), 0)
+		return
+	}
+
+	return
+}
+
 func (c *Client) DeleteInstance(instanceName string, timeout time.Duration) (err error) {
 	opts := &efaasapi.DeleteInstanceItemOpts{
 		Force: optional.NewString("false"),
 	}
-	op, resp, err := c.ProjectsprojectinstancesApi.DeleteInstanceItem(c.Context, instanceName, ProjectNumber(), opts)
+	op, resp, err := c.ProjectsprojectinstancesApi.DeleteInstanceItem(c.context, instanceName, c.projectNumber, opts)
 	err = CheckApiCall(err, resp, nil)
 	if err != nil {
 		err = errors.WrapPrefix(err, fmt.Sprintf("Delete Instance %v failed", instanceName), 0)
@@ -250,7 +281,7 @@ func (c *Client) DeleteInstance(instanceName string, timeout time.Duration) (err
 }
 
 func (c *Client) GetInstance(instanceName string) (inst efaasapi.Instances, err error) {
-	inst, resp, err := c.ProjectsprojectinstancesApi.GetInstance(c.Context, instanceName, ProjectNumber())
+	inst, resp, err := c.ProjectsprojectinstancesApi.GetInstance(c.context, instanceName, c.projectNumber)
 	err = CheckApiCall(err, resp, nil)
 	if err != nil {
 		err = errors.WrapPrefix(err, fmt.Sprintf("GetInstance %v failed", instanceName), 0)
@@ -272,7 +303,7 @@ func (c *Client) UpdateFilesystemQuotaById(instanceName string, fsId string, quo
 	}
 
 	glog.V(log.INFO).Infof("Updating filesystem: %#v with %#v", fsId, payload)
-	op, resp, err := c.ProjectsprojectinstancesApi.UpdateFilesystemQuota(c.Context, instanceName, fsId, ProjectNumber(), payload)
+	op, resp, err := c.ProjectsprojectinstancesApi.UpdateFilesystemQuota(c.context, instanceName, fsId, c.projectNumber, payload)
 	err = CheckApiCall(err, resp, nil)
 	if err != nil {
 		err = errors.WrapPrefix(err, fmt.Sprintf("Failed updating filesystem %v quota %#v", fsId, payload), 0)
@@ -306,7 +337,7 @@ func (c *Client) UpdateFilesystemQuotaByName(instanceName string, fsName string,
 }
 
 func (c *Client) UpdateInstanceCapacity(instanceName string, capacity efaasapi.SetCapacity, timeout time.Duration) (err error) {
-	op, resp, err := c.ProjectsprojectinstancesApi.PostInstanceSetCapacity(c.Context, instanceName, ProjectNumber(), capacity)
+	op, resp, err := c.ProjectsprojectinstancesApi.PostInstanceSetCapacity(c.context, instanceName, c.projectNumber, capacity)
 	err = CheckApiCall(err, resp, &op)
 	if err != nil {
 		err = errors.WrapPrefix(err, fmt.Sprintf("Failed to add capacity to instance %v", instanceName), 0)
@@ -323,7 +354,7 @@ func (c *Client) UpdateInstanceCapacity(instanceName string, capacity efaasapi.S
 
 func (c *Client) UpdateFilesystemAccessors(instanceName string, fsId string, accessors efaasapi.Accessors, timeout time.Duration) (err error) {
 	glog.V(log.INFO).Infof("Updating filesystem: %#v with %#v", fsId, accessors)
-	op, resp, err := c.ProjectsprojectinstancesApi.SetAccessorsToFilesystem(c.Context, instanceName, fsId, ProjectNumber(), accessors)
+	op, resp, err := c.ProjectsprojectinstancesApi.SetAccessorsToFilesystem(c.context, instanceName, fsId, c.projectNumber, accessors)
 
 	err = CheckApiCall(err, resp, nil)
 	if err != nil {
@@ -343,7 +374,7 @@ func (c *Client) UpdateFilesystemAccessors(instanceName string, fsId string, acc
 func (c *Client) UpdateSnapshotScheduler(instanceName string, fsId string, scheduler efaasapi.SnapshotSchedule, timeout time.Duration) (err error) {
 	glog.V(log.INFO).Infof("Updating filesystem: %#v with %#v", fsId, scheduler)
 	op, resp, err := c.ProjectsprojectinstancesApi.SetFilesystemSnapshotScheduling(
-		c.Context, instanceName, fsId, ProjectNumber(), scheduler)
+		c.context, instanceName, fsId, c.projectNumber, scheduler)
 
 	err = CheckApiCall(err, resp, nil)
 	if err != nil {
@@ -368,7 +399,7 @@ func (c *Client) AddFilesystem(instanceName string, filesystem efaasapi.DataCont
 	}
 
 	glog.V(log.HIGH_LEVEL_INFO).Infof("Adding filesystem: %#v: %#v", filesystem.Name, filesystem)
-	op, resp, err := c.ProjectsprojectinstancesApi.AddFilesystem(c.Context, inst.Name, ProjectNumber(), filesystem)
+	op, resp, err := c.ProjectsprojectinstancesApi.AddFilesystem(c.context, inst.Name, c.projectNumber, filesystem)
 	err = CheckApiCall(err, resp, &op)
 	if err != nil {
 		err = errors.WrapPrefix(err, fmt.Sprintf("Failed to add filesystem %v - %#v", filesystem.Name, filesystem), 0)
@@ -399,7 +430,7 @@ func (c *Client) DeleteFilesystem(instanceName string, fsName string, timeout ti
 
 	glog.V(log.HIGH_LEVEL_INFO).Infof("Deleting filesystem: %v", fsName)
 
-	op, resp, err := c.ProjectsprojectinstancesApi.DeleteFilesystem(c.Context, inst.Name, fs.Id, ProjectNumber())
+	op, resp, err := c.ProjectsprojectinstancesApi.DeleteFilesystem(c.context, inst.Name, fs.Id, c.projectNumber)
 	err = CheckApiCall(err, resp, &op)
 	if err != nil {
 		err = errors.WrapPrefix(err, fmt.Sprintf("Failed to delete filesystem %v", fsName), 0)
@@ -437,7 +468,7 @@ func (c *Client) GetSnapshotByFsAndName(instanceName string, fsName string, snap
 func (c *Client) ListInstanceSnapshots(instanceName string) (snapshots []efaasapi.Snapshots, err error) {
 	glog.V(log.DEBUG).Infof("Listing all snapshots")
 
-	snapshots, resp, err := c.ProjectsprojectsnapshotsApi.ListInstanceSnapshots(c.Context, ProjectNumber(), instanceName, nil)
+	snapshots, resp, err := c.ProjectsprojectsnapshotsApi.ListInstanceSnapshots(c.context, c.projectNumber, instanceName, nil)
 	err = CheckApiCall(err, resp, nil)
 	if err != nil {
 		err = errors.WrapPrefix(err, fmt.Sprintf("Failed to list instance snapshots"), 0)
@@ -467,7 +498,7 @@ func (c *Client) GetSnapshotByName(instanceName string, snapName string) (snapsh
 
 func (c *Client) GetSnapshotById(snapId string) (snapshot efaasapi.Snapshots, err error) {
 	glog.V(log.DEBUG).Infof("Getting snapshot by Id %v", snapId)
-	snapshot, resp, err := c.ProjectsprojectsnapshotsApi.GetSnapshot(c.Context, ProjectNumber(), snapId)
+	snapshot, resp, err := c.ProjectsprojectsnapshotsApi.GetSnapshot(c.context, c.projectNumber, snapId)
 	err = CheckApiCall(err, resp, nil)
 	if err != nil {
 		err = errors.WrapPrefix(err, fmt.Sprintf("Failed to get snapshots byt Id %v", snapId), 0)
@@ -489,7 +520,7 @@ func (c *Client) ListSnapshotsByFsName(instanceName string, fsName string) (snap
 		Filesystem: optional.NewString(fs.Id),
 		Instance:   optional.NewString(instanceName),
 	}
-	snapshots, resp, err := c.ProjectsprojectsnapshotsApi.ListSnapshots(c.Context, ProjectNumber(), listOpts)
+	snapshots, resp, err := c.ProjectsprojectsnapshotsApi.ListSnapshots(c.context, c.projectNumber, listOpts)
 	err = CheckApiCall(err, resp, nil)
 	if err != nil {
 		err = errors.WrapPrefix(err, fmt.Sprintf("Failed to list snapshots for filesystem %v", fsName), 0)
@@ -508,7 +539,7 @@ func (c *Client) CreateSnapshot(instanceName string, fsName string, snapshot efa
 
 	createOpts := &efaasapi.FilesystemManualCreateSnapshotOpts{}
 	op, resp, err := c.ProjectsprojectinstancesApi.FilesystemManualCreateSnapshot(
-		c.Context, instanceName, fs.Id, ProjectNumber(), snapshot, createOpts)
+		c.context, instanceName, fs.Id, c.projectNumber, snapshot, createOpts)
 	err = CheckApiCall(err, resp, &op)
 	if err != nil {
 		err = errors.WrapPrefix(err, fmt.Sprintf("Failed to create snapshot %v on filesystem %v", snapshot.Name, fsName), 0)
@@ -533,7 +564,7 @@ func (c *Client) DeleteSnapshot(instanceName string, fsName string, snapName str
 	}
 
 	deleteOpts := &efaasapi.DeleteSnapshotOpts{}
-	op, resp, err := c.ProjectsprojectsnapshotsApi.DeleteSnapshot(c.Context, ProjectNumber(), snap.Id, deleteOpts)
+	op, resp, err := c.ProjectsprojectsnapshotsApi.DeleteSnapshot(c.context, c.projectNumber, snap.Id, deleteOpts)
 	err = CheckApiCall(err, resp, &op)
 	if err != nil {
 		err = errors.WrapPrefix(err, fmt.Sprintf("Failed to delete snapshot %v (%v) from filesystem %v",
@@ -565,7 +596,7 @@ func (c *Client) CreateShareWithFs(instanceName string, fsName string, snapName 
 	}
 
 	createOpts := &efaasapi.CreateShareOpts{}
-	op, resp, err := c.ProjectsprojectsnapshotsApi.CreateShare(c.Context, ProjectNumber(), snap.Id, payload, createOpts)
+	op, resp, err := c.ProjectsprojectsnapshotsApi.CreateShare(c.context, c.projectNumber, snap.Id, payload, createOpts)
 	err = CheckApiCall(err, resp, &op)
 	if err != nil {
 		err = errors.WrapPrefix(err, fmt.Sprintf("Failed to create share on snapshot %v (%v)", snapName, snap.Id), 0)
@@ -595,7 +626,7 @@ func (c *Client) CreateShare(instanceName string, snapName string, shareName str
 	}
 
 	createOpts := &efaasapi.CreateShareOpts{}
-	op, resp, err := c.ProjectsprojectsnapshotsApi.CreateShare(c.Context, ProjectNumber(), snap.Id, payload, createOpts)
+	op, resp, err := c.ProjectsprojectsnapshotsApi.CreateShare(c.context, c.projectNumber, snap.Id, payload, createOpts)
 	err = CheckApiCall(err, resp, &op)
 	if err != nil {
 		err = errors.WrapPrefix(err, fmt.Sprintf("Failed to create share on snapshot %v (%v)", snapName, snap.Id), 0)
@@ -621,7 +652,7 @@ func (c *Client) DeleteShare(instanceName string, fsName string, snapName string
 	}
 
 	deleteOpts := &efaasapi.DeleteShareOpts{}
-	op, resp, err := c.ProjectsprojectsnapshotsApi.DeleteShare(c.Context, ProjectNumber(), snap.Id, deleteOpts)
+	op, resp, err := c.ProjectsprojectsnapshotsApi.DeleteShare(c.context, c.projectNumber, snap.Id, deleteOpts)
 	err = CheckApiCall(err, resp, &op)
 	if err != nil {
 		err = errors.WrapPrefix(err, fmt.Sprintf("Failed to delete share on snapshot %v (%v)", snapName, snap.Id), 0)
