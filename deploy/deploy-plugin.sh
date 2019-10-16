@@ -85,6 +85,8 @@ if [[ -n "${CSI_EFAAS_INSTANCE}" ]]; then
 
         CSI_EFAAS_SA_KEY=$(base64 -w 1000000 ${CSI_EFAAS_SA_KEY_FILE})
     fi
+else
+  CSI_EFAAS_SA_KEY="Tm90IGFwcGxpY2FibGU=" # Not applicable for ECFS, but can't be left empty as it's used in a template
 fi
 
 OBJECTS=(templates/configmap templates/secret templates/csi-attacher-rbac templates/csi-provisioner-rbac templates/csi-nodeplugin-rbac templates/csi-snapshotter-rbac csi-ecfsplugin-attacher csi-ecfsplugin-provisioner templates/csi-snapshotter templates/storageclass templates/csi-ecfsplugin snapshotclass)
@@ -101,8 +103,8 @@ for OBJ in ${OBJECTS[@]}; do
         assert $? "Failed to create ${OBJ} from template"
     else
         log_info "Creating ${OBJ}"
-	    exec_cmd kubectl create -f "${DEPLOYMENT_BASE}/${OBJ}.yaml" --namespace ${NAMESPACE} ${DRY_RUN_FLAG}
-	    EXIT_CODE=$?
+        exec_cmd kubectl create -f "${DEPLOYMENT_BASE}/${OBJ}.yaml" --namespace ${NAMESPACE} ${DRY_RUN_FLAG}
+        EXIT_CODE=$?
         if [[ ${EXIT_CODE} != 0 && ${OBJ} == "snapshotclass" ]]; then
             # Workaround for the race between VolumeSnapshotClass CRD creation in external-snapshotter and its use in snapshotclass.yaml
             CRD="volumesnapshotclasses.snapshot.storage.k8s.io"
@@ -123,3 +125,4 @@ for OBJ in ${OBJECTS[@]}; do
         fi
     fi
 done
+
