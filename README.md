@@ -1,14 +1,16 @@
-# Elastifile's ECFS CSI provisioner
+# Elastifile CSI provisioner
 
-[Container Storage Interface (CSI)](https://github.com/container-storage-interface/) provisioner for Elastifile ECFS.
+[Container Storage Interface (CSI)](https://github.com/container-storage-interface/) plugin for Elastifile ECFS/EFAAS.
 
 ## Overview
 
-Elastifile ECFS provisioner plugin implements an interface between CSI enabled Container Orchestrator (CO) and ECFS cluster.
+Elastifile CSI plugin implements an interface between a CSI enabled Container Orchestrator (CO) and Elastifile cluster (SP).
 
-The plugin allows dynamically provisioning ECFS volumes, creating volume snapshots, creating volumes from volume snapshots, and attaching them to workloads.
+The plugin allows dynamically provisioning Elastifile volumes, creating volume snapshots, creating volumes from volume snapshots, and attaching them to workloads.
 
-Current implementation of ECFS CSI plugin was tested in Kubernetes environment (requires Kubernetes 1.13+).
+This implementation of Elastifile CSI plugin was tested with Kubernetes environment 1.14.
+
+Status: Beta
 
 * For details about configuring and deploying the plugin with EMS, see [docs/deploy-ems.md](docs/deploy-ems.md).
 * For details about configuring and deploying the plugin with eFaaS, see [docs/deploy-efaas.md](docs/deploy-efaas.md).

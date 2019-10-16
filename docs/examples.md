@@ -1,4 +1,4 @@
-# `examples` directory includes manifests and scripts that demonstrate the use of Elastifile ECFS CSI provisioner 
+# `examples` directory includes manifests and scripts that demonstrate the use of Elastifile CSI plugin 
 
 There are several helper scripts that can be used to deploy/teardown the configuration and make your life a bit easier in general by reducing the number of commands you have to type and demonstrating all parts of the provisioner use as well as end-to-end workflow.
 
@@ -8,7 +8,7 @@ There are several helper scripts that can be used to deploy/teardown the configu
 
 * `create-job.sh` - creates a pvc and a job that consumes the pvc and writes some data 
 
-Demonstrates how to create a job and mount volume provisioned by ECFS plugin
+Demonstrates how to create a job and mount volume provisioned by Elastifile CSI plugin
 
 * `create-restore-job.sh` - creates a snapshot on an existing volume, restores it to a new volume, then writes to a new file while reading fom an existing one 
 

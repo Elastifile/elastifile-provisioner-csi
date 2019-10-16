@@ -28,7 +28,7 @@ VENDOR_DIR="$(PROJECT_ROOT)/src/vendor"
 GOPATH = "$(PROJECT_ROOT):$(VENDOR_DIR)"
 
 $(info Setting GOPATH to $(GOPATH))
-$(info ECFS image settings: $(PLUGIN_IMAGE_NAME) tag $(PLUGIN_TAG))
+$(info Elastifile CSI plugin image: $(PLUGIN_IMAGE_NAME) tag $(PLUGIN_TAG))
 
 DEPLOYRUNNER_IMAGE_NAME = elastifileio/ecfs-provisioner-csi-deployrunner
 DEPLOYRUNNER_DOCKER_DIR = $(PROJECT_ROOT)/images/deployrunner

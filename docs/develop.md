@@ -1,5 +1,12 @@
 ## Building Elastifile's ECFS CSI provisioner
 
+### Prerequisites
+
+In order to be able to push the image, you may need to perform `docker login` once
+```bash
+docker login -u elastifileio
+```
+
 ### Make targets
 
 CSI ECFS plugin can be compiled in a form of a binary file or in a form of a Docker image.
