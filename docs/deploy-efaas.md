@@ -1,8 +1,6 @@
-# Deploying Elastifile's ECFS CSI provisioner with ECFS management console
+# Deploying Elastifile CSI plugin with EFAAS
 
 ## Deployment requirements
-
-Requires Kubernetes 1.13+
 
 Your Kubernetes cluster must allow privileged pods (i.e. `--allow-privileged` flag must be set to true for both the API server and the kubelet). Moreover, as stated in the [mount propagation docs](https://kubernetes.io/docs/concepts/storage/volumes/#mount-propagation), the Docker daemon of the cluster nodes must allow shared mounts.
 
@@ -18,12 +16,12 @@ Deployment scripts and YAML manifests are located under [deploy](../deploy) dire
 
 ### Deploy plugin
 ```bash
-PLUGIN_TAG=v0.6.0 NAMESPACE=elastifile-csi-ns CSI_GCP_PROJECT_NUMBER=276859139519 CSI_EFAAS_INSTANCE="demo-instance1" EFAAS_URL="https://cloud-file-service-gcp.elastifile.com" CSI_EFAAS_SA_KEY_FILE=/path/to/sa-key.json ./deploy-plugin.sh
+PLUGIN_TAG=v0.7.0 CSI_GCP_PROJECT_NUMBER=276859139519 CSI_EFAAS_INSTANCE="demo-instance1" EFAAS_URL="https://cloud-file-service-gcp.elastifile.com" CSI_EFAAS_SA_KEY_FILE=/path/to/sa-key.json ./deploy-plugin.sh
 ```
 
 These values may be set by the user:
-* PLUGIN_TAG - The version of the Elastifile ECFS CSI Provisioner you're interested in
-* NAMESPACE - Plugin's namespace. It's recommended to specify a non-default namespace to prevent collisions between different applications
+* PLUGIN_TAG - The version of the Elastifile CSI plugin you're interested in
+* NAMESPACE - Plugin's namespace. The plugin gets installed into a dedicated namespace by default
 * CSI_EFAAS_INSTANCE - Name of the eFaaS instance to use, can be obtained via https://console.cloud.google.com/home/dashboard
 * CSI_GCP_PROJECT_NUMBER - Project number of the project connected to the eFaaS instance
 * EFAAS_URL - URL of the eFaaS service console, e.g. https://cloud-file-service-gcp.elastifile.com
@@ -67,7 +65,7 @@ The recommended scripts are
 
 ### Notes on volume deletion
 
-Upon PVC deletion, ECFS Data Container is going to be deleted.
+Upon PVC deletion, Elastifile Data Container is going to be deleted.
 
 In case there's data or a snapshot associated with the Data Container, it will be kept intact to prevent accidental data loss. 
 
