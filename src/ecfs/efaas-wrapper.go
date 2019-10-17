@@ -385,7 +385,7 @@ func efaasCreateVolumeFromSnapshot(srcSnapName string, dstVolOptions *volumeOpti
 
 	// Mount the destination volume
 	dstVolMountPath := fmt.Sprintf("/mnt/%v", dstVolumeId)
-	err = mountEcfs(dstVolMountPath, dstVolumeId)
+	err = mountEcfs(dstVolMountPath, dstVolumeId, []string{"vers=3"})
 	if err != nil {
 		isMount, e := isMountPoint(dstVolMountPath) // TODO: Consider remounting or using unique paths
 		if e != nil {
