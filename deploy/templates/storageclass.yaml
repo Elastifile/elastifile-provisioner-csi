@@ -3,7 +3,9 @@ kind: StorageClass
 metadata:
   name: elastifile
 provisioner: csi-ecfsplugin
-reclaimPolicy: Delete 
+reclaimPolicy: Delete
+mountOptions:
+  - vers=3
 parameters: # Note - only string values are accepted in parameters
 
   # === EMS options ===

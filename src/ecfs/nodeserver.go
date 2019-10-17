@@ -110,7 +110,7 @@ func (ns *nodeServer) nodeStageVolume(ctx context.Context, req *csi.NodeStageVol
 	}
 
 	// Mount the volume
-	err = mountEcfs(stagingTargetPath, volId)
+	err = mountEcfs(stagingTargetPath, volId, req.VolumeCapability.GetMount().GetMountFlags())
 	if err != nil {
 		err = errors.WrapPrefix(err, fmt.Sprintf("Failed to mount volume %v", volId), 0)
 		return nil, status.Error(codes.Internal, err.Error())

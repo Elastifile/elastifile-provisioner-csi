@@ -78,7 +78,7 @@ func getNfsExportEfaas(volId volumeHandleType) (nfsExport string, err error) {
 	return
 }
 
-func mountEcfs(mountPoint string, volId volumeHandleType) (err error) {
+func mountEcfs(mountPoint string, volId volumeHandleType, mountFlags []string) (err error) {
 	var nfsExport string
 
 	glog.V(log.INFO).Infof("ecfs: Mounting volume %v on %v", volId, mountPoint)
@@ -95,15 +95,16 @@ func mountEcfs(mountPoint string, volId volumeHandleType) (err error) {
 		return err
 	}
 
-	// TODO: Add support for mount options once mountOptions and SupportsMountOption() are supported in K8s
-	// https://kubernetes.io/docs/concepts/storage/persistent-volumes/#mount-options
-	args := []string{
+	var args []string
+	if len(mountFlags) > 0 {
+		args = append(args, "-o", strings.Join(mountFlags, ","))
+	}
+	args = append(args,
 		"-vvv",
 		"-t", "nfs",
-		"-o", "nolock,vers=3", // TODO: Remove these defaults once mount works
 		nfsExport,
 		mountPoint,
-	}
+	)
 
 	err = mountNfs(args...)
 	if err != nil {
