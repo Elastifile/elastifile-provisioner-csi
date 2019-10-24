@@ -44,14 +44,17 @@ func (c *VolumeCache) Get(volumeName string) (cachedVolume *CachedVolume, cacheH
 
 func (c *VolumeCache) Set(volumeName string, isReady bool, operationFailure error) (err error) {
 	if *c == nil {
-		*c = make(VolumeCache)
+		glog.V(log.TRACE).Infof("ecfs: Creating persistent resource for volume %v in Set", volumeName)
+		err = c.Create(volumeName)
+		if err != nil {
+			return errors.WrapPrefix(err, fmt.Sprintf(
+				"Failed to create volume cache entry in Set. Volume=%v to isReady=%v operationFailure=%v",
+				volumeName, isReady, operationFailure), 0)
+		}
 	}
 
-	(*c)[volumeName] = &CachedVolume{
-		ID:      volumeName,
-		Error:   operationFailure,
-		IsReady: isReady,
-	}
+	(*c)[volumeName].IsReady = isReady
+	(*c)[volumeName].Error = operationFailure
 
 	err = (*c)[volumeName].persistentResource.KeepAlive()
 	if err != nil {
