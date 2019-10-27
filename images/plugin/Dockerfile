@@ -1,4 +1,4 @@
-FROM ubuntu:16.04
+FROM ubuntu:18.04
 LABEL maintainers="jeanspector@google.com"
 LABEL description="Elastifile CSI Plugin"
 
@@ -10,6 +10,7 @@ RUN apt-get update && \
     apt-get -y install nfs-common telnet curl
 
 RUN chmod +x /ecfsplugin && \
-    mkdir -p /var/log/elastifile
+    mkdir -p /var/log/elastifile && \
+    mkdir -p /run/sendsigs.omit.d
 
 ENTRYPOINT ["/entrypoint.sh", "/ecfsplugin"]
