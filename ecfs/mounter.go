@@ -72,7 +72,11 @@ func mountEcfs(mountPoint string, volId volumeHandleType) error {
 
 	err = mountNfs(args...)
 	if err != nil {
-		return errors.WrapPrefix(err, "Failed to mount ECFS export", 0)
+		if isErrorAlreadyMounted(err) && isWorkaround("b/153705643") {
+			glog.V(log.DEBUG).Infof("ecfs: Mount point %v is already mounted", mountPoint)
+		} else {
+			return errors.WrapPrefix(err, "Failed to mount ECFS export", 0)
+		}
 	}
 
 	return nil
