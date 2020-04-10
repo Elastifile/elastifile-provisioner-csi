@@ -194,6 +194,20 @@ func isErrorDoesNotExist(err error) bool {
 	return false
 }
 
+func isErrorAlreadyMounted(err error) bool {
+	var errorMessages = []string{
+		"already mounted",
+	}
+
+	for _, text := range errorMessages {
+		if strings.Contains(err.Error(), text) {
+			glog.V(log.VERBOSE_DEBUG).Infof("ecfs: Error means that the path is already mounted: %v", err)
+			return true
+		}
+	}
+	return false
+}
+
 func isWorkaround(desc string) bool {
 	glog.Warningf("USING WORKAROUND FOR %v", desc)
 	return true
