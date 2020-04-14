@@ -54,11 +54,8 @@ func mountEcfs(mountPoint string, volId volumeHandleType) error {
 	}
 
 	glog.V(log.INFO).Infof("ecfs: Mounting volume %v on %v", volId, mountPoint)
-	var emsClient emanageClient
-	dc, export, err := emsClient.GetDcDefaultExportByVolumeId(volId)
-	if err != nil {
-		return errors.WrapPrefix(err, fmt.Sprintf("Failed to get DC/export for Volume Id %s", volId), 0)
-	}
+
+	dcName := string(volId)
 
 	// TODO: Add support for mount options once mountOptions and SupportsMountOption() are supported in K8s
 	// https://kubernetes.io/docs/concepts/storage/persistent-volumes/#mount-options
@@ -66,7 +63,7 @@ func mountEcfs(mountPoint string, volId volumeHandleType) error {
 		"-vvv",
 		"-t", "nfs",
 		"-o", "nolock,vers=3", // TODO: Remove these defaults once mount works
-		fmt.Sprintf("%v:%v/%v", nfsAddr, dc.Name, export.Name),
+		fmt.Sprintf("%v:%v/%v", nfsAddr, dcName, volumeExportName),
 		mountPoint,
 	}
 

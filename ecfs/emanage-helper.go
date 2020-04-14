@@ -73,7 +73,7 @@ func (ems *emanageClient) GetClient() *emanageClient {
 }
 
 func (ems *emanageClient) GetDcByName(dcName string) (*emanage.DataContainer, error) {
-	glog.V(log.DEBUG).Infof("ecfs: GetDcByName - getting DCs from ECFS management")
+	glog.V(log.DEBUG).Infof("ecfs: GetDcByName %v - getting DCs from ECFS management", dcName)
 	dcs, err := ems.GetClient().DataContainers.GetAll(nil)
 	if err != nil {
 		return nil, errors.WrapPrefix(err, "Failed to list Data Containers", 0)
