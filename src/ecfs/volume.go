@@ -76,17 +76,6 @@ func createDc(emsClient *emanageClient, opt *volumeOptions) (*emanage.DataContai
 }
 
 func createExportForVolume(emsClient *emanageClient, volOptions *volumeOptions) (export emanage.Export, err error) {
-	found, export, err := exportExists(emsClient, volumeExportName, volOptions)
-	if err != nil {
-		err = errors.WrapPrefix(err, fmt.Sprintf("Failed to check if export %v exists on DC %v (%v)",
-			volumeExportName, volOptions.DataContainer.Id, volOptions.DataContainer.Name), 0)
-		return
-	}
-	if found {
-		glog.V(log.DEBUG).Infof("ecfs: Export %v for volume %v already exists - nothing to do", volumeExportName, volOptions.VolumeId)
-		return
-	}
-
 	exportOpt := &emanage.ExportCreateForVolumeOpts{
 		DcId:        int(volOptions.DataContainer.Id),
 		Path:        "/",
