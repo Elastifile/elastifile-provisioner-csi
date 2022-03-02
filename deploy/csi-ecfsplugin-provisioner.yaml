@@ -13,12 +13,15 @@ spec:
 
 ---
 kind: StatefulSet
-apiVersion: apps/v1beta1
+apiVersion: apps/v1
 metadata:
   name: csi-ecfsplugin-provisioner
 spec:
   serviceName: "csi-ecfsplugin-provisioner"
   replicas: 1
+  selector:
+    matchLabels:
+      app: "csi-ecfsplugin-provisioner"
   template:
     metadata:
       labels:
@@ -27,7 +30,7 @@ spec:
       serviceAccount: csi-provisioner
       containers:
         - name: csi-provisioner
-          image: gcr.io/gke-release/csi-provisioner:v1.0.1-gke.0
+          image: gcr.io/gke-release/csi-provisioner:v1.6.0-gke.0
           args:
             - "--provisioner=csi-ecfsplugin"
             - "--csi-address=$(ADDRESS)"

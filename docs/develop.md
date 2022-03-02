@@ -56,7 +56,7 @@ $ PLUGIN_TAG=v0.0.1 make all
 
 ### Dependency management
 
-This project uses [dep](https://github.com/golang/dep) as it dependency management tool.
+This project uses [dep](https://github.com/golang/dep) as its dependency management tool.
 
 After cloning the project, it is recommended to run `dep ensure`.
 

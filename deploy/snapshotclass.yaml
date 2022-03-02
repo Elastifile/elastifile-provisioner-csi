@@ -1,8 +1,8 @@
-apiVersion: snapshot.storage.k8s.io/v1alpha1
+apiVersion: snapshot.storage.k8s.io/v1
 kind: VolumeSnapshotClass
 metadata:
   name: csi-ecfs-snapclass
-snapshotter: csi-ecfsplugin
+driver: csi-ecfsplugin
+deletionPolicy: Delete
 parameters:
   retention: "4"
-
