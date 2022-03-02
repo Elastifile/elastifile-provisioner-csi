@@ -23,5 +23,5 @@ done
 
 popd
 
-# Delete CRDs crated by external-snapshotter
+# Delete CRDs created by external-snapshotter
 exec_cmd kubectl delete crd volumesnapshotclasses.snapshot.storage.k8s.io volumesnapshotcontents.snapshot.storage.k8s.io volumesnapshots.snapshot.storage.k8s.io

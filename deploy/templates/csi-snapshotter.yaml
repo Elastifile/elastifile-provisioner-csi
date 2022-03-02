@@ -42,7 +42,7 @@ spec:
 ---
 # TODO: It is recommended that sidecar containers External-Snapshotter and External-Provisioner be deployed together with CSI driver in a StatefulSet.
 kind: StatefulSet
-apiVersion: apps/v1beta1
+apiVersion: apps/v1
 metadata:
   name: csi-snapshotter
 spec:
@@ -60,10 +60,10 @@ spec:
       serviceAccount: csi-snapshotter
       containers:
         - name: csi-snapshotter
-          image: quay.io/k8scsi/csi-snapshotter:v1.0.1
+          image: gcr.io/gke-release/csi-snapshotter:v2.1.1-gke.0
           args:
             - "--csi-address=$(ADDRESS)"
-            - "--connection-timeout=15s"
+            - "--timeout=1m"
 #            - "--v=5"
             - "--v=10"
           env:

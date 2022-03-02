@@ -13,12 +13,15 @@ spec:
 
 ---
 kind: StatefulSet
-apiVersion: apps/v1beta1
+apiVersion: apps/v1
 metadata:
   name: csi-ecfsplugin-attacher
 spec:
   serviceName: "csi-ecfsplugin-attacher"
   replicas: 1
+  selector:
+    matchLabels:
+      app: "csi-ecfsplugin-attacher"
   template:
     metadata:
       labels:
@@ -27,7 +30,7 @@ spec:
       serviceAccount: csi-attacher
       containers:
         - name: csi-ecfsplugin-attacher
-          image: gcr.io/gke-release/csi-attacher:v1.0.1-gke.0
+          image: gcr.io/gke-release/csi-attacher:v2.2.0-gke.0
           args:
             - "--v=10"
 #            - "--v=5"
