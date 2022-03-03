@@ -41,7 +41,7 @@ func getCreateVolumeResponse(volumeId volumeHandleType, volOptions *volumeOption
 	return &csi.CreateVolumeResponse{
 		Volume: &csi.Volume{
 			Id:            string(volumeId),
-			CapacityBytes: int64(volOptions.Capacity),
+			CapacityBytes: volOptions.Capacity,
 			Attributes:    req.GetParameters(),
 		},
 		// TODO: Uncomment when switching to CSI 1.0

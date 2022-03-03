@@ -23,6 +23,8 @@ parameters:
   defaultVolumeSize: "100GiB"
   # Volume access. Supported values: read_write, read_only, list_only, no_access
   access: "read_write"
+  # Volume capacity percentage to be used as the soft quota. Default: 100
+  softQuotaPct: "75"
 
   # The config map and secrets are expected to contain ECFS cluster details (IP addresses and user credentials)
   configurationNamespace: ${NAMESPACE}

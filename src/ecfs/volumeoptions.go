@@ -17,6 +17,7 @@ limitations under the License.
 package main
 
 import (
+	"fmt"
 	"strconv"
 
 	"github.com/container-storage-interface/spec/lib/go/csi/v0"
@@ -46,6 +47,7 @@ type volumeOptions struct {
 	ExportUid         optional.Int
 	ExportGid         optional.Int
 	Access            string
+	SoftQuotaPct      int // Capacity percentage to be used as a soft quota
 }
 
 func extractOptionString(paramName StorageClassCustomParameter, options map[string]string) (value string, err error) {
@@ -69,6 +71,7 @@ const (
 	Permissions       StorageClassCustomParameter = "permissions"
 	DefaultVolumeSize StorageClassCustomParameter = "defaultVolumeSize"
 	Access            StorageClassCustomParameter = "access"
+	SoftQuotaPct      StorageClassCustomParameter = "softQuotaPct"
 )
 
 func newVolumeOptions(req *csi.CreateVolumeRequest) (*volumeOptions, error) {
@@ -162,6 +165,18 @@ func newVolumeOptions(req *csi.CreateVolumeRequest) (*volumeOptions, error) {
 		paramStr = string(emanage.ExportAccessRW)
 	}
 	opts.Access = paramStr
+
+	// SoftQuotaPct
+	if paramStr, err = extractOptionString(SoftQuotaPct, volParams); err != nil {
+		paramStr = "100"
+	}
+	if opts.SoftQuotaPct, err = strconv.Atoi(paramStr); err != nil {
+		return nil, errors.Wrap(err, 0)
+	}
+	if opts.SoftQuotaPct < 0 || opts.SoftQuotaPct > 100 {
+		return nil, errors.WrapPrefix(err, fmt.Sprintf(
+			"Invalid soft quota percentage: %v", opts.SoftQuotaPct), 0)
+	}
 
 	glog.V(log.DEBUG).Infof("ecfs: Current volume options: %+v", opts)
 	return opts, nil
