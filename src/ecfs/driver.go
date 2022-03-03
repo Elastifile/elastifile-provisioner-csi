@@ -22,7 +22,7 @@ import (
 	"github.com/golang/glog"
 	"github.com/kubernetes-csi/drivers/pkg/csi-common"
 
-	"csi-provisioner-elastifile/ecfs/log"
+	"ecfs/log"
 )
 
 const (

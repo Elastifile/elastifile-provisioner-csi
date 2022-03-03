@@ -19,12 +19,12 @@ package main
 import (
 	"flag"
 	"os"
-	"src/github.com/go-errors/errors"
 
+	_ "github.com/elastifile/emanage-go/src/emanage-client"
+	"github.com/go-errors/errors"
 	"github.com/golang/glog"
 
-	"csi-provisioner-elastifile/ecfs/log"
-	_ "github.com/elastifile/emanage-go/src/emanage-client"
+	"ecfs/log"
 )
 
 func init() {

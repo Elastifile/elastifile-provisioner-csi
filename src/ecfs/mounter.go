@@ -20,11 +20,11 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/golang/glog"
-
-	"csi-provisioner-elastifile/ecfs/log"
 	"github.com/elastifile/emanage-go/src/emanage-client"
 	"github.com/elastifile/errors"
+	"github.com/golang/glog"
+
+	"ecfs/log"
 )
 
 func mountNfs(args ...string) error {

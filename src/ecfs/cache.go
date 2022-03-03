@@ -6,7 +6,7 @@ import (
 	"github.com/go-errors/errors"
 	"github.com/golang/glog"
 
-	"csi-provisioner-elastifile/ecfs/log"
+	"ecfs/log"
 )
 
 type CachedVolume struct {
