@@ -68,9 +68,8 @@ func exportExists(emsClient *emanageClient, exportName string, opt *volumeOption
 
 func createDc(emsClient *emanageClient, opt *volumeOptions) (*emanage.DataContainer, error) {
 	dc, err := emsClient.DataContainers.Create(string(opt.VolumeId), dcPolicy, &emanage.DcCreateOpts{
-		// TODO: Consider setting soft quota at a %% of capacity (to be set via storageclass)
-		SoftQuota:      int(opt.Capacity),
-		HardQuota:      int(opt.Capacity),
+		HardQuota:      opt.Capacity,
+		SoftQuota:      opt.Capacity * int64(opt.SoftQuotaPct) / 100,
 		DirPermissions: opt.ExportPermissions,
 	})
 	return &dc, err
