@@ -23,8 +23,7 @@ TEMP_DIR = _output
 PLUGIN_DOCKER_DIR = images/plugin
 PLUGIN_BINARY = ecfsplugin
 
-PROJECT_ROOT = $(shell dirname $(shell dirname $(value CURDIR)))
-GOPATH = "$(PROJECT_ROOT):$(CURDIR)/vendor"
+GOPATH = "$(CURDIR):$(CURDIR)/vendor"
 
 $(info ecfs image settings: $(PLUGIN_IMAGE_NAME) tag $(PLUGIN_TAG))
 
@@ -43,7 +42,7 @@ all: image push
 binary:
 	@echo Setting GOPATH to $(GOPATH)
 	if [ ! -d ./vendor ]; then dep ensure; fi
-	GOPATH=$(GOPATH) CGO_ENABLED=0 GOOS=linux go build -a -ldflags '-extldflags "-static"' -o  $(TEMP_DIR)/$(PLUGIN_BINARY) ./ecfs
+	GOPATH=$(GOPATH) CGO_ENABLED=0 GOOS=linux go build -a -ldflags '-extldflags "-static"' -o  $(TEMP_DIR)/$(PLUGIN_BINARY) ecfs
 
 # Create docker image
 image: binary

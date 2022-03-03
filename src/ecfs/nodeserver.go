@@ -23,13 +23,13 @@ import (
 
 	"github.com/container-storage-interface/spec/lib/go/csi/v0"
 	//"github.com/container-storage-interface/spec/lib/go/csi" // TODO: Uncomment when switching to CSI 1.0
+	"github.com/elastifile/errors"
 	"github.com/golang/glog"
 	"github.com/kubernetes-csi/drivers/pkg/csi-common"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
-	"csi-provisioner-elastifile/ecfs/log"
-	"github.com/elastifile/errors"
+	"ecfs/log"
 )
 
 type nodeServer struct {
