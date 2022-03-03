@@ -25,7 +25,7 @@ import (
 )
 
 const (
-	Version = "0.6.5"
+	Version = "0.6.6"
 )
 
 type ecfsDriver struct {
