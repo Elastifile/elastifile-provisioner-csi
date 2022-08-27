@@ -81,8 +81,8 @@ type DcCreateOpts struct {
 	Name           string          `json:"name"`
 	NamespaseScope string          `json:"namespace_scope,omitempty"`
 	DataType       string          `json:"data_type,omitempty"`
-	SoftQuota      int             `json:"soft_quota"`
-	HardQuota      int             `json:"hard_quota"`
+	SoftQuota      int64           `json:"soft_quota"`
+	HardQuota      int64           `json:"hard_quota"`
 	DirPermissions int             `json:"dir_permissions,omitempty"`
 	Share          optional.String `json:"share,omitempty"`
 	VmIds          []int           `json:"vm_ids,omitempty"`

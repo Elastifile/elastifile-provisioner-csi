@@ -42,7 +42,7 @@ func getCreateVolumeResponse(volumeId volumeHandleType, volOptions *volumeOption
 	return &csi.CreateVolumeResponse{
 		Volume: &csi.Volume{
 			VolumeId:      string(volumeId),
-			CapacityBytes: int64(volOptions.Capacity),
+			CapacityBytes: volOptions.Capacity,
 			VolumeContext: req.GetParameters(),
 		},
 	}
