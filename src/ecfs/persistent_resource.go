@@ -306,4 +306,4 @@ func (pr *PersistentResource) Delete() (err error) {
 // TODO: Add background keepalive thread per resource being actively worked on
 
 // TODO: Decide what to do with existing DCs whose volumes were deleted (e.g. due to existing data/snapshots)
-// Deleting all snapshots and their exports makes sense, but existing data is something that needs PM's decision
+//   Deleting all snapshots and their exports makes sense, but existing data is something that needs PM's decision
