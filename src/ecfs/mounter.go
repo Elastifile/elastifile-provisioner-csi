@@ -53,14 +53,7 @@ func getNfsExportEcfs(volId volumeHandleType) (nfsExport string, err error) {
 		return
 	}
 
-	var emsClient emanageClient
-	dc, export, err := emsClient.GetDcDefaultExportByVolumeId(volId)
-	if err != nil {
-		err = errors.WrapPrefix(err, fmt.Sprintf("Failed to get DC/export for Volume Id %s", volId), 0)
-		return
-	}
-
-	return fmt.Sprintf("%v:%v/%v", nfsAddr, dc.Name, export.Name), nil
+	return fmt.Sprintf("%v:%v/%v", nfsAddr, string(volId), volumeExportName), nil
 }
 
 func getNfsExportEfaas(volId volumeHandleType) (nfsExport string, err error) {
